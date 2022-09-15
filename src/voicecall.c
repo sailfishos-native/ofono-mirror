@@ -64,6 +64,7 @@ struct ofono_voicecall {
 	struct ofono_sim_context *sim_context;
 	unsigned int sim_watch;
 	unsigned int sim_state_watch;
+	unsigned int ecc_watch;
 	const struct ofono_voicecall_driver *driver;
 	void *driver_data;
 	struct ofono_atom *atom;
@@ -2866,6 +2867,16 @@ static void voicecall_close_settings(struct ofono_voicecall *vc)
 	}
 }
 
+static void unwatch_sim_ecc_numbers(struct ofono_voicecall *vc)
+{
+	if (!vc->sim_context)
+		return;
+
+	ofono_sim_remove_file_watch(vc->sim_context, vc->ecc_watch);
+	ofono_sim_context_free(vc->sim_context);
+	vc->sim_context = NULL;
+}
+
 static void voicecall_unregister(struct ofono_atom *atom)
 {
 	DBusConnection *conn = ofono_dbus_get_connection();
@@ -2890,6 +2901,7 @@ static void voicecall_unregister(struct ofono_atom *atom)
 
 	vc->sim = NULL;
 
+	unwatch_sim_ecc_numbers(vc);
 	free_sim_ecc_numbers(vc, FALSE);
 
 	if (vc->nw_en_list) {
@@ -2993,35 +3005,39 @@ static void read_sim_ecc_numbers(int id, void *userdata)
 			ecc_g3_read_cb, vc);
 }
 
+static void watch_sim_ecc_numbers(struct ofono_voicecall *vc)
+{
+	if (vc->sim_context)
+		return;
+
+	vc->sim_context = ofono_sim_context_create(vc->sim);
+	read_sim_ecc_numbers(SIM_EFECC_FILEID, vc);
+
+	vc->ecc_watch = ofono_sim_add_file_watch(vc->sim_context,
+					SIM_EFECC_FILEID, read_sim_ecc_numbers,
+					vc, NULL);
+}
+
 static void sim_state_watch(enum ofono_sim_state new_state, void *user)
 {
 	struct ofono_voicecall *vc = user;
 
 	switch (new_state) {
 	case OFONO_SIM_STATE_INSERTED:
-		if (vc->sim_context == NULL)
-			vc->sim_context = ofono_sim_context_create(vc->sim);
-
-		read_sim_ecc_numbers(SIM_EFECC_FILEID, vc);
-
-		ofono_sim_add_file_watch(vc->sim_context, SIM_EFECC_FILEID,
-						read_sim_ecc_numbers, vc, NULL);
+		watch_sim_ecc_numbers(vc);
 		break;
 	case OFONO_SIM_STATE_NOT_PRESENT:
 	case OFONO_SIM_STATE_RESETTING:
 		/* TODO: Must release all non-emergency calls */
 
-		if (vc->sim_context) {
-			ofono_sim_context_free(vc->sim_context);
-			vc->sim_context = NULL;
-		}
-
+		unwatch_sim_ecc_numbers(vc);
 		free_sim_ecc_numbers(vc, FALSE);
 		set_new_ecc(vc);
 
 		voicecall_close_settings(vc);
 		break;
 	case OFONO_SIM_STATE_READY:
+		watch_sim_ecc_numbers(vc);
 		voicecall_load_settings(vc);
 		break;
 	case OFONO_SIM_STATE_LOCKED_OUT:
