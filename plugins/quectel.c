@@ -128,6 +128,17 @@ enum quectel_power_event {
 
 static const char dbus_hw_interface[] = OFONO_SERVICE ".quectel.Hardware";
 
+static ofono_bool_t quectel_model_supports_lte(enum quectel_model model)
+{
+	switch (model) {
+	case QUECTEL_EC21:
+	case QUECTEL_EC200:
+		return TRUE;
+	default:
+		return FALSE;
+	}
+}
+
 static ofono_bool_t has_serial_connection(struct ofono_modem *modem)
 {
 
@@ -1356,10 +1367,11 @@ static void quectel_post_sim(struct ofono_modem *modem)
 	ofono_phonebook_create(modem, data->vendor, "atmodem", data->aux);
 	ofono_call_volume_create(modem, data->vendor, "atmodem", data->aux);
 
-	if (data->model == QUECTEL_EC21 || data->model == QUECTEL_EC200) {
+	if (data->model == QUECTEL_EC21 || data->model == QUECTEL_EC200)
 		ofono_ussd_create(modem, data->vendor, "atmodem", data->aux);
+
+	if (quectel_model_supports_lte(data->model))
 		ofono_lte_create(modem, data->vendor, "atmodem", data->aux);
-	}
 }
 
 static void quectel_post_online(struct ofono_modem *modem)
