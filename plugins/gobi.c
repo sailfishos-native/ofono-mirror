@@ -571,13 +571,17 @@ static void gobi_post_sim(struct ofono_modem *modem)
 	if (data->features & GOBI_WDS) {
 		struct ofono_gprs *gprs;
 		struct ofono_gprs_context *gc;
+		const char *interface =
+			ofono_modem_get_string(modem, "NetworkInterface");
 
 		gprs = ofono_gprs_create(modem, 0, "qmimodem", data->device);
 		gc = ofono_gprs_context_create(modem, 0, "qmimodem",
 							data->device);
 
-		if (gprs && gc)
+		if (gprs && gc) {
 			ofono_gprs_add_context(gprs, gc);
+			ofono_gprs_context_set_interface(gc, interface);
+		}
 	}
 }
 
