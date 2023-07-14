@@ -68,6 +68,7 @@
 struct gobi_data {
 	struct qmi_device *device;
 	struct qmi_service *dms;
+	struct qmi_service *wda;
 	unsigned long features;
 	unsigned int discover_attempts;
 	uint8_t oper_mode;
@@ -95,6 +96,15 @@ static int gobi_probe(struct ofono_modem *modem)
 	return 0;
 }
 
+static void cleanup_services(struct gobi_data *data)
+{
+	qmi_service_unref(data->dms);
+	data->dms = NULL;
+
+	qmi_service_unref(data->wda);
+	data->wda = NULL;
+}
+
 static void gobi_remove(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
@@ -103,7 +113,7 @@ static void gobi_remove(struct ofono_modem *modem)
 
 	ofono_modem_set_data(modem, NULL);
 
-	qmi_service_unref(data->dms);
+	cleanup_services(data);
 
 	qmi_device_unref(data->device);
 
@@ -131,8 +141,7 @@ static void shutdown_device(struct ofono_modem *modem)
 
 	DBG("%p", modem);
 
-	qmi_service_unref(data->dms);
-	data->dms = NULL;
+	cleanup_services(data);
 
 	qmi_device_shutdown(data->device, shutdown_cb, modem, NULL);
 }
@@ -234,6 +243,75 @@ error:
 	shutdown_device(modem);
 }
 
+static void get_data_format_cb(struct qmi_result *result, void *user_data)
+{
+	struct ofono_modem *modem = user_data;
+	struct gobi_data *data = ofono_modem_get_data(modem);
+	uint32_t llproto;
+	enum qmi_device_expected_data_format expected_llproto;
+
+	DBG("");
+
+	if (qmi_result_set_error(result, NULL))
+		goto done;
+
+	if (!qmi_result_get_uint32(result, QMI_WDA_LL_PROTOCOL, &llproto))
+		goto done;
+
+	expected_llproto = qmi_device_get_expected_data_format(data->device);
+
+	if ((llproto == QMI_WDA_DATA_LINK_PROTOCOL_802_3) &&
+			(expected_llproto ==
+				QMI_DEVICE_EXPECTED_DATA_FORMAT_RAW_IP)) {
+		if (!qmi_device_set_expected_data_format(data->device,
+					QMI_DEVICE_EXPECTED_DATA_FORMAT_802_3))
+			DBG("Fail to set expected data to 802.3");
+		else
+			DBG("expected data set to 802.3");
+	} else if ((llproto == QMI_WDA_DATA_LINK_PROTOCOL_RAW_IP) &&
+			(expected_llproto ==
+				QMI_DEVICE_EXPECTED_DATA_FORMAT_802_3)) {
+		if (!qmi_device_set_expected_data_format(data->device,
+					QMI_DEVICE_EXPECTED_DATA_FORMAT_RAW_IP))
+			DBG("Fail to set expected data to raw-ip");
+		else
+			DBG("expected data set to raw-ip");
+	}
+
+done:
+	if (qmi_service_send(data->dms, QMI_DMS_GET_CAPS, NULL,
+						get_caps_cb, modem, NULL) > 0)
+		return;
+
+	shutdown_device(modem);
+}
+
+static void create_wda_cb(struct qmi_service *service, void *user_data)
+{
+	struct ofono_modem *modem = user_data;
+	struct gobi_data *data = ofono_modem_get_data(modem);
+
+	DBG("");
+
+	if (!service) {
+		DBG("Failed to request WDA service, continue initialization");
+		goto error;
+	}
+
+	data->wda = qmi_service_ref(service);
+
+	if (qmi_service_send(data->wda, QMI_WDA_GET_DATA_FORMAT, NULL,
+				get_data_format_cb, modem, NULL) > 0)
+		return;
+
+error:
+	if (qmi_service_send(data->dms, QMI_DMS_GET_CAPS, NULL,
+						get_caps_cb, modem, NULL) > 0)
+		return;
+
+	shutdown_device(modem);
+}
+
 static void create_dms_cb(struct qmi_service *service, void *user_data)
 {
 	struct ofono_modem *modem = user_data;
@@ -246,8 +324,8 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 
 	data->dms = qmi_service_ref(service);
 
-	if (qmi_service_send(data->dms, QMI_DMS_GET_CAPS, NULL,
-					get_caps_cb, modem, NULL) > 0)
+	if (qmi_service_create(data->device, QMI_SERVICE_WDA,
+					create_wda_cb, modem, NULL))
 		return;
 
 error:
