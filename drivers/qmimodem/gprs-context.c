@@ -78,8 +78,6 @@ static void get_settings_cb(struct qmi_result *result, void *user_data)
 	struct cb_data *cbd = user_data;
 	ofono_gprs_context_cb_t cb = cbd->cb;
 	struct ofono_gprs_context *gc = cbd->user;
-	struct ofono_modem *modem;
-	const char *interface;
 	uint8_t pdp_type, ip_family;
 	uint32_t ip_addr;
 	struct in_addr addr;
@@ -145,11 +143,6 @@ static void get_settings_cb(struct qmi_result *result, void *user_data)
 		ofono_gprs_context_set_ipv4_dns_servers(gc, dns);
 
 done:
-	modem = ofono_gprs_context_get_modem(gc);
-	interface = ofono_modem_get_string(modem, "NetworkInterface");
-
-	ofono_gprs_context_set_interface(gc, interface);
-
 	CALLBACK_WITH_SUCCESS(cb, cbd->data);
 }
 
@@ -159,8 +152,6 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 	ofono_gprs_context_cb_t cb = cbd->cb;
 	struct ofono_gprs_context *gc = cbd->user;
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
-	struct ofono_modem *modem;
-	const char *interface;
 	uint32_t handle;
 
 	DBG("");
@@ -182,11 +173,6 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 	if (qmi_service_send(data->wds, QMI_WDS_GET_CURRENT_SETTINGS, NULL,
 					get_settings_cb, cbd, g_free) > 0)
 		return;
-
-	modem = ofono_gprs_context_get_modem(gc);
-	interface = ofono_modem_get_string(modem, "NetworkInterface");
-
-	ofono_gprs_context_set_interface(gc, interface);
 
 	CALLBACK_WITH_SUCCESS(cb, cbd->data);
 
