@@ -181,7 +181,7 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 	cbd = cb_data_new(cb, cbd->data);
 	cbd->user = gc;
 
-	if (qmi_service_send(data->wds, QMI_WDS_GET_SETTINGS, NULL,
+	if (qmi_service_send(data->wds, QMI_WDS_GET_CURRENT_SETTINGS, NULL,
 					get_settings_cb, cbd, g_free) > 0)
 		return;
 
@@ -220,7 +220,7 @@ static void qmi_gprs_read_settings(struct ofono_gprs_context* gc,
 
 	cbd->user = gc;
 
-	if (qmi_service_send(data->wds, QMI_WDS_START_NET, NULL,
+	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, NULL,
 					start_net_cb, cbd, g_free) > 0)
 		return;
 
@@ -292,7 +292,7 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 		qmi_param_append(param, QMI_WDS_PARAM_PASSWORD,
 					strlen(ctx->password), ctx->password);
 
-	if (qmi_service_send(data->wds, QMI_WDS_START_NET, param,
+	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, param,
 					start_net_cb, cbd, g_free) > 0)
 		return;
 
@@ -346,7 +346,7 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 	param = qmi_param_new_uint32(QMI_WDS_PARAM_PKT_HANDLE,
 						data->pkt_handle);
 
-	if (qmi_service_send(data->wds, QMI_WDS_STOP_NET, param,
+	if (qmi_service_send(data->wds, QMI_WDS_STOP_NETWORK, param,
 					stop_net_cb, cbd, g_free) > 0)
 		return;
 
@@ -381,7 +381,7 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 
 	data->wds = qmi_service_ref(service);
 
-	qmi_service_register(data->wds, QMI_WDS_PKT_STATUS_IND,
+	qmi_service_register(data->wds, QMI_WDS_PACKET_SERVICE_STATUS,
 					pkt_status_notify, gc, NULL);
 }
 

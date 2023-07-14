@@ -149,9 +149,8 @@ static void get_default_profile_cb(struct qmi_result *result, void *user_data)
 
 	data->last_auto_context_id = index;
 
-	/* Get LTE Attach Parameters */
-	if (qmi_service_send(data->wds, 0x85, NULL,
-				get_lte_attach_param_cb, gprs, NULL) > 0)
+	if (qmi_service_send(data->wds, QMI_WDS_GET_LTE_ATTACH_PARAMETERS,
+				NULL, get_lte_attach_param_cb, gprs, NULL) > 0)
 		return;
 
 error:
@@ -192,9 +191,8 @@ static void get_lte_attach_params(struct ofono_gprs* gprs)
 	/* Profile type */
 	qmi_param_append(param, 0x1, sizeof(p), &p);
 
-	/* Get default profile */
-	if (qmi_service_send(data->wds, 0x49, param,
-				get_default_profile_cb, gprs, NULL) > 0)
+	if (qmi_service_send(data->wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
+				param, get_default_profile_cb, gprs, NULL) > 0)
 		return;
 
 	qmi_param_free(param);
