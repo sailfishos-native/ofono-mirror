@@ -567,13 +567,23 @@ static void gobi_post_sim(struct ofono_modem *modem)
 		if (mw)
 			ofono_message_waiting_register(mw);
 	}
+
+	if (data->features & GOBI_WDS) {
+		struct ofono_gprs *gprs;
+		struct ofono_gprs_context *gc;
+
+		gprs = ofono_gprs_create(modem, 0, "qmimodem", data->device);
+		gc = ofono_gprs_context_create(modem, 0, "qmimodem",
+							data->device);
+
+		if (gprs && gc)
+			ofono_gprs_add_context(gprs, gc);
+	}
 }
 
 static void gobi_post_online(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
-	struct ofono_gprs *gprs;
-	struct ofono_gprs_context *gc;
 
 	DBG("%p", modem);
 
@@ -584,15 +594,6 @@ static void gobi_post_online(struct ofono_modem *modem)
 
 	if (data->features & GOBI_VOICE)
 		ofono_ussd_create(modem, 0, "qmimodem", data->device);
-
-	if (data->features & GOBI_WDS) {
-		gprs = ofono_gprs_create(modem, 0, "qmimodem", data->device);
-		gc = ofono_gprs_context_create(modem, 0, "qmimodem",
-							data->device);
-
-		if (gprs && gc)
-			ofono_gprs_add_context(gprs, gc);
-	}
 }
 
 static struct ofono_modem_driver gobi_driver = {
