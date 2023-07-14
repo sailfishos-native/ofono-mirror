@@ -27,6 +27,7 @@
 #include <fcntl.h>
 #include <unistd.h>
 #include <stdlib.h>
+#include <stdio.h>
 
 #define OFONO_API_SUBJECT_TO_CHANGE
 #include <ofono/plugin.h>
@@ -537,6 +538,64 @@ static void gobi_pre_sim(struct ofono_modem *modem)
 							data->device);
 }
 
+static void gobi_setup_gprs(struct ofono_modem *modem)
+{
+	struct gobi_data *data = ofono_modem_get_data(modem);
+	int n_premux = ofono_modem_get_integer(modem, "NumPremuxInterfaces");
+	struct ofono_gprs *gprs;
+	struct ofono_gprs_context *gc;
+	const char *interface;
+	char buf[256];
+	int i;
+
+	gprs = ofono_gprs_create(modem, 0, "qmimodem", data->device);
+	if (!gprs) {
+		ofono_warn("Unable to create gprs for: %s",
+					ofono_modem_get_path(modem));
+		return;
+	}
+
+	/* Simple case of 802.3 interface, no QMAP */
+	if (n_premux == 0) {
+		interface = ofono_modem_get_string(modem, "NetworkInterface");
+
+		gc = ofono_gprs_context_create(modem, 0, "qmimodem",
+							data->device);
+		if (!gc) {
+			ofono_warn("Unable to create gprs-context for: %s",
+					ofono_modem_get_path(modem));
+			return;
+		}
+
+		ofono_gprs_add_context(gprs, gc);
+		ofono_gprs_context_set_interface(gc, interface);
+
+		return;
+	}
+
+	for (i = 0; i < n_premux; i++) {
+		int mux_id;
+
+		sprintf(buf, "PremuxInterface%dMuxId", i + 1);
+		mux_id = ofono_modem_get_integer(modem, buf);
+
+		gc = ofono_gprs_context_create(modem, mux_id, "qmimodem",
+							data->device);
+
+		if (!gc) {
+			ofono_warn("gprs-context creation failed for [%d] %s",
+					i + 1, ofono_modem_get_path(modem));
+			continue;
+		}
+
+		sprintf(buf, "PremuxInterface%d", i + 1);
+		interface = ofono_modem_get_string(modem, buf);
+
+		ofono_gprs_add_context(gprs, gc);
+		ofono_gprs_context_set_interface(gc, interface);
+	}
+}
+
 static void gobi_post_sim(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
@@ -568,21 +627,8 @@ static void gobi_post_sim(struct ofono_modem *modem)
 			ofono_message_waiting_register(mw);
 	}
 
-	if (data->features & GOBI_WDS) {
-		struct ofono_gprs *gprs;
-		struct ofono_gprs_context *gc;
-		const char *interface =
-			ofono_modem_get_string(modem, "NetworkInterface");
-
-		gprs = ofono_gprs_create(modem, 0, "qmimodem", data->device);
-		gc = ofono_gprs_context_create(modem, 0, "qmimodem",
-							data->device);
-
-		if (gprs && gc) {
-			ofono_gprs_add_context(gprs, gc);
-			ofono_gprs_context_set_interface(gc, interface);
-		}
-	}
+	if (data->features & GOBI_WDS)
+		gobi_setup_gprs(modem);
 }
 
 static void gobi_post_online(struct ofono_modem *modem)
