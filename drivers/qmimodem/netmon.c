@@ -202,7 +202,7 @@ static void qmi_netmon_request_update(struct ofono_netmon *netmon,
 	/* Request all signal strength items: mask=0xff */
 	qmi_param_append_uint16(param, 0x10, 255);
 
-	if (qmi_service_send(data->nas, QMI_NAS_GET_RSSI, param,
+	if (qmi_service_send(data->nas, QMI_NAS_GET_SIGNAL_STRENGTH, param,
 					get_rssi_cb, cbd, g_free) > 0)
 		return;
 

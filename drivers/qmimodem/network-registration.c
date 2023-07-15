@@ -261,7 +261,7 @@ static void qmi_registration_status(struct ofono_netreg *netreg,
 
 	cbd->user = data;
 
-	if (qmi_service_send(data->nas, QMI_NAS_GET_SS_INFO, NULL,
+	if (qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
 					get_ss_info_cb, cbd, g_free) > 0)
 		return;
 
@@ -379,7 +379,7 @@ static void qmi_list_operators(struct ofono_netreg *netreg,
 
 	DBG("");
 
-	if (qmi_service_send(data->nas, QMI_NAS_SCAN_NETS, NULL,
+	if (qmi_service_send(data->nas, QMI_NAS_NETWORK_SCAN, NULL,
 					scan_nets_cb, cbd, g_free) > 0)
 		return;
 
@@ -424,7 +424,7 @@ static void qmi_register_auto(struct ofono_netreg *netreg,
 	param = qmi_param_new_uint8(QMI_NAS_PARAM_REGISTER_ACTION,
 					QMI_NAS_REGISTER_ACTION_AUTO);
 
-	if (qmi_service_send(data->nas, QMI_NAS_REGISTER_NET, param,
+	if (qmi_service_send(data->nas, QMI_NAS_NETWORK_REGISTER, param,
 					register_net_cb, cbd, g_free) > 0)
 		return;
 
@@ -454,7 +454,7 @@ static void qmi_register_manual(struct ofono_netreg *netreg,
 	qmi_param_append(param, QMI_NAS_PARAM_REGISTER_MANUAL_INFO,
 						sizeof(info), &info);
 
-	if (qmi_service_send(data->nas, QMI_NAS_REGISTER_NET, param,
+	if (qmi_service_send(data->nas, QMI_NAS_NETWORK_REGISTER, param,
 					register_net_cb, cbd, g_free) > 0)
 		return;
 
@@ -517,7 +517,7 @@ static void qmi_signal_strength(struct ofono_netreg *netreg,
 
 	DBG("");
 
-	if (qmi_service_send(data->nas, QMI_NAS_GET_RSSI, NULL,
+	if (qmi_service_send(data->nas, QMI_NAS_GET_SIGNAL_STRENGTH, NULL,
 					get_rssi_cb, cbd, g_free) > 0)
 		return;
 
@@ -561,7 +561,7 @@ static void event_notify(struct qmi_result *result, void *user_data)
 	}
 }
 
-static void set_event_cb(struct qmi_result *result, void *user_data)
+static void set_event_report_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_netreg *netreg = user_data;
 	struct netreg_data *data = ofono_netreg_get_data(netreg);
@@ -570,10 +570,10 @@ static void set_event_cb(struct qmi_result *result, void *user_data)
 
 	ofono_netreg_register(netreg);
 
-	qmi_service_register(data->nas, QMI_NAS_EVENT,
+	qmi_service_register(data->nas, QMI_NAS_EVENT_REPORT,
 					event_notify, netreg, NULL);
 
-	qmi_service_register(data->nas, QMI_NAS_SS_INFO_IND,
+	qmi_service_register(data->nas, QMI_NAS_SERVING_SYSTEM_INDICATION,
 					ss_info_notify, netreg, NULL);
 }
 
@@ -602,8 +602,8 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 							sizeof(ss), &ss);
 	qmi_param_append_uint8(param, QMI_NAS_PARAM_REPORT_RF_INFO, 0x01);
 
-	if (qmi_service_send(data->nas, QMI_NAS_SET_EVENT, param,
-					set_event_cb, netreg, NULL) > 0)
+	if (qmi_service_send(data->nas, QMI_NAS_SET_EVENT_REPORT, param,
+					set_event_report_cb, netreg, NULL) > 0)
 		return;
 
 	qmi_param_free(param);

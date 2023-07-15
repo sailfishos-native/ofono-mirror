@@ -21,23 +21,6 @@
 
 #include <stdint.h>
 
-#define QMI_NAS_RESET			0	/* Reset NAS service state variables */
-#define QMI_NAS_ABORT			1	/* Abort previously issued NAS command */
-#define QMI_NAS_EVENT			2	/* Connection state report indication */
-#define QMI_NAS_SET_EVENT		2	/* Set NAS state report conditions */
-#define QMI_NAS_SET_REG_EVENT		3	/* Set NAS registration report conditions */
-
-#define QMI_NAS_GET_RSSI		32	/* Get the signal strength */
-#define QMI_NAS_SCAN_NETS		33	/* Scan for visible network */
-#define QMI_NAS_REGISTER_NET		34	/* Initiate a network registration */
-#define QMI_NAS_ATTACH_DETACH		35	/* Initiate an attach or detach action */
-#define QMI_NAS_GET_SS_INFO		36	/* Get info about current serving system */
-#define QMI_NAS_SS_INFO_IND		36	/* Current serving system info indication */
-#define QMI_NAS_GET_HOME_INFO		37	/* Get info about home network */
-
-#define QMI_NAS_SET_SYSTEM_SELECTION_PREF 51
-#define QMI_NAS_GET_SYSTEM_SELECTION_PREF 52
-
 /* Set NAS state report conditions */
 #define QMI_NAS_PARAM_REPORT_SIGNAL_STRENGTH	0x10
 struct qmi_nas_param_event_signal_strength {
@@ -208,6 +191,56 @@ struct qmi_nas_home_network {
 #define QMI_NAS_PARAM_SYSTEM_SELECTION_PREF_MODE	0x11
 
 #define QMI_NAS_RESULT_SYSTEM_SELECTION_PREF_MODE	0x11
+
+enum qmi_nas_command {
+	/* Reset NAS service state variables */
+	QMI_NAS_RESET				= 0x00,
+	/* Abort previously issued NAS command */
+	QMI_NAS_ABORT				= 0x01,
+	/* Connection state report indication */
+	QMI_NAS_EVENT_REPORT			= 0x02,
+	/* Set NAS state report conditions */
+	QMI_NAS_SET_EVENT_REPORT		= 0x02,
+	/* Set NAS registration report conditions */
+	QMI_NAS_REGISTER_INDICATIONS		= 0x03,
+	/* Get the signal strength */
+	QMI_NAS_GET_SIGNAL_STRENGTH		= 0x20,
+	/* Scan for visible network */
+	QMI_NAS_NETWORK_SCAN			= 0x21,
+	/* Initiate a network registration */
+	QMI_NAS_NETWORK_REGISTER		= 0x22,
+	/* Initiate an attach or detach action */
+	QMI_NAS_ATTACH_DETACH			= 0x23,
+	/* Get info about current serving system */
+	QMI_NAS_GET_SERVING_SYSTEM		= 0x24,
+	/* Current serving system info indication */
+	QMI_NAS_SERVING_SYSTEM_INDICATION	= 0x24,
+	/* Get info about home network */
+	QMI_NAS_GET_HOME_NETWORK		= 0x25,
+	QMI_NAS_GET_PREFERRED_NETWORK		= 0x26,
+	QMI_NAS_SET_PREFERRED_NETWORK		= 0x27,
+	QMI_NAS_SET_TECHNOLOGY_PREFERENCE	= 0x2A,
+	QMI_NAS_GET_TECHNOLOGY_PREFERENCE	= 0x2B,
+	QMI_NAS_GET_RF_BAND_INFORMATION		= 0x31,
+	QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE	= 0x33,
+	QMI_NAS_GET_SYSTEM_SELECTION_PREFERENCE	= 0x34,
+	QMI_NAS_GET_OPERATOR_NAME		= 0x39,
+	QMI_NAS_OPERATOR_NAME_INDICATION	= 0x3A,
+	QMI_NAS_GET_CELL_LOCATION_INFO		= 0x43,
+	QMI_NAS_GET_PLMN_NAME			= 0x44,
+	QMI_NAS_NETWORK_TIME_INDICATION		= 0x4C,
+	QMI_NAS_GET_SYSTEM_INFO			= 0x4D,
+	QMI_NAS_SYSTEM_INFO_INDICATION		= 0x4E,
+	QMI_NAS_GET_SIGNAL_INFO			= 0x4F,
+	QMI_NAS_CONFIG_SIGNAL_INFO		= 0x50,
+	QMI_NAS_SIGNAL_INFO_INDICATION		= 0x51,
+	QMI_NAS_GET_TX_RX_INFO			= 0x5A,
+	QMI_NAS_FORCE_NETWORK_SEARCH		= 0x67,
+	QMI_NAS_NETWORK_REJECT_INDICATION	= 0x68,
+	QMI_NAS_CONFIG_SIGNAL_INFO_V2		= 0x6C,
+	QMI_NAS_GET_DRX				= 0x89,
+	QMI_NAS_GET_LTE_CPHY_CA_INFO		= 0xAC,
+};
 
 int qmi_nas_rat_to_tech(uint8_t rat);
 int qmi_nas_cap_to_bearer_tech(int cap_tech);

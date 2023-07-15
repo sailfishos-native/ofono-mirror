@@ -86,7 +86,7 @@ static void qmi_query_rat_mode(struct ofono_radio_settings *rs,
 	DBG("");
 
 	if (qmi_service_send(data->nas,
-				QMI_NAS_GET_SYSTEM_SELECTION_PREF, NULL,
+				QMI_NAS_GET_SYSTEM_SELECTION_PREFERENCE, NULL,
 				get_system_selection_pref_cb, cbd, g_free) > 0)
 		return;
 
@@ -144,7 +144,7 @@ static void qmi_set_rat_mode(struct ofono_radio_settings *rs, unsigned int mode,
 			pref);
 
 	if (qmi_service_send(data->nas,
-				QMI_NAS_SET_SYSTEM_SELECTION_PREF, param,
+				QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE, param,
 				set_system_selection_pref_cb, cbd, g_free) > 0)
 		return;
 

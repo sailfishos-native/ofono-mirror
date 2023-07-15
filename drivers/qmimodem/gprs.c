@@ -327,7 +327,7 @@ static void qmi_attached_status(struct ofono_gprs *gprs,
 	DBG("");
 
 	cbd->user = gprs;
-	if (qmi_service_send(data->nas, QMI_NAS_GET_SS_INFO, NULL,
+	if (qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
 					get_ss_info_cb, cbd, g_free) > 0)
 		return;
 
@@ -355,10 +355,10 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 	 * First get the SS info - the modem may already be connected,
 	 * and the state-change notification may never arrive
 	 */
-	qmi_service_send(data->nas, QMI_NAS_GET_SS_INFO, NULL,
+	qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
 					ss_info_notify, gprs, NULL);
 
-	qmi_service_register(data->nas, QMI_NAS_SS_INFO_IND,
+	qmi_service_register(data->nas, QMI_NAS_SERVING_SYSTEM_INDICATION,
 					ss_info_notify, gprs, NULL);
 
 	ofono_gprs_set_cid_range(gprs, 1, 1);
