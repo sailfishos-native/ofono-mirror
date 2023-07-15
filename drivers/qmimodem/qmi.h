@@ -61,6 +61,15 @@ enum qmi_device_expected_data_format {
 	QMI_DEVICE_EXPECTED_DATA_FORMAT_RAW_IP,
 };
 
+enum qmi_data_endpoint_type {
+    QMI_DATA_ENDPOINT_TYPE_UNKNOWN   = 0x00,
+    QMI_DATA_ENDPOINT_TYPE_HSIC      = 0x01,
+    QMI_DATA_ENDPOINT_TYPE_HSUSB     = 0x02,
+    QMI_DATA_ENDPOINT_TYPE_PCIE      = 0x03,
+    QMI_DATA_ENDPOINT_TYPE_EMBEDDED  = 0x04,
+    QMI_DATA_ENDPOINT_TYPE_BAM_DMUX  = 0x05,
+};
+
 void qmi_free(void *ptr);
 
 typedef void (*qmi_destroy_func_t)(void *user_data);

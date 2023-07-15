@@ -63,6 +63,10 @@ struct qmi_wds_notify_conn_status {
 #define QMI_WDS_PDP_TYPE_IPV6			0x02
 #define QMI_WDS_PDP_TYPE_IPV4V6			0x03
 
+enum qmi_wds_client_type {
+	QMI_WDS_CLIENT_TYPE_TETHERED = 0x01,
+};
+
 enum qmi_wds_command {
 	QMI_WDS_RESET					= 0x00,
 	QMI_WDS_EVENT_REPORT				= 0x01,
