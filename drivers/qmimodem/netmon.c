@@ -198,8 +198,6 @@ static void qmi_netmon_request_update(struct ofono_netmon *netmon,
 	cbd->user = netmon;
 
 	param = qmi_param_new();
-	if (!param)
-		goto out;
 
 	/* Request all signal strength items: mask=0xff */
 	qmi_param_append_uint16(param, 0x10, 255);
@@ -209,10 +207,7 @@ static void qmi_netmon_request_update(struct ofono_netmon *netmon,
 		return;
 
 	qmi_param_free(param);
-
-out:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	g_free(cbd);
 }
 

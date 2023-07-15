@@ -146,8 +146,6 @@ static void qmi_sca_set(struct ofono_sms *sms,
 	snprintf(type, sizeof(type), "%d", sca->type);
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	qmi_param_append(param, QMI_WMS_PARAM_SMSC_ADDR,
 						strlen(number), number);
@@ -162,7 +160,6 @@ static void qmi_sca_set(struct ofono_sms *sms,
 
 error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -205,8 +202,6 @@ static void qmi_submit(struct ofono_sms *sms,
 	memcpy(message->msg_data, pdu, pdu_len);
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	qmi_param_append(param, QMI_WMS_PARAM_MESSAGE, 3 + pdu_len, message);
 
@@ -215,10 +210,7 @@ static void qmi_submit(struct ofono_sms *sms,
 		return;
 
 	qmi_param_free(param);
-
-error:
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -330,8 +322,6 @@ static void qmi_bearer_set(struct ofono_sms *sms, int bearer,
 	domain = bearer_to_domain(bearer);
 
 	param = qmi_param_new_uint8(QMI_WMS_PARAM_DOMAIN, domain);
-	if (!param)
-		goto error;
 
 	if (qmi_service_send(data->wms, QMI_WMS_SET_DOMAIN_PREF, param,
 					set_domain_pref_cb, cbd, g_free) > 0)
@@ -341,7 +331,6 @@ static void qmi_bearer_set(struct ofono_sms *sms, int bearer,
 
 error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -384,8 +373,6 @@ static void delete_msg(struct ofono_sms *sms, uint8_t tag)
 	DBG("");
 
 	param = qmi_param_new();
-	if (param == NULL)
-		goto done;
 
 	qmi_param_append_uint8(param, QMI_WMS_PARAM_DEL_STORE,
 				QMI_WMS_STORAGE_TYPE_NV);
@@ -412,8 +399,6 @@ static void delete_msg(struct ofono_sms *sms, uint8_t tag)
 		return;
 
 	qmi_param_free(param);
-
-done:
 	data->msg_list_chk = false;
 }
 
@@ -458,8 +443,6 @@ static void raw_read(struct ofono_sms *sms, uint8_t type, uint32_t ndx)
 	DBG("");
 
 	param = qmi_param_new();
-	if (param == NULL)
-		goto done;
 
 	data->rd_msg_id.type = type;
 	data->rd_msg_id.ndx = ndx;
@@ -475,8 +458,6 @@ static void raw_read(struct ofono_sms *sms, uint8_t type, uint32_t ndx)
 		return;
 
 	qmi_param_free(param);
-
-done:
 	data->msg_list_chk = false;
 }
 
@@ -552,8 +533,6 @@ static void get_msg_list(struct ofono_sms *sms)
 	DBG("");
 
 	param = qmi_param_new();
-	if (param == NULL)
-		return;
 
 	data->msg_list_chk = true;
 
@@ -734,8 +713,6 @@ static void get_routes_cb(struct qmi_result *result, void *user_data)
 	new_list->route[0].action = QMI_WMS_ACTION_STORE_AND_NOTIFY;
 
 	param = qmi_param_new();
-	if (!param)
-		goto done;
 
 	qmi_param_append(param, QMI_WMS_PARAM_ROUTE_LIST, len, new_list);
 	qmi_param_append_uint8(param, QMI_WMS_PARAM_STATUS_REPORT, 0x01);
@@ -793,14 +770,11 @@ static void create_wms_cb(struct qmi_service *service, void *user_data)
 					event_notify, sms, NULL);
 
 	param = qmi_param_new_uint8(QMI_WMS_PARAM_NEW_MSG_REPORT, 0x01);
-	if (!param)
-		goto done;
 
 	if (qmi_service_send(data->wms, QMI_WMS_SET_EVENT, param,
 					set_event_cb, sms, NULL) > 0)
 		return;
 
-done:
 	ofono_sms_register(sms);
 }
 

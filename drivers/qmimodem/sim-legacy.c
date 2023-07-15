@@ -326,8 +326,6 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 					event_notify, sim, NULL);
 
 	param = qmi_param_new();
-	if (!param)
-		goto done;
 
 	qmi_param_append_uint8(param, QMI_DMS_PARAM_REPORT_PIN_STATUS, 0x01);
 	qmi_param_append_uint8(param, QMI_DMS_PARAM_REPORT_OPER_MODE, 0x01);
@@ -339,7 +337,6 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 
 	qmi_param_free(param);
 
-done:
 	ofono_sim_register(sim);
 }
 

@@ -139,10 +139,6 @@ static void qmi_set_rat_mode(struct ofono_radio_settings *rs, unsigned int mode,
 	}
 
 	param = qmi_param_new();
-	if (!param) {
-		CALLBACK_WITH_FAILURE(cb, user_data);
-		return;
-	}
 
 	qmi_param_append_uint16(param, QMI_NAS_PARAM_SYSTEM_SELECTION_PREF_MODE,
 			pref);

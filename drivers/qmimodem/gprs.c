@@ -188,8 +188,6 @@ static void get_lte_attach_params(struct ofono_gprs* gprs)
 	 * context the modem has activated.
 	 */
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	/* Profile type */
 	qmi_param_append(param, 0x1, sizeof(p), &p);
@@ -200,9 +198,6 @@ static void get_lte_attach_params(struct ofono_gprs* gprs)
 		return;
 
 	qmi_param_free(param);
-
-error:
-	ofono_warn("Unable to query LTE APN... will not activate context");
 }
 
 static int handle_ss_info(struct qmi_result *result, struct ofono_gprs *gprs)
@@ -290,18 +285,13 @@ static void qmi_set_attached(struct ofono_gprs *gprs, int attached,
 		action = QMI_NAS_ATTACH_ACTION_DETACH;
 
 	param = qmi_param_new_uint8(QMI_NAS_PARAM_ATTACH_ACTION, action);
-	if (!param)
-		goto error;
 
 	if (qmi_service_send(data->nas, QMI_NAS_ATTACH_DETACH, param,
 					attach_detach_cb, cbd, g_free) > 0)
 		return;
 
 	qmi_param_free(param);
-
-error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	g_free(cbd);
 }
 

@@ -423,18 +423,13 @@ static void qmi_register_auto(struct ofono_netreg *netreg,
 
 	param = qmi_param_new_uint8(QMI_NAS_PARAM_REGISTER_ACTION,
 					QMI_NAS_REGISTER_ACTION_AUTO);
-	if (!param)
-		goto error;
 
 	if (qmi_service_send(data->nas, QMI_NAS_REGISTER_NET, param,
 					register_net_cb, cbd, g_free) > 0)
 		return;
 
 	qmi_param_free(param);
-
-error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -451,8 +446,6 @@ static void qmi_register_manual(struct ofono_netreg *netreg,
 
 	param = qmi_param_new_uint8(QMI_NAS_PARAM_REGISTER_ACTION,
 					QMI_NAS_REGISTER_ACTION_MANUAL);
-	if (!param)
-		goto error;
 
 	info.mcc = atoi(mcc);
 	info.mnc = atoi(mnc);
@@ -466,10 +459,7 @@ static void qmi_register_manual(struct ofono_netreg *netreg,
 		return;
 
 	qmi_param_free(param);
-
-error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -607,8 +597,6 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 	data->nas = qmi_service_ref(service);
 
 	param = qmi_param_new();
-	if (!param)
-		goto done;
 
 	qmi_param_append(param, QMI_NAS_PARAM_REPORT_SIGNAL_STRENGTH,
 							sizeof(ss), &ss);
@@ -620,7 +608,6 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 
 	qmi_param_free(param);
 
-done:
 	ofono_netreg_register(netreg);
 }
 

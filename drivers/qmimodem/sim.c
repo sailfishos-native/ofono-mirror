@@ -183,8 +183,6 @@ static void qmi_read_attributes(struct ofono_sim *sim, int fileid,
 		goto error;
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	qmi_param_append(param, 0x01, sizeof(aid_data), aid_data);
 	qmi_param_append(param, 0x02, fileid_len, fileid_data);
@@ -198,7 +196,6 @@ static void qmi_read_attributes(struct ofono_sim *sim, int fileid,
 error:
 	CALLBACK_WITH_FAILURE(cb, -1, -1, -1, NULL,
 					EF_STATUS_INVALIDATED, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -252,8 +249,6 @@ static void qmi_read_transparent(struct ofono_sim *sim,
 	read_data[3] = (length & 0xff00) >> 8;
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	qmi_param_append(param, 0x01, sizeof(aid_data), aid_data);
 	qmi_param_append(param, 0x02, fileid_len, fileid_data);
@@ -267,7 +262,6 @@ static void qmi_read_transparent(struct ofono_sim *sim,
 
 error:
 	CALLBACK_WITH_FAILURE(cb, NULL, 0, user_data);
-
 	g_free(cbd);
 }
 
@@ -298,8 +292,6 @@ static void qmi_read_record(struct ofono_sim *sim,
 	read_data[3] = (length & 0xff00) >> 8;
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	qmi_param_append(param, 0x01, sizeof(aid_data), aid_data);
 	qmi_param_append(param, 0x02, fileid_len, fileid_data);
@@ -313,7 +305,6 @@ static void qmi_read_record(struct ofono_sim *sim,
 
 error:
 	CALLBACK_WITH_FAILURE(cb, NULL, 0, user_data);
-
 	g_free(cbd);
 }
 
@@ -383,8 +374,6 @@ static void write_generic(struct ofono_sim *sim,
 	memcpy(&write_data[4], value, length);
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	qmi_param_append(param, 0x01, sizeof(aid_data), aid_data);
 	qmi_param_append(param, 0x02, fileid_len, fileid_data);
@@ -398,7 +387,6 @@ static void write_generic(struct ofono_sim *sim,
 
 error:
 	CALLBACK_WITH_FAILURE(cb, user_data);
-
 	g_free(cbd);
 }
 
@@ -745,8 +733,6 @@ static void qmi_pin_send(struct ofono_sim *sim, const char *passwd,
 		goto error;
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	/* param info */
 	info_data = alloca(2 + passwd_len);
@@ -769,7 +755,6 @@ static void qmi_pin_send(struct ofono_sim *sim, const char *passwd,
 
 error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -874,8 +859,6 @@ static void create_uim_cb(struct qmi_service *service, void *user_data)
 	data->uim = qmi_service_ref(service);
 
 	param = qmi_param_new_uint32(QMI_UIM_PARAM_EVENT_MASK, mask);
-	if (!param)
-		goto error;
 
 	if (qmi_service_send(data->uim, QMI_UIM_EVENT_REGISTRATION, param,
 					event_registration_cb, sim, NULL) > 0)

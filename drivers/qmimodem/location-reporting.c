@@ -136,18 +136,13 @@ static void qmi_location_reporting_enable(struct ofono_location_reporting *lr,
 	cbd->user = lr;
 
 	param = qmi_param_new_uint8(QMI_PDS_PARAM_AUTO_TRACKING, 0x01);
-	if (!param)
-		goto error;
 
 	if (qmi_service_send(data->pds, QMI_PDS_SET_AUTOTRACK, param,
 					autotrack_enable_cb, cbd, g_free) > 0)
 		return;
 
 	qmi_param_free(param);
-
-error:
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -181,18 +176,13 @@ static void qmi_location_reporting_disable(struct ofono_location_reporting *lr,
 	cbd->user = lr;
 
 	param = qmi_param_new_uint8(QMI_PDS_PARAM_AUTO_TRACKING, 0x00);
-	if (!param)
-		goto error;
 
 	if (qmi_service_send(data->pds, QMI_PDS_SET_AUTOTRACK, param,
 					autotrack_disable_cb, cbd, g_free) > 0)
 		return;
 
 	qmi_param_free(param);
-
-error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	g_free(cbd);
 }
 
@@ -228,8 +218,6 @@ static void create_pds_cb(struct qmi_service *service, void *user_data)
 					state_notify, lr, NULL);
 
 	param = qmi_param_new();
-	if (!param)
-		goto done;
 
 	qmi_param_append_uint8(param, QMI_PDS_PARAM_REPORT_NMEA, 0x01);
 	qmi_param_append_uint8(param, QMI_PDS_PARAM_REPORT_NMEA_DEBUG, 0x00);
@@ -240,7 +228,6 @@ static void create_pds_cb(struct qmi_service *service, void *user_data)
 
 	qmi_param_free(param);
 
-done:
 	ofono_location_reporting_register(lr);
 }
 

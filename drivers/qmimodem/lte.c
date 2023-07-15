@@ -82,8 +82,6 @@ static void qmimodem_lte_set_default_attach_info(const struct ofono_lte *lte,
 	p.index = ldd->default_profile;
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	/* Profile selector */
 	qmi_param_append(param, 0x01, sizeof(p), &p);
@@ -98,8 +96,6 @@ static void qmimodem_lte_set_default_attach_info(const struct ofono_lte *lte,
 		return;
 
 	qmi_param_free(param);
-
-error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 	g_free(cbd);
 }
@@ -151,8 +147,6 @@ static void get_default_profile_cb(struct qmi_result *result, void *user_data)
 	p.index = index;
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	/* Profile selector */
 	qmi_param_append(param, 0x01, sizeof(p), &p);
@@ -194,8 +188,6 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 
 	/* Query the default profile */
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	/* Profile type */
 	qmi_param_append(param, 0x1, sizeof(p), &p);
@@ -207,7 +199,6 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 
 	qmi_param_free(param);
 
-error:
 	ofono_error("Failed to query default profile");
 	ofono_lte_register(lte);
 }

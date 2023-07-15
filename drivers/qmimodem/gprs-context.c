@@ -273,8 +273,6 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 	}
 
 	param = qmi_param_new();
-	if (!param)
-		goto error;
 
 	qmi_param_append(param, QMI_WDS_PARAM_APN,
 					strlen(ctx->apn), ctx->apn);
@@ -347,8 +345,6 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 
 	param = qmi_param_new_uint32(QMI_WDS_PARAM_PKT_HANDLE,
 						data->pkt_handle);
-	if (!param)
-		goto error;
 
 	if (qmi_service_send(data->wds, QMI_WDS_STOP_NET, param,
 					stop_net_cb, cbd, g_free) > 0)
@@ -356,7 +352,6 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 
 	qmi_param_free(param);
 
-error:
 	if (cb)
 		CALLBACK_WITH_FAILURE(cb, user_data);
 
