@@ -101,6 +101,7 @@ static void qmimodem_lte_set_default_attach_info(const struct ofono_lte *lte,
 
 error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
+	g_free(cbd);
 }
 
 static void reset_profile_cb(struct qmi_result *result, void *user_data)
