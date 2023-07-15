@@ -337,6 +337,8 @@ static void qmi_bearer_set(struct ofono_sms *sms, int bearer,
 					set_domain_pref_cb, cbd, g_free) > 0)
 		return;
 
+	qmi_param_free(param);
+
 error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 
