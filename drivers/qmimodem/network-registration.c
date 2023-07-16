@@ -526,6 +526,20 @@ static void qmi_signal_strength(struct ofono_netreg *netreg,
 	g_free(cbd);
 }
 
+static void system_info_notify(struct qmi_result *result, void *user_data)
+{
+	DBG("");
+
+	qmi_result_print_tlvs(result);
+}
+
+static void signal_info_notify(struct qmi_result *result, void *user_data)
+{
+	DBG("");
+
+	qmi_result_print_tlvs(result);
+}
+
 static void event_notify(struct qmi_result *result, void *user_data)
 {
 	struct ofono_netreg *netreg = user_data;
@@ -561,12 +575,16 @@ static void event_notify(struct qmi_result *result, void *user_data)
 	}
 }
 
-static void set_event_report_cb(struct qmi_result *result, void *user_data)
+static void register_indications_cb(struct qmi_result *result,
+							void *user_data)
 {
 	struct ofono_netreg *netreg = user_data;
 	struct netreg_data *data = ofono_netreg_get_data(netreg);
 
-	DBG("");
+	if (qmi_result_set_error(result, NULL)) {
+		ofono_netreg_remove(netreg);
+		return;
+	}
 
 	ofono_netreg_register(netreg);
 
@@ -575,6 +593,41 @@ static void set_event_report_cb(struct qmi_result *result, void *user_data)
 
 	qmi_service_register(data->nas, QMI_NAS_SERVING_SYSTEM_INDICATION,
 					ss_info_notify, netreg, NULL);
+
+	qmi_service_register(data->nas, QMI_NAS_SYSTEM_INFO_INDICATION,
+					system_info_notify, netreg, NULL);
+
+	qmi_service_register(data->nas, QMI_NAS_SIGNAL_INFO_INDICATION,
+					signal_info_notify, netreg, NULL);
+}
+
+static void set_event_report_cb(struct qmi_result *result, void *user_data)
+{
+	struct ofono_netreg *netreg = user_data;
+	struct netreg_data *data = ofono_netreg_get_data(netreg);
+	static const uint8_t PARAM_SERVING_SYSTEM_EVENTS = 0x13;
+	static const uint8_t PARAM_SYSTEM_INFO = 0x18;
+	static const uint8_t PARAM_SIGNAL_INFO = 0x19;
+	struct qmi_param *param;
+
+	DBG("");
+
+	if (qmi_result_set_error(result, NULL))
+		goto error;
+
+	param = qmi_param_new();
+
+	qmi_param_append_uint8(param, PARAM_SERVING_SYSTEM_EVENTS, 0x01);
+	qmi_param_append_uint8(param, PARAM_SYSTEM_INFO, 0x01);
+	qmi_param_append_uint8(param, PARAM_SIGNAL_INFO, 0x01);
+
+	if (qmi_service_send(data->nas, QMI_NAS_REGISTER_INDICATIONS, param,
+				register_indications_cb, netreg, NULL) > 0)
+		return;
+
+	qmi_param_free(param);
+error:
+	ofono_netreg_remove(netreg);
 }
 
 static void create_nas_cb(struct qmi_service *service, void *user_data)
@@ -582,33 +635,37 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 	struct ofono_netreg *netreg = user_data;
 	struct netreg_data *data = ofono_netreg_get_data(netreg);
 	struct qmi_param *param;
-	struct qmi_nas_param_event_signal_strength ss = { .report = 0x01,
-				.count = 5, .dbm[0] = -55, .dbm[1] = -65,
-				.dbm[2] = -75, .dbm[3] = -85, .dbm[4] = -95 };
+	static const uint8_t PARAM_REPORT_SIGNAL_STRENGTH = 0x10;
+	static const uint8_t PARAM_REPORT_RF_INFO = 0x11;
+	struct {
+		uint8_t report;					/* bool */
+		uint8_t count;
+		int8_t dbm[5];
+	} __attribute__((__packed__)) ss = { .report = 0x01,
+			.count = 5, .dbm[0] = -55, .dbm[1] = -65,
+			.dbm[2] = -75, .dbm[3] = -85, .dbm[4] = -95 };
 
 	DBG("");
 
 	if (!service) {
 		ofono_error("Failed to request NAS service");
-		ofono_netreg_remove(netreg);
-		return;
+		goto error;
 	}
 
 	data->nas = qmi_service_ref(service);
 
 	param = qmi_param_new();
 
-	qmi_param_append(param, QMI_NAS_PARAM_REPORT_SIGNAL_STRENGTH,
-							sizeof(ss), &ss);
-	qmi_param_append_uint8(param, QMI_NAS_PARAM_REPORT_RF_INFO, 0x01);
+	qmi_param_append(param, PARAM_REPORT_SIGNAL_STRENGTH, sizeof(ss), &ss);
+	qmi_param_append_uint8(param, PARAM_REPORT_RF_INFO, 0x01);
 
 	if (qmi_service_send(data->nas, QMI_NAS_SET_EVENT_REPORT, param,
 					set_event_report_cb, netreg, NULL) > 0)
 		return;
 
 	qmi_param_free(param);
-
-	ofono_netreg_register(netreg);
+error:
+	ofono_netreg_remove(netreg);
 }
 
 static int qmi_netreg_probe(struct ofono_netreg *netreg,

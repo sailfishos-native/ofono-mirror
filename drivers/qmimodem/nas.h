@@ -21,18 +21,6 @@
 
 #include <stdint.h>
 
-/* Set NAS state report conditions */
-#define QMI_NAS_PARAM_REPORT_SIGNAL_STRENGTH	0x10
-struct qmi_nas_param_event_signal_strength {
-	uint8_t report;					/* bool */
-	uint8_t count;
-	int8_t dbm[5];
-} __attribute__((__packed__));
-#define QMI_NAS_PARAM_REPORT_RF_INFO		0x11
-struct qmi_nas_param_event_rf_info {
-	uint8_t report;					/* bool */
-} __attribute__((__packed__));
-
 #define QMI_NAS_NOTIFY_SIGNAL_STRENGTH		0x10
 struct qmi_nas_signal_strength {
 	int8_t dbm;
