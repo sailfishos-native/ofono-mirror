@@ -60,13 +60,12 @@ struct modem_info {
 };
 
 struct device_info {
-	char *devpath;
 	char *devnode;
 	char *interface;
 	char *number;
 	char *label;
 	char *sysattr;
-	char *subsystem;
+	struct udev_device *udev_device;
 };
 
 struct serial_device_info {
@@ -205,16 +204,18 @@ static gboolean setup_gobi(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = list->next) {
 		struct device_info *info = list->data;
+		const char *subsystem =
+			udev_device_get_subsystem(info->udev_device);
 
 		DBG("%s %s %s %s %s %s", info->devnode, info->interface,
 						info->number, info->label,
-						info->sysattr, info->subsystem);
+						info->sysattr, subsystem);
 
-		if (g_strcmp0(info->subsystem, "usbmisc") == 0) /* cdc-wdm */
+		if (g_strcmp0(subsystem, "usbmisc") == 0) /* cdc-wdm */
 			qmi = info->devnode;
-		else if (g_strcmp0(info->subsystem, "net") == 0) /* wwan */
+		else if (g_strcmp0(subsystem, "net") == 0) /* wwan */
 			net = info->devnode;
-		else if (g_strcmp0(info->subsystem, "tty") == 0) {
+		else if (g_strcmp0(subsystem, "tty") == 0) {
 			if (g_strcmp0(info->interface, "255/255/255") == 0) {
 				if (g_strcmp0(info->number, "00") == 0)
 					diag = info->devnode; /* ec20 */
@@ -256,9 +257,11 @@ static gboolean setup_sierra(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = list->next) {
 		struct device_info *info = list->data;
+		const char *subsystem =
+			udev_device_get_subsystem(info->udev_device);
 
 		DBG("%s %s %s %s %s", info->devnode, info->interface,
-				info->number, info->label, info->subsystem);
+				info->number, info->label, subsystem);
 
 		if (g_strcmp0(info->interface, "255/255/255") == 0) {
 			if (g_strcmp0(info->number, "01") == 0)
@@ -269,7 +272,7 @@ static gboolean setup_sierra(struct modem_info *modem)
 				app = info->devnode;
 			else if (g_strcmp0(info->number, "07") == 0)
 				net = info->devnode;
-			else if (g_strcmp0(info->subsystem, "net") == 0) {
+			else if (g_strcmp0(subsystem, "net") == 0) {
 				/*
 				 * When using the voice firmware on a mc7304
 				 * the second cdc-wdm interface doesn't handle
@@ -284,7 +287,7 @@ static gboolean setup_sierra(struct modem_info *modem)
 					if (net == NULL)
 						net = info->devnode;
 				}
-			} else if (g_strcmp0(info->subsystem, "usbmisc") == 0) {
+			} else if (g_strcmp0(subsystem, "usbmisc") == 0) {
 				if (g_strcmp0(info->number, "08") == 0) {
 					qmi = info->devnode;
 				} else if (g_strcmp0(info->number, "0a") == 0) {
@@ -683,15 +686,17 @@ static gboolean setup_telitqmi(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = list->next) {
 		struct device_info *info = list->data;
+		const char *subsystem =
+				udev_device_get_subsystem(info->udev_device);
 
 		DBG("%s %s %s %s %s", info->devnode, info->interface,
-				info->number, info->label, info->subsystem);
+				info->number, info->label, subsystem);
 
 		if (g_strcmp0(info->interface, "255/255/255") == 0 &&
 				g_strcmp0(info->number, "02") == 0) {
-			if (g_strcmp0(info->subsystem, "net") == 0)
+			if (g_strcmp0(subsystem, "net") == 0)
 				net = info->devnode;
-			else if (g_strcmp0(info->subsystem, "usbmisc") == 0)
+			else if (g_strcmp0(subsystem, "usbmisc") == 0)
 				qmi = info->devnode;
 		}
 	}
@@ -720,9 +725,11 @@ static gboolean setup_droid(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = list->next) {
 		struct device_info *info = list->data;
+		const char *subsystem =
+			udev_device_get_subsystem(info->udev_device);
 
 		DBG("%s %s %s %s %s", info->devnode, info->interface,
-				info->number, info->label, info->subsystem);
+				info->number, info->label, subsystem);
 
 		if (g_strcmp0(info->interface, "255/255/255") == 0 &&
 				g_strcmp0(info->number, "04") == 0) {
@@ -957,15 +964,17 @@ static gboolean setup_quectelqmi(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = g_slist_next(list)) {
 		struct device_info *info = list->data;
+		const char *subsystem =
+			udev_device_get_subsystem(info->udev_device);
 
 		DBG("%s %s %s %s %s", info->devnode, info->interface,
-				info->number, info->label, info->subsystem);
+				info->number, info->label, subsystem);
 
 		if (g_strcmp0(info->interface, "255/255/255") == 0 &&
 				g_strcmp0(info->number, "04") == 0) {
-			if (g_strcmp0(info->subsystem, "net") == 0)
+			if (g_strcmp0(subsystem, "net") == 0)
 				net = info->devnode;
-			else if (g_strcmp0(info->subsystem, "usbmisc") == 0)
+			else if (g_strcmp0(subsystem, "usbmisc") == 0)
 				qmi = info->devnode;
 		} else if (g_strcmp0(info->interface, "255/0/0") == 0 &&
 				g_strcmp0(info->number, "01") == 0) {
@@ -1005,16 +1014,18 @@ static gboolean setup_mbim(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = list->next) {
 		struct device_info *info = list->data;
+		const char *subsystem =
+			udev_device_get_subsystem(info->udev_device);
 
 		DBG("%s %s %s %s %s %s", info->devnode, info->interface,
 						info->number, info->label,
-						info->sysattr, info->subsystem);
+						info->sysattr, subsystem);
 
-		if (g_strcmp0(info->subsystem, "usbmisc") == 0) /* cdc-wdm */
+		if (g_strcmp0(subsystem, "usbmisc") == 0) /* cdc-wdm */
 			ctl = info->devnode;
-		else if (g_strcmp0(info->subsystem, "net") == 0) /* wwan */
+		else if (g_strcmp0(subsystem, "net") == 0) /* wwan */
 			net = info->devnode;
-		else if (g_strcmp0(info->subsystem, "tty") == 0) {
+		else if (g_strcmp0(subsystem, "tty") == 0) {
 			if (g_strcmp0(info->number, "02") == 0)
 				atcmd = info->devnode;
 		}
@@ -1201,9 +1212,11 @@ static gboolean setup_gemalto(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = list->next) {
 		struct device_info *info = list->data;
+		const char *subsystem =
+			udev_device_get_subsystem(info->udev_device);
 
 		DBG("%s %s %s %s %s", info->devnode, info->interface,
-				info->number, info->label, info->subsystem);
+				info->number, info->label, subsystem);
 
 		/* PHS8-P */
 		if (g_strcmp0(info->interface, "255/255/255") == 0) {
@@ -1213,9 +1226,9 @@ static gboolean setup_gemalto(struct modem_info *modem)
 				app = info->devnode;
 			else if (g_strcmp0(info->number, "03") == 0)
 				mdm = info->devnode;
-			else if (g_strcmp0(info->subsystem, "net") == 0)
+			else if (g_strcmp0(subsystem, "net") == 0)
 				net = info->devnode;
-			else if (g_strcmp0(info->subsystem, "usbmisc") == 0)
+			else if (g_strcmp0(subsystem, "usbmisc") == 0)
 				qmi = info->devnode;
 		}
 
@@ -1230,7 +1243,7 @@ static gboolean setup_gemalto(struct modem_info *modem)
 		}
 
 		if (g_strcmp0(info->interface, "2/6/0") == 0) {
-			if (g_strcmp0(info->subsystem, "net") == 0) {
+			if (g_strcmp0(subsystem, "net") == 0) {
 				if (g_strcmp0(info->number, "0a") == 0)
 					net = info->devnode;
 				if (g_strcmp0(info->number, "0c") == 0)
@@ -1268,12 +1281,16 @@ static gboolean setup_xmm7xxx(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = list->next) {
 		struct device_info *info = list->data;
+		const char *syspath =
+				udev_device_get_syspath(info->udev_device);
+		const char *subsystem =
+				udev_device_get_subsystem(info->udev_device);
 
-		DBG("%s %s %s %s %s %s %s\n", info->devpath, info->devnode,
+		DBG("%s %s %s %s %s %s %s\n", syspath, info->devnode,
 				info->interface, info->number, info->label,
-				info->sysattr, info->subsystem);
+				info->sysattr, subsystem);
 
-		if (g_strcmp0(info->subsystem, "pci") == 0) {
+		if (g_strcmp0(subsystem, "pci") == 0) {
 			if ((g_strcmp0(modem->vendor, "0x8086") == 0) &&
 				(g_strcmp0(modem->model, "0x7560") == 0)) {
 				mdm = "/dev/iat";
@@ -1287,10 +1304,10 @@ static gboolean setup_xmm7xxx(struct modem_info *modem)
 			}
 		} else { /* For USB */
 			if (g_strcmp0(modem->model, "095a") == 0) {
-				if (g_strcmp0(info->subsystem, "tty") == 0) {
+				if (g_strcmp0(subsystem, "tty") == 0) {
 					if (g_strcmp0(info->number, "00") == 0)
 						mdm = info->devnode;
-				} else if (g_strcmp0(info->subsystem, "net")
+				} else if (g_strcmp0(subsystem, "net")
 									== 0) {
 					if (g_strcmp0(info->number, "06") == 0)
 						net = info->devnode;
@@ -1300,10 +1317,10 @@ static gboolean setup_xmm7xxx(struct modem_info *modem)
 						net3 = info->devnode;
 				}
 			} else {
-				if (g_strcmp0(info->subsystem, "tty") == 0) {
+				if (g_strcmp0(subsystem, "tty") == 0) {
 					if (g_strcmp0(info->number, "02") == 0)
 						mdm = info->devnode;
-				} else if (g_strcmp0(info->subsystem, "net")
+				} else if (g_strcmp0(subsystem, "net")
 									== 0) {
 					if (g_strcmp0(info->number, "00") == 0)
 						net = info->devnode;
@@ -1345,10 +1362,12 @@ static gboolean setup_sim7x00(struct modem_info *modem)
 
 	for (list = modem->devices; list; list = list->next) {
 		struct device_info *info = list->data;
+		const char *subsystem =
+				udev_device_get_subsystem(info->udev_device);
 
 		DBG("%s %s %s %s %s %s", info->devnode, info->interface,
 						info->number, info->label,
-						info->sysattr, info->subsystem);
+						info->sysattr, subsystem);
 
 		/*
 		 * SIM7100 serial port layout:
@@ -1360,11 +1379,11 @@ static gboolean setup_sim7x00(struct modem_info *modem)
 		 *
 		 * -- https://www.spinics.net/lists/linux-usb/msg135728.html
 		 */
-		if (g_strcmp0(info->subsystem, "usbmisc") == 0) /* cdc-wdm */
+		if (g_strcmp0(subsystem, "usbmisc") == 0) /* cdc-wdm */
 			qmi = info->devnode; /* SIM7600 */
-		else if (g_strcmp0(info->subsystem, "net") == 0) /* wwan */
+		else if (g_strcmp0(subsystem, "net") == 0) /* wwan */
 			net = info->devnode; /* SIM7600 */
-		else if (g_strcmp0(info->subsystem, "tty") == 0) {
+		else if (g_strcmp0(subsystem, "tty") == 0) {
 			if (g_strcmp0(info->interface, "255/255/255") == 0) {
 				if (g_strcmp0(info->number, "00") == 0)
 					diag = info->devnode; /* SIM7x00 */
@@ -1470,13 +1489,12 @@ static const char *get_sysattr(const char *driver)
 
 static void device_info_free(struct device_info *info)
 {
-	g_free(info->devpath);
 	g_free(info->devnode);
 	g_free(info->interface);
 	g_free(info->number);
 	g_free(info->label);
 	g_free(info->sysattr);
-	g_free(info->subsystem);
+	udev_device_unref(info->udev_device);
 	g_free(info);
 }
 
@@ -1534,8 +1552,10 @@ static gboolean check_remove(gpointer key, gpointer value, gpointer user_data)
 	case MODEM_TYPE_PCIE:
 		for (list = modem->devices; list; list = list->next) {
 			struct device_info *info = list->data;
+			const char *syspath =
+				udev_device_get_syspath(info->udev_device);
 
-			if (g_strcmp0(info->devpath, devpath) == 0)
+			if (g_strcmp0(syspath, devpath) == 0)
 				return TRUE;
 		}
 		break;
@@ -1662,14 +1682,13 @@ static void add_device(const char *modem_syspath, const char *modem_devname,
 			struct udev_device *device)
 {
 	struct udev_device *usb_interface;
-	const char *devpath, *devnode, *interface, *number;
-	const char *label, *sysattr, *subsystem;
+	const char *devnode, *interface, *number;
+	const char *label, *sysattr;
 	struct modem_info *modem;
 	struct device_info *info;
 	struct udev_device *parent;
 
-	devpath = udev_device_get_syspath(device);
-	if (devpath == NULL)
+	if (udev_device_get_syspath(device) == NULL)
 		return;
 
 	modem = g_hash_table_lookup(modem_list, modem_syspath);
@@ -1732,27 +1751,24 @@ static void add_device(const char *modem_syspath, const char *modem_devname,
 		}
 	}
 
-	subsystem = udev_device_get_subsystem(device);
-
 	if (modem->sysattr != NULL)
 		sysattr = udev_device_get_sysattr_value(device, modem->sysattr);
 	else
 		sysattr = NULL;
 
-	DBG("%s", modem->syspath);
-	DBG("%s", devpath);
+	DBG("modem:%s device:%s",
+			modem->syspath, udev_device_get_syspath(device));
 	DBG("%s (%s) %s [%s] ==> %s %s", devnode, modem->driver,
 					interface, number, label, sysattr);
 
 	info = g_new0(struct device_info, 1);
 
-	info->devpath = g_strdup(devpath);
 	info->devnode = g_strdup(devnode);
 	info->interface = g_strdup(interface);
 	info->number = g_strdup(number);
 	info->label = g_strdup(label);
 	info->sysattr = g_strdup(sysattr);
-	info->subsystem = g_strdup(subsystem);
+	info->udev_device = udev_device_ref(device);
 
 	modem->devices = g_slist_insert_sorted(modem->devices, info,
 							compare_device);
