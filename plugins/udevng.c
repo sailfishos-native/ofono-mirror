@@ -1656,10 +1656,10 @@ static void add_serial_device(struct udev_device *dev)
 	modem->serial = info;
 }
 
-static void add_device(const char *syspath, const char *devname,
-			const char *driver, const char *vendor,
-			const char *model, struct udev_device *device,
-			enum modem_type type)
+static void add_device(const char *modem_syspath, const char *modem_devname,
+			const char *modem_driver, const char *modem_vendor,
+			const char *modem_model, enum modem_type modem_type,
+			struct udev_device *device)
 {
 	struct udev_device *usb_interface;
 	const char *devpath, *devnode, *interface, *number;
@@ -1672,18 +1672,18 @@ static void add_device(const char *syspath, const char *devname,
 	if (devpath == NULL)
 		return;
 
-	modem = g_hash_table_lookup(modem_list, syspath);
+	modem = g_hash_table_lookup(modem_list, modem_syspath);
 	if (modem == NULL) {
 		modem = g_new0(struct modem_info, 1);
 
-		modem->type = type;
-		modem->syspath = g_strdup(syspath);
-		modem->devname = g_strdup(devname);
-		modem->driver = g_strdup(driver);
-		modem->vendor = g_strdup(vendor);
-		modem->model = g_strdup(model);
+		modem->type = modem_type;
+		modem->syspath = g_strdup(modem_syspath);
+		modem->devname = g_strdup(modem_devname);
+		modem->driver = g_strdup(modem_driver);
+		modem->vendor = g_strdup(modem_vendor);
+		modem->model = g_strdup(modem_model);
 
-		modem->sysattr = get_sysattr(driver);
+		modem->sysattr = get_sysattr(modem_driver);
 
 		g_hash_table_replace(modem_list, modem->syspath, modem);
 	}
@@ -1739,9 +1739,9 @@ static void add_device(const char *syspath, const char *devname,
 	else
 		sysattr = NULL;
 
-	DBG("%s", syspath);
+	DBG("%s", modem->syspath);
 	DBG("%s", devpath);
-	DBG("%s (%s) %s [%s] ==> %s %s", devnode, driver,
+	DBG("%s (%s) %s [%s] ==> %s %s", devnode, modem->driver,
 					interface, number, label, sysattr);
 
 	info = g_new0(struct device_info, 1);
@@ -1929,8 +1929,8 @@ static void check_usb_device(struct udev_device *device)
 			return;
 	}
 
-	add_device(syspath, devname, driver, vendor, model, device,
-			MODEM_TYPE_USB);
+	add_device(syspath, devname, driver, vendor, model, MODEM_TYPE_USB,
+			device);
 }
 
 static const struct {
@@ -1984,8 +1984,8 @@ static void check_pci_device(struct udev_device *device)
 	if (driver == NULL)
 		return;
 
-	add_device(syspath, devname, driver, vendor, model, device,
-			MODEM_TYPE_PCIE);
+	add_device(syspath, devname, driver, vendor, model, MODEM_TYPE_PCIE,
+			device);
 }
 
 static void check_device(struct udev_device *device)
