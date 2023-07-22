@@ -65,6 +65,7 @@ struct device_info {
 	char *number;
 	char *label;
 	char *sysattr;
+	char *kernel_driver;
 	struct udev_device *udev_device;
 };
 
@@ -1494,6 +1495,7 @@ static void device_info_free(struct device_info *info)
 	g_free(info->number);
 	g_free(info->label);
 	g_free(info->sysattr);
+	g_free(info->kernel_driver);
 	udev_device_unref(info->udev_device);
 	g_free(info);
 }
@@ -1679,7 +1681,7 @@ static void add_serial_device(struct udev_device *dev)
 static void add_device(const char *modem_syspath, const char *modem_devname,
 			const char *modem_driver, const char *modem_vendor,
 			const char *modem_model, enum modem_type modem_type,
-			struct udev_device *device)
+			struct udev_device *device, const char *kernel_driver)
 {
 	struct udev_device *usb_interface;
 	const char *devnode, *interface, *number;
@@ -1768,6 +1770,7 @@ static void add_device(const char *modem_syspath, const char *modem_devname,
 	info->number = g_strdup(number);
 	info->label = g_strdup(label);
 	info->sysattr = g_strdup(sysattr);
+	info->kernel_driver = g_strdup(kernel_driver);
 	info->udev_device = udev_device_ref(device);
 
 	modem->devices = g_slist_insert_sorted(modem->devices, info,
@@ -1870,6 +1873,7 @@ static void check_usb_device(struct udev_device *device)
 	struct udev_device *usb_device;
 	const char *syspath, *devname, *driver;
 	const char *vendor = NULL, *model = NULL;
+	const char *kernel_driver;
 
 	usb_device = udev_device_get_parent_with_subsystem_devtype(device,
 							"usb", "usb_device");
@@ -1898,34 +1902,32 @@ static void check_usb_device(struct udev_device *device)
 					usb_interface, "OFONO_DRIVER");
 	}
 
+	kernel_driver = udev_device_get_property_value(device, "ID_USB_DRIVER");
+	if (kernel_driver == NULL) {
+		kernel_driver = udev_device_get_driver(device);
+		if (kernel_driver == NULL) {
+			struct udev_device *parent;
+
+			parent = udev_device_get_parent(device);
+			if (parent == NULL)
+				return;
+
+			kernel_driver = udev_device_get_driver(parent);
+			if (kernel_driver == NULL)
+				return;
+		}
+	}
+
 	if (driver == NULL) {
-		const char *drv;
 		unsigned int i;
 
-		drv = udev_device_get_property_value(device, "ID_USB_DRIVER");
-		if (drv == NULL) {
-			drv = udev_device_get_driver(device);
-			if (drv == NULL) {
-				struct udev_device *parent;
-
-				parent = udev_device_get_parent(device);
-				if (parent == NULL)
-					return;
-
-				drv = udev_device_get_driver(parent);
-				if (drv == NULL)
-					return;
-			}
-		}
-
-
-		DBG("%s [%s:%s]", drv, vendor, model);
+		DBG("%s [%s:%s]", kernel_driver, vendor, model);
 
 		if (vendor == NULL || model == NULL)
 			return;
 
 		for (i = 0; vendor_list[i].driver; i++) {
-			if (g_str_equal(vendor_list[i].drv, drv) == FALSE)
+			if (g_strcmp0(vendor_list[i].drv, kernel_driver))
 				continue;
 
 			if (vendor_list[i].vid) {
@@ -1946,7 +1948,7 @@ static void check_usb_device(struct udev_device *device)
 	}
 
 	add_device(syspath, devname, driver, vendor, model, MODEM_TYPE_USB,
-			device);
+			device, kernel_driver);
 }
 
 static const struct {
@@ -1962,7 +1964,8 @@ static const struct {
 static void check_pci_device(struct udev_device *device)
 {
 	const char *syspath, *devname, *driver;
-	const char *vendor = NULL, *model = NULL, *drv = NULL;
+	const char *vendor = NULL, *model = NULL;
+	const char *kernel_driver;
 	unsigned int i;
 
 	syspath = udev_device_get_syspath(device);
@@ -1974,14 +1977,14 @@ static void check_pci_device(struct udev_device *device)
 	vendor = udev_device_get_sysattr_value(device, "vendor");
 	model = udev_device_get_sysattr_value(device, "device");
 	driver = udev_device_get_property_value(device, "OFONO_DRIVER");
-	drv = udev_device_get_property_value(device, "DRIVER");
-	DBG("%s [%s:%s]", drv, vendor, model);
+	kernel_driver = udev_device_get_property_value(device, "DRIVER");
+	DBG("%s [%s:%s]", kernel_driver, vendor, model);
 
-	if (vendor == NULL || model == NULL || drv == NULL)
+	if (vendor == NULL || model == NULL || kernel_driver == NULL)
 		return;
 
 	for (i = 0; pci_driver_list[i].driver; i++) {
-		if (g_str_equal(pci_driver_list[i].drv, drv) == FALSE)
+		if (g_strcmp0(pci_driver_list[i].drv, kernel_driver))
 			continue;
 
 		if (pci_driver_list[i].vid) {
@@ -2001,7 +2004,7 @@ static void check_pci_device(struct udev_device *device)
 		return;
 
 	add_device(syspath, devname, driver, vendor, model, MODEM_TYPE_PCIE,
-			device);
+			device, kernel_driver);
 }
 
 static void check_device(struct udev_device *device)
