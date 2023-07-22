@@ -527,8 +527,6 @@ void __ofono_nettime_probe_drivers(struct ofono_modem *modem);
 void __ofono_nettime_info_received(struct ofono_modem *modem,
 					struct ofono_network_time *info);
 
-#include <ofono/cdma-voicecall.h>
-#include <ofono/cdma-connman.h>
 #include <ofono/sim-auth.h>
 
 #include <ofono/gprs-provision.h>
@@ -554,11 +552,6 @@ void __ofono_emulator_slc_condition(struct ofono_emulator *em,
 					enum ofono_emulator_slc_condition cond);
 
 #include <ofono/gnss.h>
-#include <ofono/cdma-sms.h>
-#include <ofono/cdma-netreg.h>
-
-#include <ofono/cdma-provision.h>
-ofono_bool_t __ofono_cdma_provision_get_name(const char *sid, char **name);
 
 #include <ofono/private-network.h>
 

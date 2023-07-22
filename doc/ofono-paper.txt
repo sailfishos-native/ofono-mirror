@@ -11,11 +11,11 @@ change that; it is a telephony host stack specifically targeted at both
 mobile embedded and desktop systems.
 
 Launched on May 11, 2009 oFono aims to provide a solid framework for builidng
-3GPP GSM/UMTS User Equipment (UE) standard compliant devices.  Support for
-CDMA/EVDO technologies is also planned.  The goal of oFono is to provide an
-easy to use, high-level API for applications.  This is accomplished by keeping
-the core logic within the daemon, taking care of standards compliance and
-exposing only the need-to-know aspects to the application.
+3GPP GSM/UMTS User Equipment (UE) standard compliant devices.  The goal of
+oFono is to provide an easy to use, high-level API for applications.  This is
+accomplished by keeping the core logic within the daemon, taking care of
+standards compliance and exposing only the need-to-know aspects to the
+application.
 
 The license for oFono was chosen as GPLv2.  This means that all core services
 and plugins for oFono must be Open Source.  oFono accepts GPLv2 or any

@@ -22,8 +22,4 @@ ENV{DEVTYPE}!="usb_device", GOTO="ofono_end"
 # Ignore fake serial number
 ATTRS{serial}=="1234567890ABCDEF", ENV{ID_SERIAL_SHORT}=""
 
-# Nokia CDMA Device
-ATTRS{idVendor}=="0421", ATTRS{idProduct}=="023e", ENV{OFONO_DRIVER}="nokiacdma"
-ATTRS{idVendor}=="0421", ATTRS{idProduct}=="00b6", ENV{OFONO_DRIVER}="nokiacdma"
-
 LABEL="ofono_end"

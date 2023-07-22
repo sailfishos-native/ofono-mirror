@@ -50,8 +50,6 @@
 #include <ofono/call-barring.h>
 #include <ofono/phonebook.h>
 #include <ofono/message-waiting.h>
-#include <ofono/cdma-netreg.h>
-#include <ofono/cdma-connman.h>
 #include <ofono/log.h>
 
 #include <drivers/atmodem/atutil.h>
@@ -88,7 +86,6 @@ struct huawei_data {
 	const char *offline_command;
 	gboolean have_voice;
 	gboolean have_gsm;
-	gboolean have_cdma;
 	gboolean have_ndis;
 	gboolean have_ussdmode;
 };
@@ -453,13 +450,6 @@ static void sysinfo_enable_cb(gboolean ok, GAtResult *result,
 	g_at_chat_send(data->pcui, "AT^CVOICE=?", cvoice_prefix,
 					cvoice_support_cb, modem, NULL);
 
-	/* For CDMA we use AlwaysOnline so we leave the modem online. */
-	if (data->have_gsm == FALSE && data->have_cdma == TRUE) {
-		ofono_modem_set_boolean(modem, "AlwaysOnline", TRUE);
-		ofono_modem_set_powered(modem, TRUE);
-		return;
-	}
-
 	if (g_at_chat_send(data->pcui, data->offline_command, none_prefix,
 					cfun_offline, modem, NULL) > 0)
 		return;
@@ -509,17 +499,11 @@ static void rfswitch_support(gboolean ok, GAtResult *result, gpointer user_data)
 	struct ofono_modem *modem = user_data;
 	struct huawei_data *data = ofono_modem_get_data(modem);
 
-	if (data->have_gsm == FALSE && data->have_cdma == TRUE) {
-		data->offline_command = "AT+CFUN=5";
-		goto done;
-	}
-
 	if (!ok)
 		data->offline_command = "AT+CFUN=5";
 	else
 		data->offline_command = "AT+CFUN=7";
 
-done:
 	g_at_chat_send(data->pcui, "AT+CFUN=1", none_prefix,
 					cfun_enable, modem, NULL);
 }
@@ -545,8 +529,6 @@ static void gcap_support(gboolean ok, GAtResult *result, gpointer user_data)
 
 		if (!strcmp(gcap, "+CGSM"))
 			data->have_gsm = TRUE;
-		else if (!strcmp(gcap, "+CIS707-A"))
-			data->have_cdma = TRUE;
 	}
 
 done:
@@ -824,13 +806,6 @@ static void huawei_pre_sim(struct ofono_modem *modem)
 		ofono_devinfo_create(modem, 0, "atmodem", data->pcui);
 		sim = ofono_sim_create(modem, OFONO_VENDOR_HUAWEI,
 						"atmodem", data->pcui);
-	} else if (data->have_cdma == TRUE) {
-		ofono_devinfo_create(modem, 0, "cdmamodem", data->pcui);
-
-		/* Create SIM atom only if SIM is not embedded */
-		if (data->sim_state != SIM_STATE_ROMSIM)
-			sim = ofono_sim_create(modem, OFONO_VENDOR_HUAWEI,
-						"atmodem-noef", data->pcui);
 	}
 
 	if (sim && data->have_sim == TRUE)
@@ -873,23 +848,16 @@ static void huawei_post_online(struct ofono_modem *modem)
 
 	DBG("%p", modem);
 
-	if (data->have_gsm == TRUE) {
-		ofono_netreg_create(modem, OFONO_VENDOR_HUAWEI,
-						"atmodem", data->pcui);
+	ofono_netreg_create(modem, OFONO_VENDOR_HUAWEI,
+					"atmodem", data->pcui);
+	ofono_cbs_create(modem, OFONO_VENDOR_QUALCOMM_MSM,
+					"atmodem", data->pcui);
 
-		ofono_cbs_create(modem, OFONO_VENDOR_QUALCOMM_MSM,
+	if (data->have_ussdmode == TRUE)
+		ofono_ussd_create(modem, 0, "huaweimodem", data->pcui);
+	else
+		ofono_ussd_create(modem, OFONO_VENDOR_QUALCOMM_MSM,
 						"atmodem", data->pcui);
-		if (data->have_ussdmode == TRUE)
-			ofono_ussd_create(modem, 0, "huaweimodem", data->pcui);
-		else
-			ofono_ussd_create(modem, OFONO_VENDOR_QUALCOMM_MSM,
-							"atmodem", data->pcui);
-	} else if (data->have_cdma == TRUE) {
-		ofono_cdma_netreg_create(modem, 0, "huaweimodem", data->pcui);
-
-		ofono_cdma_connman_create(modem, OFONO_VENDOR_HUAWEI,
-						"cdmamodem", data->modem);
-	}
 
 	if (data->have_voice == TRUE) {
 		struct ofono_message_waiting *mw;

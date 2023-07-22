@@ -541,14 +541,6 @@ static inline void check_network_access_name(const char *command,
 	check_common_text(command, test);
 }
 
-/* Defined in TS 102.223 Section 8.71 */
-static inline void check_cdma_sms_tpdu(
-				const struct stk_common_byte_array *command,
-				const struct stk_common_byte_array *test)
-{
-	check_common_byte_array(command, test);
-}
-
 static void check_text_attr_html(const struct stk_text_attribute *test,
 				char *text, const char *expected_html)
 {
@@ -6279,7 +6271,6 @@ struct send_sms_test {
 	unsigned char qualifier;
 	char *alpha_id;
 	struct sms_test gsm_sms;
-	struct stk_common_byte_array cdma_sms;
 	struct stk_icon_id icon_id;
 	struct stk_text_attribute text_attr;
 	struct stk_frame_id frame_id;
@@ -8081,7 +8072,6 @@ static void test_send_sms(gconstpointer data)
 
 	check_alpha_id(command->send_sms.alpha_id, test->alpha_id);
 	check_gsm_sms(&command->send_sms.gsm_sms, &test->gsm_sms);
-	check_cdma_sms_tpdu(&command->send_sms.cdma_sms, &test->cdma_sms);
 	check_icon_id(&command->send_sms.icon_id, &test->icon_id);
 	check_text_attr(&command->send_sms.text_attr, &test->text_attr);
 	check_frame_id(&command->send_sms.frame_id, &test->frame_id);

@@ -142,13 +142,13 @@ pkginclude_HEADERS = include/log.h include/plugin.h include/history.h \
 			include/gprs.h include/gprs-context.h \
 			include/radio-settings.h include/stk.h \
 			include/audio-settings.h include/nettime.h \
-			include/ctm.h include/cdma-voicecall.h \
-			include/cdma-sms.h include/sim-auth.h \
+			include/ctm.h \
+			include/sim-auth.h \
 			include/gprs-provision.h include/emulator.h \
 			include/location-reporting.h \
-			include/cdma-connman.h include/gnss.h \
-			include/private-network.h include/cdma-netreg.h \
-			include/cdma-provision.h include/handsfree.h \
+			include/gnss.h \
+			include/private-network.h \
+			include/handsfree.h \
 			include/handsfree-audio.h include/siri.h \
 			include/netmon.h include/lte.h include/ims.h \
 			include/storage.h
@@ -458,8 +458,7 @@ builtin_sources += drivers/atmodem/atutil.h \
 			drivers/huaweimodem/voicecall.c \
 			drivers/huaweimodem/audio-settings.c \
 			drivers/huaweimodem/gprs-context.c \
-			drivers/huaweimodem/radio-settings.c \
-			drivers/huaweimodem/cdma-netreg.c
+			drivers/huaweimodem/radio-settings.c
 
 builtin_modules += calypsomodem
 builtin_sources += drivers/atmodem/atutil.h \
@@ -576,15 +575,6 @@ dist_conf_DATA += plugins/phonesim.conf
 endif
 endif
 
-if CDMAMODEM
-builtin_modules += cdmamodem
-builtin_sources += drivers/cdmamodem/cdmamodem.h \
-			drivers/cdmamodem/cdmamodem.c \
-			drivers/cdmamodem/voicecall.c \
-			drivers/cdmamodem/devinfo.c \
-			drivers/cdmamodem/connman.c
-endif
-
 builtin_modules += g1
 builtin_sources += plugins/g1.c
 
@@ -636,9 +626,6 @@ builtin_sources += plugins/gemalto.c
 builtin_modules += nokia
 builtin_sources += plugins/nokia.c
 
-builtin_modules += nokiacdma
-builtin_sources += plugins/nokiacdma.c
-
 builtin_modules += linktop
 builtin_sources += plugins/linktop.c
 
@@ -650,9 +637,6 @@ builtin_sources += plugins/alcatel.c
 
 builtin_modules += speedup
 builtin_sources += plugins/speedup.c
-
-builtin_modules += speedupcdma
-builtin_sources += plugins/speedupcdma.c
 
 builtin_modules += samsung
 builtin_sources += plugins/samsung.c
@@ -732,9 +716,6 @@ builtin_sources += plugins/mbpi.h plugins/mbpi.c
 builtin_modules += provision
 builtin_sources += plugins/provision.c
 
-builtin_modules += cdma_provision
-builtin_sources += plugins/cdma-provision.c
-
 builtin_modules += file_provision
 builtin_sources += plugins/file-provision.c
 
@@ -791,14 +772,13 @@ src_ofonod_SOURCES = $(builtin_sources) $(gatchat_sources) src/ofono.ver \
 			src/nettime.c src/stkagent.c src/stkagent.h \
 			src/simfs.c src/simfs.h src/audio-settings.c \
 			src/smsagent.c src/smsagent.h src/ctm.c \
-			src/cdma-voicecall.c src/sim-auth.c \
+			src/sim-auth.c \
 			src/message.h src/message.c src/gprs-provision.c \
 			src/emulator.c src/location-reporting.c \
-			src/cdma-connman.c src/gnss.c \
+			src/gnss.c \
 			src/gnssagent.c src/gnssagent.h \
-			src/cdma-smsutil.h src/cdma-smsutil.c \
-			src/cdma-sms.c src/private-network.c src/cdma-netreg.c \
-			src/cdma-provision.c src/handsfree.c \
+			src/private-network.c \
+			src/handsfree.c \
 			src/handsfree-audio.c src/bluetooth.h \
 			src/hfp.h src/siri.c \
 			src/netmon.c src/lte.c src/ims.c \
@@ -927,16 +907,10 @@ test_scripts = test/backtrace \
 		test/set-umts-band \
 		test/lockdown-modem \
 		test/set-call-forwarding \
-		test/cdma-list-call \
-		test/cdma-dial-number \
-		test/cdma-hangup \
-		test/cdma-set-credentials \
 		test/disable-call-forwarding \
 		test/list-messages \
 		test/test-sms \
 		test/test-message-waiting \
-		test/cdma-connman-disable \
-		test/cdma-connman-enable \
 		test/set-context-property \
 		test/test-gnss \
 		test/swap-calls \
@@ -979,7 +953,7 @@ unit_objects =
 
 unit_tests = unit/test-common unit/test-util \
 				unit/test-simutil unit/test-stkutil \
-				unit/test-sms unit/test-cdmasms \
+				unit/test-sms \
 				unit/test-mbim \
 				unit/test-rilmodem-cs \
 				unit/test-rilmodem-sms \
@@ -1012,10 +986,6 @@ unit_objects += $(unit_test_stkutil_OBJECTS)
 unit_test_sms_SOURCES = unit/test-sms.c src/util.c src/smsutil.c src/storage.c
 unit_test_sms_LDADD = @GLIB_LIBS@ $(ell_ldadd)
 unit_objects += $(unit_test_sms_OBJECTS)
-
-unit_test_cdmasms_SOURCES = unit/test-cdmasms.c src/cdma-smsutil.c
-unit_test_cdmasms_LDADD = @GLIB_LIBS@ $(ell_ldadd)
-unit_objects += $(unit_test_cdmasms_OBJECTS)
 
 unit_test_sms_root_SOURCES = unit/test-sms-root.c \
 					src/util.c src/smsutil.c src/storage.c
@@ -1084,7 +1054,7 @@ TESTS = $(unit_tests)
 if TOOLS
 noinst_PROGRAMS += tools/huawei-audio tools/auto-enable \
 			tools/get-location tools/lookup-apn \
-			tools/lookup-provider-name tools/tty-redirector
+			tools/tty-redirector
 
 tools_huawei_audio_SOURCES = tools/huawei-audio.c
 tools_huawei_audio_LDADD = gdbus/libgdbus-internal.la @GLIB_LIBS@ @DBUS_LIBS@
@@ -1097,10 +1067,6 @@ tools_get_location_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
 tools_lookup_apn_SOURCES = plugins/mbpi.c plugins/mbpi.h tools/lookup-apn.c
 tools_lookup_apn_LDADD = @GLIB_LIBS@
-
-tools_lookup_provider_name_SOURCES = plugins/mbpi.c plugins/mbpi.h \
-				tools/lookup-provider-name.c
-tools_lookup_provider_name_LDADD = @GLIB_LIBS@
 
 tools_tty_redirector_SOURCES = tools/tty-redirector.c
 tools_tty_redirector_LDADD = @GLIB_LIBS@

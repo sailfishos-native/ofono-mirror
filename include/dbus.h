@@ -68,13 +68,6 @@ extern "C" {
 #define OFONO_LTE_INTERFACE OFONO_SERVICE ".LongTermEvolution"
 #define OFONO_IMS_INTERFACE OFONO_SERVICE ".IpMultimediaSystem"
 
-/* CDMA Interfaces */
-#define OFONO_CDMA_VOICECALL_MANAGER_INTERFACE "org.ofono.cdma.VoiceCallManager"
-#define OFONO_CDMA_MESSAGE_MANAGER_INTERFACE "org.ofono.cdma.MessageManager"
-#define OFONO_CDMA_CONNECTION_MANAGER_INTERFACE "org.ofono.cdma.ConnectionManager"
-#define OFONO_CDMA_NETWORK_REGISTRATION_INTERFACE \
-					"org.ofono.cdma.NetworkRegistration"
-
 /* Essentially a{sv} */
 #define OFONO_PROPERTIES_ARRAY_SIGNATURE DBUS_DICT_ENTRY_BEGIN_CHAR_AS_STRING \
 					DBUS_TYPE_STRING_AS_STRING \
