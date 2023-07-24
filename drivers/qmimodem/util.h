@@ -25,6 +25,7 @@ struct cb_data {
 	void *cb;
 	void *data;
 	void *user;
+	int ref;
 };
 
 static inline struct cb_data *cb_data_new(void *cb, void *data)
@@ -35,8 +36,25 @@ static inline struct cb_data *cb_data_new(void *cb, void *data)
 	ret->cb = cb;
 	ret->data = data;
 	ret->user = NULL;
+	ret->ref = 1;
 
 	return ret;
+}
+
+static inline struct cb_data *cb_data_ref(struct cb_data *cbd)
+{
+	cbd->ref++;
+	return cbd;
+}
+
+static inline void cb_data_unref(gpointer user_data)
+{
+	struct cb_data *cbd = user_data;
+
+	if (--cbd->ref)
+		return;
+
+	g_free(cbd);
 }
 
 #define CALLBACK_WITH_CME_ERROR(cb, err, args...)	\
