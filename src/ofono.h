@@ -217,6 +217,42 @@ gboolean __ofono_modem_remove_atom_watch(struct ofono_modem *modem,
 
 void __ofono_atom_free(struct ofono_atom *atom);
 
+const void *__ofono_atom_driver_builtin_find(const char *name,
+				const struct ofono_atom_driver_desc *start,
+				const struct ofono_atom_driver_desc *stop);
+
+#define OFONO_DEFINE_ATOM_CREATE(type, atom_type, ...)			\
+extern struct ofono_atom_driver_desc __start___ ## type[];		\
+extern struct ofono_atom_driver_desc __stop___ ## type[];		\
+									\
+struct ofono_ ## type *ofono_ ## type ##_create(			\
+				struct ofono_modem *modem,		\
+				unsigned int vendor, const char *driver,\
+				void *data)				\
+{									\
+	const struct ofono_ ## type ## _driver *drv =			\
+		__ofono_atom_driver_builtin_find(driver,		\
+				__start___ ## type,			\
+				__stop___ ## type);			\
+	struct ofono_ ## type *atom;					\
+									\
+	if (!drv || !drv->probe)					\
+		return NULL;						\
+									\
+	atom = g_new0(struct ofono_ ##type, 1);				\
+	atom->atom = __ofono_modem_add_atom(modem, atom_type,		\
+				type ##_remove, atom);			\
+	__VA_ARGS__							\
+									\
+	if (drv->probe(atom, vendor, data) < 0)	{			\
+		ofono_ ## type ##_remove(atom);				\
+		return NULL;						\
+	}								\
+									\
+	atom->driver = drv;						\
+	return atom;							\
+}
+
 typedef void (*ofono_modemwatch_cb_t)(struct ofono_modem *modem,
 					gboolean added, void *data);
 void __ofono_modemwatch_init(void);

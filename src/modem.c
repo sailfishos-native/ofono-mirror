@@ -457,6 +457,28 @@ static void flush_atoms(struct ofono_modem *modem, enum modem_state new_state)
 	}
 }
 
+const void *__ofono_atom_driver_builtin_find(const char *name,
+				const struct ofono_atom_driver_desc *start,
+				const struct ofono_atom_driver_desc *stop)
+{
+	const struct ofono_atom_driver_desc *desc;
+
+	if (!name)
+		return NULL;
+
+	for (desc = start; desc < stop; desc++) {
+		if (!desc->name || !desc->driver)
+			continue;
+
+		if (strcmp(desc->name, name))
+			continue;
+
+		return desc->driver;
+	}
+
+	return NULL;
+}
+
 static void notify_online_watches(struct ofono_modem *modem)
 {
 	struct ofono_watchlist_item *item;
