@@ -294,9 +294,6 @@ enum uicc_app_param {
 	UICC_APP_PARAM_URL =			0x5F50,
 };
 
-gboolean isi_uicc_properties(GIsiModem *modem, int *app_id, int *app_type,
-				int *client_id);
-
 #ifdef __cplusplus
 };
 #endif

@@ -67,8 +67,6 @@ enum uicc_flag {
 	UICC_FLAG_PASSWD_REQUIRED =	1 << 2,
 };
 
-static GHashTable *g_modems;
-
 struct file_info {
 	int fileid;
 	int length;
@@ -1621,8 +1619,6 @@ static int uicc_sim_probe(struct ofono_sim *sim, unsigned int vendor,
 		return -ENOMEM;
 	}
 
-	g_hash_table_insert(g_modems, g_isi_client_modem(sd->client), sim);
-
 	sd->server_running = FALSE;
 	sd->uicc_app_started = FALSE;
 	sd->pin_state_received = FALSE;
@@ -1642,8 +1638,6 @@ static void uicc_sim_remove(struct ofono_sim *sim)
 
 	if (data == NULL)
 		return;
-
-	g_hash_table_remove(g_modems, g_isi_client_modem(data->client));
 
 	g_hash_table_destroy(data->app_table);
 	g_isi_client_destroy(data->client);
@@ -1672,38 +1666,10 @@ static const struct ofono_sim_driver driver = {
 
 void isi_uicc_init(void)
 {
-	g_modems = g_hash_table_new(g_direct_hash, g_direct_equal);
 	ofono_sim_driver_register(&driver);
 }
 
 void isi_uicc_exit(void)
 {
-	g_hash_table_destroy(g_modems);
 	ofono_sim_driver_unregister(&driver);
-}
-
-gboolean isi_uicc_properties(GIsiModem *modem, int *app_id, int *app_type,
-				int *client_id)
-{
-	struct ofono_sim *sim;
-	struct uicc_sim_data *sd;
-
-	sim = g_hash_table_lookup(g_modems, modem);
-	if (sim == NULL)
-		return FALSE;
-
-	sd = ofono_sim_get_data(sim);
-	if (sd == NULL)
-		return FALSE;
-
-	if (app_id != NULL)
-		*app_id = sd->app_id;
-
-	if (app_type != NULL)
-		*app_type = sd->app_type;
-
-	if (client_id != NULL)
-		*client_id = sd->client_id;
-
-	return TRUE;
 }
