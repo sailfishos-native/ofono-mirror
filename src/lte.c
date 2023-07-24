@@ -57,8 +57,6 @@ struct ofono_lte {
 	struct ofono_lte_default_attach_info info;
 };
 
-static GSList *g_drivers = NULL;
-
 static void lte_load_settings(struct ofono_lte *lte)
 {
 	char *apn;
@@ -328,7 +326,7 @@ static const GDBusSignalTable lte_signals[] = {
 	{ }
 };
 
-static void lte_atom_remove(struct ofono_atom *atom)
+static void lte_remove(struct ofono_atom *atom)
 {
 	struct ofono_lte *lte = __ofono_atom_get_data(atom);
 
@@ -351,60 +349,7 @@ static void lte_atom_remove(struct ofono_atom *atom)
 	g_free(lte);
 }
 
-struct ofono_lte *ofono_lte_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver, void *data)
-{
-	struct ofono_lte *lte;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	lte = g_try_new0(struct ofono_lte, 1);
-
-	if (lte == NULL)
-		return NULL;
-
-	lte->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_LTE,
-						lte_atom_remove, lte);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_lte_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(lte, vendor, data) < 0)
-			continue;
-
-		lte->driver = drv;
-		break;
-	}
-
-	DBG("LTE atom created");
-
-	return lte;
-}
-
-int ofono_lte_driver_register(const struct ofono_lte_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_lte_driver_unregister(const struct ofono_lte_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
+OFONO_DEFINE_ATOM_CREATE(lte, OFONO_ATOM_TYPE_LTE)
 
 static void lte_atom_unregister(struct ofono_atom *atom)
 {

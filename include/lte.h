@@ -42,17 +42,12 @@ struct ofono_lte_default_attach_info {
 typedef void (*ofono_lte_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_lte_driver {
-	const char *name;
 	int (*probe)(struct ofono_lte *lte, unsigned int vendor, void *data);
 	void (*remove)(struct ofono_lte *lte);
 	void (*set_default_attach_info)(const struct ofono_lte *lte,
 			const struct ofono_lte_default_attach_info *info,
 			ofono_lte_cb_t cb, void *data);
 };
-
-int ofono_lte_driver_register(const struct ofono_lte_driver *d);
-
-void ofono_lte_driver_unregister(const struct ofono_lte_driver *d);
 
 struct ofono_lte *ofono_lte_create(struct ofono_modem *modem,
 					unsigned int vendor,

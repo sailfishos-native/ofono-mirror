@@ -48,9 +48,6 @@ extern void qmi_gprs_exit(void);
 extern void qmi_gprs_context_init(void);
 extern void qmi_gprs_context_exit(void);
 
-extern void qmi_lte_init(void);
-extern void qmi_lte_exit(void);
-
 extern void qmi_radio_settings_init(void);
 extern void qmi_radio_settings_exit(void);
 

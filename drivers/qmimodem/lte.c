@@ -38,8 +38,7 @@
 
 #include "qmi.h"
 #include "wds.h"
-
-#include "qmimodem.h"
+#include "util.h"
 
 struct lte_data {
 	struct qmi_service *wds;
@@ -237,18 +236,9 @@ static void qmimodem_lte_remove(struct ofono_lte *lte)
 }
 
 static const struct ofono_lte_driver driver = {
-	.name				= "qmimodem",
 	.probe				= qmimodem_lte_probe,
 	.remove				= qmimodem_lte_remove,
 	.set_default_attach_info	= qmimodem_lte_set_default_attach_info,
 };
 
-void qmi_lte_init(void)
-{
-	ofono_lte_driver_register(&driver);
-}
-
-void qmi_lte_exit(void)
-{
-	ofono_lte_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(lte, qmimodem, &driver)

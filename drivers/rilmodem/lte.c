@@ -38,7 +38,7 @@
 #include <gril/gril.h>
 #include <gril/grilutil.h>
 
-#include "rilmodem.h"
+#include "rilutil.h"
 
 struct ril_lte_data {
 	GRil *ril;
@@ -143,18 +143,9 @@ static void ril_lte_remove(struct ofono_lte *lte)
 }
 
 static const struct ofono_lte_driver driver = {
-	.name				= RILMODEM,
 	.probe				= ril_lte_probe,
 	.remove				= ril_lte_remove,
 	.set_default_attach_info	= ril_lte_set_default_attach_info,
 };
 
-void ril_lte_init(void)
-{
-	ofono_lte_driver_register(&driver);
-}
-
-void ril_lte_exit(void)
-{
-	ofono_lte_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(lte, rilmodem, &driver)

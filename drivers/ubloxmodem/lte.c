@@ -202,18 +202,9 @@ static void ublox_lte_remove(struct ofono_lte *lte)
 }
 
 static const struct ofono_lte_driver driver = {
-	.name				= UBLOXMODEM,
 	.probe				= ublox_lte_probe,
 	.remove				= ublox_lte_remove,
 	.set_default_attach_info	= ublox_lte_set_default_attach_info,
 };
 
-void ublox_lte_init(void)
-{
-	ofono_lte_driver_register(&driver);
-}
-
-void ublox_lte_exit(void)
-{
-	ofono_lte_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(lte, ubloxmodem, &driver)

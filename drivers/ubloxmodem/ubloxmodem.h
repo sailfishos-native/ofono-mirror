@@ -49,6 +49,3 @@ void ublox_netreg_exit(void);
 
 extern void ublox_netmon_init(void);
 extern void ublox_netmon_exit(void);
-
-extern void ublox_lte_init(void);
-extern void ublox_lte_exit(void);

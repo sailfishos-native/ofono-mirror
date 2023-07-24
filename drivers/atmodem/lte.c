@@ -36,10 +36,10 @@
 #include <ofono/log.h>
 #include <ofono/lte.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "atmodem.h"
 
 static const char *none_prefix[] = { NULL };
 
@@ -169,18 +169,9 @@ static void at_lte_remove(struct ofono_lte *lte)
 }
 
 static const struct ofono_lte_driver driver = {
-	.name				= "atmodem",
 	.probe				= at_lte_probe,
 	.remove				= at_lte_remove,
 	.set_default_attach_info	= at_lte_set_default_attach_info,
 };
 
-void at_lte_init(void)
-{
-	ofono_lte_driver_register(&driver);
-}
-
-void at_lte_exit(void)
-{
-	ofono_lte_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(lte, atmodem, &driver)
