@@ -199,11 +199,24 @@ static gboolean setup_hso(struct modem_info *modem)
 static int setup_qmi(struct modem_info *modem, const struct device_info *qmi,
 			const struct device_info *net)
 {
+	const char *attr_value;
+	uint32_t ifindex;
+	int r;
+
 	DBG("qmi: %s net: %s kernel_driver: %s interface_number: %s",
 		qmi->devnode, net->devnode, net->kernel_driver, net->number);
 
 	if (!qmi->kernel_driver || !net->number)
 		return -EINVAL;
+
+	attr_value = udev_device_get_sysattr_value(net->udev_device,
+								"ifindex");
+	if (!attr_value)
+		return -EINVAL;
+
+	r = l_safe_atou32(attr_value, &ifindex);
+	if (r < 0)
+		return r;
 
 	ofono_modem_set_driver(modem->modem, "gobi");
 	ofono_modem_set_string(modem->modem, "Device", qmi->devnode);
@@ -211,6 +224,8 @@ static int setup_qmi(struct modem_info *modem, const struct device_info *qmi,
 							net->kernel_driver);
 	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
 	ofono_modem_set_string(modem->modem, "InterfaceNumber", net->number);
+	ofono_modem_set_integer(modem->modem, "NetworkInterfaceIndex",
+							ifindex);
 
 	switch (modem->type) {
 	case MODEM_TYPE_USB:
