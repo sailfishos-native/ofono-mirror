@@ -77,6 +77,7 @@ struct gobi_data {
 	unsigned int discover_attempts;
 	uint8_t oper_mode;
 	bool using_mux;
+	bool using_qmi_wwan_q;
 	int main_net_ifindex;
 	char main_net_name[IFNAMSIZ];
 	uint32_t set_powered_id;
@@ -102,6 +103,9 @@ static int gobi_probe(struct ofono_modem *modem)
 
 	kernel_driver = ofono_modem_get_string(modem, "KernelDriver");
 	DBG("kernel_driver: %s", kernel_driver);
+
+	if (!strcmp(kernel_driver, "qmi_wwan_q"))
+		data->using_qmi_wwan_q = true;
 
 	data->main_net_ifindex =
 		ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
@@ -523,6 +527,10 @@ static void powered_up_cb(int error, uint16_t type,
 	if (!param)
 		goto error;
 
+	if (data->using_qmi_wwan_q)
+		l_sysctl_set_u32(1, "/sys/class/net/%s/link_state",
+					data->main_net_name);
+
 	cb_data_ref(cbd);
 
 	if (qmi_service_send(data->dms, QMI_DMS_SET_OPER_MODE, param,
@@ -555,6 +563,10 @@ static void powered_down_cb(int error, uint16_t type,
 					QMI_DMS_OPER_MODE_LOW_POWER);
 	if (!param)
 		goto error;
+
+	if (data->using_qmi_wwan_q)
+		l_sysctl_set_u32(0, "/sys/class/net/%s/link_state",
+					data->main_net_name);
 
 	cb_data_ref(cbd);
 
