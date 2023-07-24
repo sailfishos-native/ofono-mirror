@@ -80,6 +80,7 @@ struct gobi_data {
 	bool using_qmi_wwan_q;
 	int main_net_ifindex;
 	char main_net_name[IFNAMSIZ];
+	uint32_t max_aggregation_size;
 	uint32_t set_powered_id;
 };
 
@@ -678,6 +679,10 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 	}
 
 	data->using_mux = true;
+
+	data->max_aggregation_size =
+		ofono_modem_get_integer(modem, "MaxAggregationSize");
+	DBG("max_aggregation_size: %u", data->max_aggregation_size);
 
 	for (i = 0; i < n_premux; i++) {
 		int mux_id;
