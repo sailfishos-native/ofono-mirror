@@ -32,13 +32,12 @@
 #include <ofono/log.h>
 #include <ofono/modem.h>
 #include <ofono/stk.h>
-#include "util.h"
 
 #include <gril.h>
 #include <parcel.h>
 
-#include "rilmodem.h"
 #include "vendor.h"
+#include "rilutil.h"
 
 struct stk_data {
 	GRil *ril;
@@ -240,19 +239,10 @@ static void ril_stk_remove(struct ofono_stk *stk)
 }
 
 static const struct ofono_stk_driver driver = {
-	.name = RILMODEM,
 	.probe = ril_stk_probe,
 	.remove = ril_stk_remove,
 	.envelope = ril_stk_envelope,
 	.terminal_response = ril_stk_terminal_response,
 };
 
-void ril_stk_init(void)
-{
-	ofono_stk_driver_register(&driver);
-}
-
-void ril_stk_exit(void)
-{
-	ofono_stk_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(stk, rilmodem, &driver)

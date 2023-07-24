@@ -33,10 +33,11 @@
 #include <ofono/modem.h>
 #include <ofono/stk.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 
-#include "atmodem.h"
 #include "stk.h"
 #include "vendor.h"
 
@@ -236,19 +237,10 @@ static void at_stk_remove(struct ofono_stk *stk)
 }
 
 static const struct ofono_stk_driver driver = {
-	.name			= "atmodem",
 	.probe			= at_stk_probe,
 	.remove			= at_stk_remove,
 	.envelope		= at_stk_envelope,
 	.terminal_response	= at_stk_terminal_response,
 };
 
-void at_stk_init(void)
-{
-	ofono_stk_driver_register(&driver);
-}
-
-void at_stk_exit(void)
-{
-	ofono_stk_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(stk, atmodem, &driver)

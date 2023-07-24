@@ -33,11 +33,10 @@
 #include <ofono/log.h>
 #include <ofono/modem.h>
 #include <ofono/stk.h>
+#include <drivers/atmodem/atutil.h>
 
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "calypsomodem.h"
 
 struct stk_data {
 	GAtChat *chat;
@@ -292,19 +291,10 @@ static void calypso_stk_remove(struct ofono_stk *stk)
 }
 
 static const struct ofono_stk_driver driver = {
-	.name			= "calypsomodem",
 	.probe			= calypso_stk_probe,
 	.remove			= calypso_stk_remove,
 	.envelope		= calypso_stk_envelope,
 	.terminal_response	= calypso_stk_terminal_response,
 };
 
-void calypso_stk_init(void)
-{
-	ofono_stk_driver_register(&driver);
-}
-
-void calypso_stk_exit(void)
-{
-	ofono_stk_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(stk, calypsomodem, &driver)

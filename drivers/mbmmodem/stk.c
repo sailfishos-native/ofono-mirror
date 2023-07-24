@@ -33,11 +33,10 @@
 #include <ofono/log.h>
 #include <ofono/modem.h>
 #include <ofono/stk.h>
+#include <drivers/atmodem/atutil.h>
 
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "mbmmodem.h"
 
 struct stk_data {
 	GAtChat *chat;
@@ -262,19 +261,10 @@ static void mbm_stk_remove(struct ofono_stk *stk)
 }
 
 static const struct ofono_stk_driver driver = {
-	.name			= "mbmmodem",
 	.probe			= mbm_stk_probe,
 	.remove			= mbm_stk_remove,
 	.envelope		= mbm_stk_envelope,
 	.terminal_response	= mbm_stk_terminal_response,
 };
 
-void mbm_stk_init(void)
-{
-	ofono_stk_driver_register(&driver);
-}
-
-void mbm_stk_exit(void)
-{
-	ofono_stk_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(stk, mbmmodem, &driver)

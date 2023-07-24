@@ -35,7 +35,6 @@
 static int mbmmodem_init(void)
 {
 	mbm_gprs_context_init();
-	mbm_stk_init();
 	mbm_location_reporting_init();
 
 	return 0;
@@ -44,7 +43,6 @@ static int mbmmodem_init(void)
 static void mbmmodem_exit(void)
 {
 	mbm_location_reporting_exit();
-	mbm_stk_exit();
 	mbm_gprs_context_exit();
 }
 

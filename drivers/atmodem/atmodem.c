@@ -44,7 +44,6 @@ static int atmodem_init(void)
 	at_ussd_init();
 	at_sms_init();
 	at_sim_init();
-	at_stk_init();
 	at_netreg_init();
 	at_cbs_init();
 	at_call_volume_init();
@@ -58,7 +57,6 @@ static int atmodem_init(void)
 
 static void atmodem_exit(void)
 {
-	at_stk_exit();
 	at_sim_exit();
 	at_sms_exit();
 	at_ussd_exit();
