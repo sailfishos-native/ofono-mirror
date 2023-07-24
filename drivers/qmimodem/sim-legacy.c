@@ -32,8 +32,8 @@
 
 #include "qmi.h"
 #include "dms.h"
+#include "util.h"
 
-#include "qmimodem.h"
 #include "simutil.h"
 
 struct sim_data {
@@ -383,7 +383,6 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 }
 
 static const struct ofono_sim_driver driver = {
-	.name			= "qmimodem-legacy",
 	.probe			= qmi_sim_probe,
 	.remove			= qmi_sim_remove,
 	.read_file_info		= qmi_read_file_info,
@@ -393,12 +392,4 @@ static const struct ofono_sim_driver driver = {
 	.query_pin_retries	= qmi_query_pin_retries,
 };
 
-void qmi_sim_legacy_init(void)
-{
-	ofono_sim_driver_register(&driver);
-}
-
-void qmi_sim_legacy_exit(void)
-{
-	ofono_sim_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sim, qmimodem_legacy, &driver)

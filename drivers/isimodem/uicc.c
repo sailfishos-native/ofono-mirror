@@ -40,7 +40,6 @@
 #include <ofono/sim.h>
 
 #include "simutil.h"
-#include "isimodem.h"
 #include "isiutil.h"
 #include "sim.h"
 #include "uicc.h"
@@ -1645,7 +1644,6 @@ static void uicc_sim_remove(struct ofono_sim *sim)
 }
 
 static const struct ofono_sim_driver driver = {
-	.name			= "wgmodem2.5",
 	.probe			= uicc_sim_probe,
 	.remove			= uicc_sim_remove,
 	.read_file_info		= uicc_read_file_info,
@@ -1664,12 +1662,4 @@ static const struct ofono_sim_driver driver = {
 	.lock			= uicc_lock,
 };
 
-void isi_uicc_init(void)
-{
-	ofono_sim_driver_register(&driver);
-}
-
-void isi_uicc_exit(void)
-{
-	ofono_sim_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sim, wgmodem2_5, &driver)

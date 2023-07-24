@@ -34,13 +34,13 @@
 #include <ofono/modem.h>
 #include <ofono/sim.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 #include "simutil.h"
 #include "vendor.h"
 #include "util.h"
-
-#include "atmodem.h"
 
 #define EF_STATUS_INVALIDATED 0
 #define EF_STATUS_VALID 1
@@ -2082,7 +2082,6 @@ static void at_set_active_card_slot(struct ofono_sim *sim, unsigned int index,
 }
 
 static const struct ofono_sim_driver driver = {
-	.name			= "atmodem",
 	.probe			= at_sim_probe,
 	.remove			= at_sim_remove,
 	.read_file_info		= at_sim_read_info,
@@ -2110,28 +2109,4 @@ static const struct ofono_sim_driver driver = {
 	.set_active_card_slot	= at_set_active_card_slot
 };
 
-static const struct ofono_sim_driver driver_noef = {
-	.name			= "atmodem-noef",
-	.probe			= at_sim_probe,
-	.remove			= at_sim_remove,
-	.read_imsi		= at_read_imsi,
-	.query_passwd_state	= at_pin_query,
-	.query_pin_retries	= at_pin_retries_query,
-	.send_passwd		= at_pin_send,
-	.reset_passwd		= at_pin_send_puk,
-	.lock			= at_pin_enable,
-	.change_passwd		= at_change_passwd,
-	.query_facility_lock	= at_query_clck,
-};
-
-void at_sim_init(void)
-{
-	ofono_sim_driver_register(&driver);
-	ofono_sim_driver_register(&driver_noef);
-}
-
-void at_sim_exit(void)
-{
-	ofono_sim_driver_unregister(&driver);
-	ofono_sim_driver_unregister(&driver_noef);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sim, atmodem, &driver)

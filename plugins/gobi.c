@@ -627,10 +627,10 @@ static void gobi_pre_sim(struct ofono_modem *modem)
 	if (data->features & GOBI_UIM)
 		sim_driver = "qmimodem";
 	else if (data->features & GOBI_DMS)
-		sim_driver = "qmimodem-legacy";
+		sim_driver = "qmimodem_legacy";
 
 	if (ofono_modem_get_boolean(modem, "ForceSimLegacy"))
-		sim_driver = "qmimodem-legacy";
+		sim_driver = "qmimodem_legacy";
 
 	if (sim_driver)
 		ofono_sim_create(modem, 0, sim_driver, data->device);

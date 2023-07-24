@@ -510,7 +510,6 @@ static void mbim_sim_remove(struct ofono_sim *sim)
 }
 
 static const struct ofono_sim_driver driver = {
-	.name			= "mbim",
 	.probe			= mbim_sim_probe,
 	.remove			= mbim_sim_remove,
 	.read_imsi		= mbim_read_imsi,
@@ -522,12 +521,4 @@ static const struct ofono_sim_driver driver = {
 	.lock			= mbim_pin_enable,
 };
 
-void mbim_sim_init(void)
-{
-	ofono_sim_driver_register(&driver);
-}
-
-void mbim_sim_exit(void)
-{
-	ofono_sim_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sim, mbim, &driver)

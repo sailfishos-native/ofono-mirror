@@ -186,8 +186,6 @@ static const char *const passwd_name[] = {
 
 static void sim_own_numbers_update(struct ofono_sim *sim);
 
-static GSList *g_drivers = NULL;
-
 static GSList *cached_pins = NULL;
 
 static const char *sim_passwd_name(enum ofono_sim_password_type type)
@@ -3294,25 +3292,6 @@ void __ofono_sim_recheck_pin(struct ofono_sim *sim)
 	sim->driver->query_passwd_state(sim, sim_pin_query_cb, sim);
 }
 
-int ofono_sim_driver_register(const struct ofono_sim_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_sim_driver_unregister(const struct ofono_sim_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void emulator_remove_handler(struct ofono_atom *atom, void *data)
 {
 	struct ofono_emulator *em = __ofono_atom_get_data(atom);
@@ -3365,48 +3344,17 @@ static void sim_remove(struct ofono_atom *atom)
 	g_free(sim);
 }
 
-struct ofono_sim *ofono_sim_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver,
-					void *data)
-{
-	struct ofono_sim *sim;
-	GSList *l;
+OFONO_DEFINE_ATOM_CREATE(sim, OFONO_ATOM_TYPE_SIM, {
 	int i;
 
-	if (driver == NULL)
-		return NULL;
-
-	sim = g_try_new0(struct ofono_sim, 1);
-
-	if (sim == NULL)
-		return NULL;
-
-	sim->phase = OFONO_SIM_PHASE_UNKNOWN;
-	sim->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_SIM,
-						sim_remove, sim);
+	atom->phase = OFONO_SIM_PHASE_UNKNOWN;
 
 	for (i = 0; i < OFONO_SIM_PASSWORD_INVALID; i++)
-		sim->pin_retries[i] = -1;
+		atom->pin_retries[i] = -1;
 
-	sim->active_card_slot = 1;
-	sim->card_slot_count = 1;
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_sim_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(sim, vendor, data) < 0)
-			continue;
-
-		sim->driver = drv;
-		break;
-	}
-
-	return sim;
-}
+	atom->active_card_slot = 1;
+	atom->card_slot_count = 1;
+})
 
 static void emulator_cnum_cb(struct ofono_emulator *em,
 			struct ofono_emulator_request *req, void *userdata)

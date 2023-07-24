@@ -32,8 +32,7 @@
 #include "qmi.h"
 #include "dms.h"
 #include "uim.h"
-
-#include "qmimodem.h"
+#include "util.h"
 #include "simutil.h"
 
 #define EF_STATUS_INVALIDATED 0
@@ -942,7 +941,6 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 }
 
 static const struct ofono_sim_driver driver = {
-	.name			= "qmimodem",
 	.probe			= qmi_sim_probe,
 	.remove			= qmi_sim_remove,
 	.read_file_info		= qmi_read_attributes,
@@ -958,12 +956,4 @@ static const struct ofono_sim_driver driver = {
 	.send_passwd		= qmi_pin_send,
 };
 
-void qmi_sim_init(void)
-{
-	ofono_sim_driver_register(&driver);
-}
-
-void qmi_sim_exit(void)
-{
-	ofono_sim_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sim, qmimodem, &driver)

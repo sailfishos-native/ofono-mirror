@@ -43,7 +43,6 @@ static int isimodem_init(void)
 	isi_voicecall_init();
 	isi_sms_init();
 	isi_cbs_init();
-	isi_sim_init();
 	isi_ussd_init();
 	isi_call_forwarding_init();
 	isi_call_settings_init();
@@ -53,7 +52,6 @@ static int isimodem_init(void)
 	isi_gprs_init();
 	isi_gprs_context_init();
 	isi_audio_settings_init();
-	isi_uicc_init();
 
 	return 0;
 }
@@ -66,7 +64,6 @@ static void isimodem_exit(void)
 	isi_voicecall_exit();
 	isi_sms_exit();
 	isi_cbs_exit();
-	isi_sim_exit();
 	isi_ussd_exit();
 	isi_call_forwarding_exit();
 	isi_call_settings_exit();
@@ -76,7 +73,6 @@ static void isimodem_exit(void)
 	isi_gprs_exit();
 	isi_gprs_context_exit();
 	isi_audio_settings_exit();
-	isi_uicc_exit();
 }
 
 OFONO_PLUGIN_DEFINE(isimodem, "PhoNet / ISI modem driver", VERSION,

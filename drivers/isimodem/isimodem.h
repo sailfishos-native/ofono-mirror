@@ -37,9 +37,6 @@ extern void isi_sms_exit(void);
 extern void isi_cbs_init(void);
 extern void isi_cbs_exit(void);
 
-extern void isi_sim_init(void);
-extern void isi_sim_exit(void);
-
 extern void isi_ussd_init(void);
 extern void isi_ussd_exit(void);
 
@@ -66,6 +63,3 @@ extern void isi_gprs_context_exit(void);
 
 extern void isi_audio_settings_init(void);
 extern void isi_audio_settings_exit(void);
-
-extern void isi_uicc_init(void);
-extern void isi_uicc_exit(void);

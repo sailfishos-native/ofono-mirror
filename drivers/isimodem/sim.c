@@ -40,7 +40,6 @@
 #include "ofono.h"
 #include "simutil.h"
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "sim.h"
 #include "debug.h"
@@ -969,7 +968,6 @@ static void isi_sim_remove(struct ofono_sim *sim)
 }
 
 static const struct ofono_sim_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_sim_probe,
 	.remove			= isi_sim_remove,
 	.read_file_info		= isi_read_file_info,
@@ -988,12 +986,4 @@ static const struct ofono_sim_driver driver = {
 	.query_facility_lock	= isi_query_locked,
 };
 
-void isi_sim_init(void)
-{
-	ofono_sim_driver_register(&driver);
-}
-
-void isi_sim_exit(void)
-{
-	ofono_sim_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sim, isimodem, &driver)

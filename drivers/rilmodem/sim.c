@@ -44,10 +44,12 @@
 
 #include "simutil.h"
 #include "util.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 #include <drivers/infineonmodem/infineon_constants.h>
+
+#define EF_STATUS_INVALIDATED 0
+#define EF_STATUS_VALID 1
 
 /* Number of passwords in EPINC response */
 #define MTK_EPINC_NUM_PASSWD 4
@@ -1481,7 +1483,6 @@ static void ril_sim_remove(struct ofono_sim *sim)
 }
 
 static const struct ofono_sim_driver driver = {
-	.name			= RILMODEM,
 	.probe			= ril_sim_probe,
 	.remove			= ril_sim_remove,
 	.read_file_info		= ril_sim_read_info,
@@ -1501,13 +1502,4 @@ static const struct ofono_sim_driver driver = {
 	.query_facility_lock    = ril_query_facility_lock,
 };
 
-void ril_sim_init(void)
-{
-	DBG("");
-	ofono_sim_driver_register(&driver);
-}
-
-void ril_sim_exit(void)
-{
-	ofono_sim_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sim, rilmodem, &driver)
