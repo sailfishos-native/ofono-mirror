@@ -28,6 +28,7 @@
 #include <unistd.h>
 #include <stdlib.h>
 #include <stdio.h>
+#include <net/if.h>
 
 #define OFONO_API_SUBJECT_TO_CHANGE
 #include <ofono/plugin.h>
@@ -48,6 +49,8 @@
 #include <ofono/location-reporting.h>
 #include <ofono/log.h>
 #include <ofono/message-waiting.h>
+
+#include <ell/ell.h>
 
 #include <drivers/qmimodem/qmi.h>
 #include <drivers/qmimodem/dms.h>
@@ -73,6 +76,10 @@ struct gobi_data {
 	unsigned long features;
 	unsigned int discover_attempts;
 	uint8_t oper_mode;
+	bool using_mux;
+	int main_net_ifindex;
+	char main_net_name[IFNAMSIZ];
+	uint32_t set_powered_id;
 };
 
 static void gobi_debug(const char *str, void *user_data)
@@ -85,12 +92,23 @@ static void gobi_debug(const char *str, void *user_data)
 static int gobi_probe(struct ofono_modem *modem)
 {
 	struct gobi_data *data;
+	const char *kernel_driver;
 
 	DBG("%p", modem);
 
 	data = g_try_new0(struct gobi_data, 1);
 	if (!data)
 		return -ENOMEM;
+
+	kernel_driver = ofono_modem_get_string(modem, "KernelDriver");
+	DBG("kernel_driver: %s", kernel_driver);
+
+	data->main_net_ifindex =
+		ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
+	l_strlcpy(data->main_net_name,
+			ofono_modem_get_string(modem, "NetworkInterface"),
+			sizeof(data->main_net_name));
+	DBG("net: %s (%d)", data->main_net_name, data->main_net_ifindex);
 
 	ofono_modem_set_data(modem, data);
 
@@ -113,6 +131,11 @@ static void gobi_remove(struct ofono_modem *modem)
 	DBG("%p", modem);
 
 	ofono_modem_set_data(modem, NULL);
+
+	if (data->set_powered_id) {
+		l_netlink_cancel(l_rtnl_get(), data->set_powered_id);
+		data->set_powered_id = 0;
+	}
 
 	cleanup_services(data);
 
@@ -479,35 +502,104 @@ static void set_online_cb(struct qmi_result *result, void *user_data)
 		CALLBACK_WITH_SUCCESS(cb, cbd->data);
 }
 
+static void powered_up_cb(int error, uint16_t type,
+				const void *msg, uint32_t len,
+				void *user_data)
+{
+	struct cb_data *cbd = user_data;
+	struct gobi_data *data = cbd->user;
+	struct qmi_param *param;
+	ofono_modem_online_cb_t cb = cbd->cb;
+
+	DBG("error: %d", error);
+
+	data->set_powered_id = 0;
+
+	if (error)
+		goto error;
+
+	param = qmi_param_new_uint8(QMI_DMS_PARAM_OPER_MODE,
+						QMI_DMS_OPER_MODE_ONLINE);
+	if (!param)
+		goto error;
+
+	cb_data_ref(cbd);
+
+	if (qmi_service_send(data->dms, QMI_DMS_SET_OPER_MODE, param,
+				set_online_cb, cbd, cb_data_unref) > 0)
+		return;
+
+	qmi_param_free(param);
+	cb_data_unref(cbd);
+error:
+	CALLBACK_WITH_FAILURE(cb, cbd->data);
+}
+
+static void powered_down_cb(int error, uint16_t type,
+				const void *msg, uint32_t len,
+				void *user_data)
+{
+	struct cb_data *cbd = user_data;
+	struct gobi_data *data = cbd->user;
+	struct qmi_param *param;
+	ofono_modem_online_cb_t cb = cbd->cb;
+
+	DBG("error: %d", error);
+
+	data->set_powered_id = 0;
+
+	if (error)
+		goto error;
+
+	param = qmi_param_new_uint8(QMI_DMS_PARAM_OPER_MODE,
+					QMI_DMS_OPER_MODE_LOW_POWER);
+	if (!param)
+		goto error;
+
+	cb_data_ref(cbd);
+
+	if (qmi_service_send(data->dms, QMI_DMS_SET_OPER_MODE, param,
+				set_online_cb, cbd, cb_data_unref) > 0)
+		return;
+
+	qmi_param_free(param);
+	cb_data_unref(cbd);
+error:
+	CALLBACK_WITH_FAILURE(cb, cbd->data);
+}
+
 static void gobi_set_online(struct ofono_modem *modem, ofono_bool_t online,
 				ofono_modem_online_cb_t cb, void *user_data)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
+	struct l_netlink *rtnl = l_rtnl_get();
 	struct cb_data *cbd = cb_data_new(cb, user_data);
-	struct qmi_param *param;
-	uint8_t mode;
+	l_netlink_command_func_t powered_cb;
 
-	DBG("%p %s", modem, online ? "online" : "offline");
+	DBG("%p %s using_mux: %s", modem, online ? "online" : "offline",
+		data->using_mux ? "yes" : "no");
+
+	cbd->user = data;
 
 	if (online)
-		mode = QMI_DMS_OPER_MODE_ONLINE;
+		powered_cb = powered_up_cb;
 	else
-		mode = QMI_DMS_OPER_MODE_LOW_POWER;
+		powered_cb = powered_down_cb;
 
-	param = qmi_param_new_uint8(QMI_DMS_PARAM_OPER_MODE, mode);
-	if (!param)
-		goto error;
+	if (!data->using_mux) {
+		powered_cb(0, 0, NULL, 0, cbd);
+		cb_data_unref(cbd);
+		return;
+	}
 
-	if (qmi_service_send(data->dms, QMI_DMS_SET_OPER_MODE, param,
-					set_online_cb, cbd, g_free) > 0)
+	data->set_powered_id = l_rtnl_set_powered(rtnl, data->main_net_ifindex,
+							online, powered_cb, cbd,
+							cb_data_unref);
+	if (data->set_powered_id)
 		return;
 
-	qmi_param_free(param);
-
-error:
-	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
-	g_free(cbd);
+	cb_data_unref(cbd);
+	CALLBACK_WITH_FAILURE(cb, user_data);
 }
 
 static void gobi_pre_sim(struct ofono_modem *modem)
@@ -572,6 +664,8 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 
 		return;
 	}
+
+	data->using_mux = true;
 
 	for (i = 0; i < n_premux; i++) {
 		int mux_id;
