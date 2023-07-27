@@ -923,9 +923,10 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 		qmi_service_unref(data->uim);
 		data->uim = NULL;
 	}
+
 	if (data->dms) {
-		qmi_service_unregister_all(data->dms);
 		qmi_service_unref(data->dms);
+		data->dms = NULL;
 	}
 
 	g_free(data);

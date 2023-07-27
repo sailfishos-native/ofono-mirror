@@ -231,8 +231,6 @@ static void qmimodem_lte_remove(struct ofono_lte *lte)
 
 	ofono_lte_set_data(lte, NULL);
 
-	qmi_service_unregister_all(ldd->wds);
-
 	qmi_service_unref(ldd->wds);
 
 	g_free(ldd);

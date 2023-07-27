@@ -413,7 +413,6 @@ static void qmi_gprs_remove(struct ofono_gprs *gprs)
 
 	ofono_gprs_set_data(gprs, NULL);
 
-	qmi_service_unregister_all(data->wds);
 	qmi_service_unref(data->wds);
 
 	qmi_service_unregister_all(data->nas);

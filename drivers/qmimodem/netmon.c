@@ -255,8 +255,6 @@ static void qmi_netmon_remove(struct ofono_netmon *netmon)
 
 	ofono_netmon_set_data(netmon, NULL);
 
-	qmi_service_unregister_all(nmd->nas);
-
 	qmi_service_unref(nmd->nas);
 
 	g_free(nmd);
