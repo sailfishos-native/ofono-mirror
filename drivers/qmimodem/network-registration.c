@@ -45,6 +45,10 @@ struct netreg_data {
 	int lac;
 	int cellid;
 	bool is_roaming;
+	uint16_t event_indication_id;
+	uint16_t signal_info_indication_id;
+	uint16_t system_info_indication_id;
+	uint16_t serving_system_indication_id;
 };
 
 enum roaming_status {
@@ -588,16 +592,23 @@ static void register_indications_cb(struct qmi_result *result,
 
 	ofono_netreg_register(netreg);
 
-	qmi_service_register(data->nas, QMI_NAS_EVENT_REPORT,
+	data->event_indication_id =
+		qmi_service_register(data->nas, QMI_NAS_EVENT_REPORT,
 					event_notify, netreg, NULL);
 
-	qmi_service_register(data->nas, QMI_NAS_SERVING_SYSTEM_INDICATION,
+	data->serving_system_indication_id =
+		qmi_service_register(data->nas,
+					QMI_NAS_SERVING_SYSTEM_INDICATION,
 					ss_info_notify, netreg, NULL);
 
-	qmi_service_register(data->nas, QMI_NAS_SYSTEM_INFO_INDICATION,
+	data->system_info_indication_id =
+		qmi_service_register(data->nas,
+					QMI_NAS_SYSTEM_INFO_INDICATION,
 					system_info_notify, netreg, NULL);
 
-	qmi_service_register(data->nas, QMI_NAS_SIGNAL_INFO_INDICATION,
+	data->signal_info_indication_id =
+		qmi_service_register(data->nas,
+					QMI_NAS_SIGNAL_INFO_INDICATION,
 					signal_info_notify, netreg, NULL);
 }
 
@@ -705,7 +716,28 @@ static void qmi_netreg_remove(struct ofono_netreg *netreg)
 
 	ofono_netreg_set_data(netreg, NULL);
 
-	qmi_service_unregister_all(data->nas);
+	if (data->event_indication_id) {
+		qmi_service_unregister(data->nas, data->event_indication_id);
+		data->event_indication_id = 0;
+	}
+
+	if (data->serving_system_indication_id) {
+		qmi_service_unregister(data->nas,
+					data->serving_system_indication_id);
+		data->serving_system_indication_id = 0;
+	}
+
+	if (data->system_info_indication_id) {
+		qmi_service_unregister(data->nas,
+					data->system_info_indication_id);
+		data->system_info_indication_id = 0;
+	}
+
+	if (data->signal_info_indication_id) {
+		qmi_service_unregister(data->nas,
+					data->signal_info_indication_id);
+		data->signal_info_indication_id = 0;
+	}
 
 	qmi_service_unref(data->nas);
 
