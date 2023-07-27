@@ -39,6 +39,7 @@
 struct sim_data {
 	struct qmi_service *dms;
 	int retries[OFONO_SIM_PASSWORD_INVALID];
+	uint16_t event_indication_id;
 };
 
 static void qmi_read_file_info(struct ofono_sim *sim, int fileid,
@@ -322,7 +323,8 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 
 	data->dms = qmi_service_ref(service);
 
-	qmi_service_register(data->dms, QMI_DMS_EVENT,
+	data->event_indication_id =
+		qmi_service_register(data->dms, QMI_DMS_EVENT,
 					event_notify, sim, NULL);
 
 	param = qmi_param_new();
@@ -370,7 +372,10 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 
 	ofono_sim_set_data(sim, NULL);
 
-	qmi_service_unregister_all(data->dms);
+	if (data->event_indication_id) {
+		qmi_service_unregister(data->dms, data->event_indication_id);
+		data->event_indication_id = 0;
+	}
 
 	qmi_service_unref(data->dms);
 

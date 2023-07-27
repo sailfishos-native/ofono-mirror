@@ -64,6 +64,7 @@ struct sim_data {
 	uint8_t app_type;
 	uint32_t retry_count;
 	guint poll_source;
+	uint16_t card_status_indication_id;
 };
 
 static void qmi_query_passwd_state(struct ofono_sim *sim,
@@ -829,9 +830,13 @@ static void event_registration_cb(struct qmi_result *result, void *user_data)
 		goto error;
 
 	DBG("event mask 0x%04x", data->event_mask);
-	if (data->event_mask & 0x0001)
-		qmi_service_register(data->uim, QMI_UIM_GET_CARD_STATUS_EVENT,
+
+	if (data->event_mask & 0x0001) {
+		data->card_status_indication_id =
+			qmi_service_register(data->uim,
+						QMI_UIM_GET_CARD_STATUS_EVENT,
 						card_status_notify, sim, NULL);
+	}
 
 	if (qmi_service_send(data->uim, QMI_UIM_GET_CARD_STATUS, NULL,
 					get_card_status_cb, sim, NULL) > 0)
@@ -840,7 +845,6 @@ static void event_registration_cb(struct qmi_result *result, void *user_data)
 error:
 	ofono_sim_remove(sim);
 }
-
 
 static void create_uim_cb(struct qmi_service *service, void *user_data)
 {
@@ -919,7 +923,12 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 		g_source_remove(data->poll_source);
 
 	if (data->uim) {
-		qmi_service_unregister_all(data->uim);
+		if (data->card_status_indication_id) {
+			qmi_service_unregister(data->uim,
+					data->card_status_indication_id);
+			data->card_status_indication_id = 0;
+		}
+
 		qmi_service_unref(data->uim);
 		data->uim = NULL;
 	}
