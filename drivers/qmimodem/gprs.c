@@ -39,6 +39,7 @@ struct gprs_data {
 	struct qmi_service *nas;
 	struct qmi_service *wds;
 	unsigned int last_auto_context_id;
+	uint16_t serving_system_indication_id;
 };
 
 static bool extract_ss_info(struct qmi_result *result, int *status, int *tech)
@@ -358,7 +359,9 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 	qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
 					ss_info_notify, gprs, NULL);
 
-	qmi_service_register(data->nas, QMI_NAS_SERVING_SYSTEM_INDICATION,
+	data->serving_system_indication_id =
+		qmi_service_register(data->nas,
+					QMI_NAS_SERVING_SYSTEM_INDICATION,
 					ss_info_notify, gprs, NULL);
 
 	ofono_gprs_set_cid_range(gprs, 1, 1);
@@ -415,7 +418,11 @@ static void qmi_gprs_remove(struct ofono_gprs *gprs)
 
 	qmi_service_unref(data->wds);
 
-	qmi_service_unregister_all(data->nas);
+	if (data->serving_system_indication_id) {
+		qmi_service_unregister(data->nas,
+					data->serving_system_indication_id);
+		data->serving_system_indication_id = 0;
+	}
 
 	qmi_service_unref(data->nas);
 
