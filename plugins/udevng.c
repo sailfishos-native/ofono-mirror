@@ -234,11 +234,10 @@ static gboolean setup_gobi(struct modem_info *modem)
 		}
 	}
 
-	DBG("qmi=%s net=%s mdm=%s gps=%s diag=%s", qmi, net, mdm, gps, diag);
-
 	if (qmi == NULL || mdm == NULL || net == NULL)
 		return FALSE;
 
+	DBG("qmi=%s net=%s mdm=%s gps=%s diag=%s", qmi, net, mdm, gps, diag);
 
 	ofono_modem_set_string(modem->modem, "Device", qmi);
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
@@ -977,17 +976,13 @@ static gboolean setup_quectelqmi(struct modem_info *modem)
 		}
 	}
 
-	DBG("qmi=%s net=%s", qmi, net);
-
 	if (qmi == NULL || net == NULL)
 		return FALSE;
 
-	DBG("qmi=%s net=%s", qmi, net);
+	DBG("qmi=%s net=%s gps=%s aux=%s", qmi, net, gps, aux);
 
 	ofono_modem_set_string(modem->modem, "Device", qmi);
 	ofono_modem_set_string(modem->modem, "NetworkInterface", net);
-
-	DBG("gps=%s aux=%s", gps, aux);
 
 	if (gps)
 		ofono_modem_set_string(modem->modem, "GPS", gps);
@@ -1619,10 +1614,8 @@ static void add_serial_device(struct udev_device *dev)
 	const char* driver;
 
 	mdev = get_serial_modem_device(dev);
-	if (!mdev) {
-		DBG("Device is missing required OFONO_DRIVER property");
+	if (!mdev)
 		return;
-	}
 
 	driver = udev_device_get_property_value(mdev, "OFONO_DRIVER");
 
