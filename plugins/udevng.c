@@ -1630,9 +1630,7 @@ static void add_serial_device(struct udev_device *dev)
 
 	modem = g_hash_table_lookup(modem_list, syspath);
 	if (modem == NULL) {
-		modem = g_try_new0(struct modem_info, 1);
-		if (modem == NULL)
-			return;
+		modem = g_new0(struct modem_info, 1);
 
 		modem->type = MODEM_TYPE_SERIAL;
 		modem->syspath = g_strdup(syspath);
@@ -1648,9 +1646,7 @@ static void add_serial_device(struct udev_device *dev)
 	DBG("%s", devpath);
 	DBG("%s (%s)", devnode, driver);
 
-	info = g_try_new0(struct serial_device_info, 1);
-	if (info == NULL)
-		return;
+	info = g_new0(struct serial_device_info, 1);
 
 	info->devpath = g_strdup(devpath);
 	info->devnode = g_strdup(devnode);
@@ -1678,9 +1674,7 @@ static void add_device(const char *syspath, const char *devname,
 
 	modem = g_hash_table_lookup(modem_list, syspath);
 	if (modem == NULL) {
-		modem = g_try_new0(struct modem_info, 1);
-		if (modem == NULL)
-			return;
+		modem = g_new0(struct modem_info, 1);
 
 		modem->type = type;
 		modem->syspath = g_strdup(syspath);
@@ -1750,9 +1744,7 @@ static void add_device(const char *syspath, const char *devname,
 	DBG("%s (%s) %s [%s] ==> %s %s", devnode, driver,
 					interface, number, label, sysattr);
 
-	info = g_try_new0(struct device_info, 1);
-	if (info == NULL)
-		return;
+	info = g_new0(struct device_info, 1);
 
 	info->devpath = g_strdup(devpath);
 	info->devnode = g_strdup(devnode);
