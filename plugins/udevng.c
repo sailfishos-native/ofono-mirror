@@ -195,16 +195,49 @@ static gboolean setup_hso(struct modem_info *modem)
 	return TRUE;
 }
 
+static int setup_qmi(struct modem_info *modem, const struct device_info *qmi,
+			const struct device_info *net)
+{
+	DBG("qmi: %s net: %s kernel_driver: %s interface_number: %s",
+		qmi->devnode, net->devnode, net->kernel_driver, net->number);
+
+	if (!qmi->kernel_driver || !net->number)
+		return -EINVAL;
+
+	ofono_modem_set_driver(modem->modem, "gobi");
+	ofono_modem_set_string(modem->modem, "Device", qmi->devnode);
+	ofono_modem_set_string(modem->modem, "KernelDriver",
+							net->kernel_driver);
+	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
+	ofono_modem_set_string(modem->modem, "InterfaceNumber", net->number);
+
+	switch (modem->type) {
+	case MODEM_TYPE_USB:
+		ofono_modem_set_string(modem->modem, "Bus", "usb");
+		break;
+	case MODEM_TYPE_PCIE:
+		ofono_modem_set_string(modem->modem, "Bus", "pcie");
+		break;
+	case MODEM_TYPE_SERIAL:
+		break;
+	}
+
+	return 0;
+}
+
 static gboolean setup_gobi(struct modem_info *modem)
 {
-	const char *qmi = NULL, *mdm = NULL, *net = NULL;
-	const char *gps = NULL, *diag = NULL;
+	const struct device_info *qmi = NULL;
+	const struct device_info *net = NULL;
+	const char *mdm = NULL;
+	const char *gps = NULL;
+	const char *diag = NULL;
 	GSList *list;
 
 	DBG("%s", modem->syspath);
 
 	for (list = modem->devices; list; list = list->next) {
-		struct device_info *info = list->data;
+		const struct device_info *info = list->data;
 		const char *subsystem =
 			udev_device_get_subsystem(info->udev_device);
 
@@ -213,9 +246,9 @@ static gboolean setup_gobi(struct modem_info *modem)
 						info->sysattr, subsystem);
 
 		if (g_strcmp0(subsystem, "usbmisc") == 0) /* cdc-wdm */
-			qmi = info->devnode;
+			qmi = info;
 		else if (g_strcmp0(subsystem, "net") == 0) /* wwan */
-			net = info->devnode;
+			net = info;
 		else if (g_strcmp0(subsystem, "tty") == 0) {
 			if (g_strcmp0(info->interface, "255/255/255") == 0) {
 				if (g_strcmp0(info->number, "00") == 0)
@@ -239,25 +272,32 @@ static gboolean setup_gobi(struct modem_info *modem)
 	if (qmi == NULL || mdm == NULL || net == NULL)
 		return FALSE;
 
-	DBG("qmi=%s net=%s mdm=%s gps=%s diag=%s", qmi, net, mdm, gps, diag);
+	DBG("qmi=%s net=%s mdm=%s gps=%s diag=%s",
+			qmi->devnode, net->devnode, mdm, gps, diag);
 
-	ofono_modem_set_string(modem->modem, "Device", qmi);
+	if (setup_qmi(modem, qmi, net) < 0)
+		return FALSE;
+
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
 	ofono_modem_set_string(modem->modem, "Diag", diag);
-	ofono_modem_set_string(modem->modem, "NetworkInterface", net);
 
 	return TRUE;
 }
 
 static gboolean setup_sierra(struct modem_info *modem)
 {
-	const char *mdm = NULL, *app = NULL, *net = NULL, *diag = NULL, *qmi = NULL;
+	const struct device_info *net = NULL;
+	const struct device_info *qmi = NULL;
+	const char *mdm = NULL;
+	const char *app = NULL;
+	const char *diag = NULL;
+
 	GSList *list;
 
 	DBG("%s", modem->syspath);
 
 	for (list = modem->devices; list; list = list->next) {
-		struct device_info *info = list->data;
+		const struct device_info *info = list->data;
 		const char *subsystem =
 			udev_device_get_subsystem(info->udev_device);
 
@@ -272,7 +312,7 @@ static gboolean setup_sierra(struct modem_info *modem)
 			else if (g_strcmp0(info->number, "04") == 0)
 				app = info->devnode;
 			else if (g_strcmp0(info->number, "07") == 0)
-				net = info->devnode;
+				net = info;
 			else if (g_strcmp0(subsystem, "net") == 0) {
 				/*
 				 * When using the voice firmware on a mc7304
@@ -283,52 +323,58 @@ static gboolean setup_sierra(struct modem_info *modem)
 				 * the first interface works.
 				 */
 				if (g_strcmp0(info->number, "08") == 0) {
-					net = info->devnode;
+					net = info;
 				} else if (g_strcmp0(info->number, "0a") == 0) {
 					if (net == NULL)
-						net = info->devnode;
+						net = info;
 				}
 			} else if (g_strcmp0(subsystem, "usbmisc") == 0) {
 				if (g_strcmp0(info->number, "08") == 0) {
-					qmi = info->devnode;
+					qmi = info;
 				} else if (g_strcmp0(info->number, "0a") == 0) {
 					if (qmi == NULL)
-						qmi = info->devnode;
+						qmi = info;
 				}
 			}
 		}
 	}
 
 	if (qmi != NULL && net != NULL) {
-		ofono_modem_set_driver(modem->modem, "gobi");
+		if (setup_qmi(modem, qmi, net) < 0)
+			return FALSE;
+
 		goto done;
 	}
 
 	if (mdm == NULL || net == NULL)
 		return FALSE;
 
+	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
 done:
-	DBG("modem=%s app=%s net=%s diag=%s qmi=%s", mdm, app, net, diag, qmi);
+	DBG("modem=%s app=%s net=%s diag=%s qmi=%s",
+			mdm, app, net->devnode, diag, qmi->devnode);
 
-	ofono_modem_set_string(modem->modem, "Device", qmi);
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
 	ofono_modem_set_string(modem->modem, "App", app);
 	ofono_modem_set_string(modem->modem, "Diag", diag);
-	ofono_modem_set_string(modem->modem, "NetworkInterface", net);
 
 	return TRUE;
 }
 
 static gboolean setup_huawei(struct modem_info *modem)
 {
-	const char *qmi = NULL, *mdm = NULL, *net = NULL;
-	const char *pcui = NULL, *diag = NULL;
+	const struct device_info *net = NULL;
+	const struct device_info *qmi = NULL;
+	const char *mdm = NULL;
+	const char *pcui = NULL;
+	const char *diag = NULL;
+
 	GSList *list;
 
 	DBG("%s", modem->syspath);
 
 	for (list = modem->devices; list; list = list->next) {
-		struct device_info *info = list->data;
+		const struct device_info *info = list->data;
 
 		DBG("%s %s %s %s", info->devnode, info->interface,
 						info->number, info->label);
@@ -353,10 +399,10 @@ static gboolean setup_huawei(struct modem_info *modem)
 			diag = info->devnode;
 		} else if (g_strcmp0(info->interface, "255/1/8") == 0 ||
 				g_strcmp0(info->interface, "255/1/56") == 0) {
-			net = info->devnode;
+			net = info;
 		} else if (g_strcmp0(info->interface, "255/1/9") == 0 ||
 				g_strcmp0(info->interface, "255/1/57") == 0) {
-			qmi = info->devnode;
+			qmi = info;
 		} else if (g_strcmp0(info->interface, "255/255/255") == 0) {
 			if (g_strcmp0(info->number, "00") == 0)
 				mdm = info->devnode;
@@ -372,21 +418,23 @@ static gboolean setup_huawei(struct modem_info *modem)
 	}
 
 	if (qmi != NULL && net != NULL) {
-		ofono_modem_set_driver(modem->modem, "gobi");
+		if (setup_qmi(modem, qmi, net) < 0)
+			return FALSE;
+
 		goto done;
 	}
 
 	if (mdm == NULL || pcui == NULL)
 		return FALSE;
 
+	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
 done:
-	DBG("mdm=%s pcui=%s diag=%s qmi=%s net=%s", mdm, pcui, diag, qmi, net);
+	DBG("mdm=%s pcui=%s diag=%s qmi=%s net=%s",
+		mdm, pcui, diag, qmi->devnode, net->devnode);
 
-	ofono_modem_set_string(modem->modem, "Device", qmi);
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
 	ofono_modem_set_string(modem->modem, "Pcui", pcui);
 	ofono_modem_set_string(modem->modem, "Diag", diag);
-	ofono_modem_set_string(modem->modem, "NetworkInterface", net);
 
 	return TRUE;
 }
@@ -680,13 +728,14 @@ static gboolean setup_telit(struct modem_info *modem)
 
 static gboolean setup_telitqmi(struct modem_info *modem)
 {
-	const char *qmi = NULL, *net = NULL;
+	const struct device_info *net = NULL;
+	const struct device_info *qmi = NULL;
 	GSList *list;
 
 	DBG("%s", modem->syspath);
 
 	for (list = modem->devices; list; list = list->next) {
-		struct device_info *info = list->data;
+		const struct device_info *info = list->data;
 		const char *subsystem =
 				udev_device_get_subsystem(info->udev_device);
 
@@ -696,23 +745,20 @@ static gboolean setup_telitqmi(struct modem_info *modem)
 		if (g_strcmp0(info->interface, "255/255/255") == 0 &&
 				g_strcmp0(info->number, "02") == 0) {
 			if (g_strcmp0(subsystem, "net") == 0)
-				net = info->devnode;
+				net = info;
 			else if (g_strcmp0(subsystem, "usbmisc") == 0)
-				qmi = info->devnode;
+				qmi = info;
 		}
 	}
 
 	if (qmi == NULL || net == NULL)
 		return FALSE;
 
-	DBG("qmi=%s net=%s", qmi, net);
-
-	ofono_modem_set_string(modem->modem, "Device", qmi);
-	ofono_modem_set_string(modem->modem, "NetworkInterface", net);
+	if (setup_qmi(modem, qmi, net) < 0)
+		return FALSE;
 
 	ofono_modem_set_boolean(modem->modem, "ForceSimLegacy", TRUE);
 	ofono_modem_set_boolean(modem->modem, "AlwaysOnline", TRUE);
-	ofono_modem_set_driver(modem->modem, "gobi");
 
 	return TRUE;
 }
@@ -958,13 +1004,16 @@ static gboolean setup_quectel(struct modem_info *modem)
 
 static gboolean setup_quectelqmi(struct modem_info *modem)
 {
-	const char *qmi = NULL, *net = NULL, *gps = NULL, *aux = NULL;
+	const struct device_info *net = NULL;
+	const struct device_info *qmi = NULL;
+	const char *gps = NULL;
+	const char *aux = NULL;
 	GSList *list;
 
 	DBG("%s", modem->syspath);
 
 	for (list = modem->devices; list; list = g_slist_next(list)) {
-		struct device_info *info = list->data;
+		const struct device_info *info = list->data;
 		const char *subsystem =
 			udev_device_get_subsystem(info->udev_device);
 
@@ -974,9 +1023,9 @@ static gboolean setup_quectelqmi(struct modem_info *modem)
 		if (g_strcmp0(info->interface, "255/255/255") == 0 &&
 				g_strcmp0(info->number, "04") == 0) {
 			if (g_strcmp0(subsystem, "net") == 0)
-				net = info->devnode;
+				net = info;
 			else if (g_strcmp0(subsystem, "usbmisc") == 0)
-				qmi = info->devnode;
+				qmi = info;
 		} else if (g_strcmp0(info->interface, "255/0/0") == 0 &&
 				g_strcmp0(info->number, "01") == 0) {
 			gps = info->devnode;
@@ -989,18 +1038,16 @@ static gboolean setup_quectelqmi(struct modem_info *modem)
 	if (qmi == NULL || net == NULL)
 		return FALSE;
 
-	DBG("qmi=%s net=%s gps=%s aux=%s", qmi, net, gps, aux);
+	DBG("gps=%s aux=%s", gps, aux);
 
-	ofono_modem_set_string(modem->modem, "Device", qmi);
-	ofono_modem_set_string(modem->modem, "NetworkInterface", net);
+	if (setup_qmi(modem, qmi, net) < 0)
+		return FALSE;
 
 	if (gps)
 		ofono_modem_set_string(modem->modem, "GPS", gps);
 
 	if (aux)
 		ofono_modem_set_string(modem->modem, "Aux", aux);
-
-	ofono_modem_set_driver(modem->modem, "gobi");
 
 	return TRUE;
 }
@@ -1354,15 +1401,19 @@ static gboolean setup_xmm7xxx(struct modem_info *modem)
 
 static gboolean setup_sim7x00(struct modem_info *modem)
 {
-	const char *audio = NULL, *diag = NULL, *gps = NULL;
-	const char *mdm = NULL, *net = NULL, *ppp = NULL;
-	const char *qmi = NULL;
+	const struct device_info *net = NULL;
+	const struct device_info *qmi = NULL;
+	const char *mdm = NULL;
+	const char *ppp = NULL;
+	const char *audio = NULL;
+	const char *diag = NULL;
+	const char *gps = NULL;
 	GSList *list;
 
 	DBG("%s", modem->syspath);
 
 	for (list = modem->devices; list; list = list->next) {
-		struct device_info *info = list->data;
+		const struct device_info *info = list->data;
 		const char *subsystem =
 				udev_device_get_subsystem(info->udev_device);
 
@@ -1381,9 +1432,9 @@ static gboolean setup_sim7x00(struct modem_info *modem)
 		 * -- https://www.spinics.net/lists/linux-usb/msg135728.html
 		 */
 		if (g_strcmp0(subsystem, "usbmisc") == 0) /* cdc-wdm */
-			qmi = info->devnode; /* SIM7600 */
+			qmi = info; /* SIM7600 */
 		else if (g_strcmp0(subsystem, "net") == 0) /* wwan */
-			net = info->devnode; /* SIM7600 */
+			net = info; /* SIM7600 */
 		else if (g_strcmp0(subsystem, "tty") == 0) {
 			if (g_strcmp0(info->interface, "255/255/255") == 0) {
 				if (g_strcmp0(info->number, "00") == 0)
@@ -1405,14 +1456,12 @@ static gboolean setup_sim7x00(struct modem_info *modem)
 		return FALSE;
 
 	if (qmi != NULL && net != NULL) {
-		DBG("qmi=%s net=%s mdm=%s gps=%s diag=%s",
-						qmi, net, mdm, gps, diag);
+		DBG("mdm=%s gps=%s diag=%s", mdm, gps, diag);
 
-		ofono_modem_set_driver(modem->modem, "gobi");
+		if (setup_qmi(modem, qmi, net) < 0)
+			return FALSE;
 
-		ofono_modem_set_string(modem->modem, "Device", qmi);
 		ofono_modem_set_string(modem->modem, "Modem", mdm);
-		ofono_modem_set_string(modem->modem, "NetworkInterface", net);
 	} else {
 		DBG("at=%s ppp=%s gps=%s diag=%s, audio=%s",
 						mdm, ppp, gps, diag, audio);
