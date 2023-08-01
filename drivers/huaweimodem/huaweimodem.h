@@ -24,9 +24,6 @@
 extern void huawei_ussd_init(void);
 extern void huawei_ussd_exit(void);
 
-extern void huawei_voicecall_init(void);
-extern void huawei_voicecall_exit(void);
-
 extern void huawei_audio_settings_init(void);
 extern void huawei_audio_settings_exit(void);
 

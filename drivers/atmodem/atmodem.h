@@ -33,9 +33,6 @@ extern void at_call_settings_exit(void);
 extern void at_ussd_init(void);
 extern void at_ussd_exit(void);
 
-extern void at_voicecall_init(void);
-extern void at_voicecall_exit(void);
-
 extern void at_call_meter_init(void);
 extern void at_call_meter_exit(void);
 

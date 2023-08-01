@@ -41,7 +41,6 @@ typedef void (*ofono_voicecall_cb_t)(const struct ofono_error *error,
  * not support vendor extensions for call progress indication.
  */
 struct ofono_voicecall_driver {
-	const char *name;
 	int (*probe)(struct ofono_voicecall *vc, unsigned int vendor,
 			void *data);
 	void (*remove)(struct ofono_voicecall *vc);
@@ -161,9 +160,6 @@ void ofono_voicecall_disconnected(struct ofono_voicecall *vc, int id,
 void ofono_voicecall_mpty_hint(struct ofono_voicecall *vc, unsigned int ids);
 
 struct ofono_modem *ofono_voicecall_get_modem(struct ofono_voicecall *vc);
-
-int ofono_voicecall_driver_register(const struct ofono_voicecall_driver *d);
-void ofono_voicecall_driver_unregister(const struct ofono_voicecall_driver *d);
 
 struct ofono_voicecall *ofono_voicecall_create(struct ofono_modem *modem,
 					unsigned int vendor,

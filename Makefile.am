@@ -460,10 +460,7 @@ builtin_sources += drivers/atmodem/atutil.h \
 			drivers/huaweimodem/gprs-context.c \
 			drivers/huaweimodem/radio-settings.c
 
-builtin_modules += calypsomodem
 builtin_sources += drivers/atmodem/atutil.h \
-			drivers/calypsomodem/calypsomodem.h \
-			drivers/calypsomodem/calypsomodem.c \
 			drivers/calypsomodem/voicecall.c \
 			drivers/calypsomodem/stk.c
 

@@ -29,7 +29,7 @@
 
 #include "qmi.h"
 
-#include "qmimodem.h"
+#include "util.h"
 
 struct voicecall_data {
 	struct qmi_service *voice;
@@ -96,17 +96,9 @@ static void qmi_voicecall_remove(struct ofono_voicecall *vc)
 }
 
 static const struct ofono_voicecall_driver driver = {
-	.name		= "qmimodem",
 	.probe		= qmi_voicecall_probe,
 	.remove		= qmi_voicecall_remove,
 };
 
-void qmi_voicecall_init(void)
-{
-	ofono_voicecall_driver_register(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(voicecall, qmimodem, &driver)
 
-void qmi_voicecall_exit(void)
-{
-	ofono_voicecall_driver_unregister(&driver);
-}

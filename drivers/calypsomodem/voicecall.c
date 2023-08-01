@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/voicecall.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "calypsomodem.h"
 
 static const char *none_prefix[] = { NULL };
 
@@ -402,7 +402,6 @@ static void calypso_voicecall_remove(struct ofono_voicecall *vc)
 }
 
 static const struct ofono_voicecall_driver driver = {
-	.name			= "calypsomodem",
 	.probe			= calypso_voicecall_probe,
 	.remove			= calypso_voicecall_remove,
 	.dial			= calypso_dial,
@@ -422,12 +421,4 @@ static const struct ofono_voicecall_driver driver = {
 	.send_tones		= calypso_send_dtmf
 };
 
-void calypso_voicecall_init(void)
-{
-	ofono_voicecall_driver_register(&driver);
-}
-
-void calypso_voicecall_exit(void)
-{
-	ofono_voicecall_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(voicecall, calypsomodem, &driver)

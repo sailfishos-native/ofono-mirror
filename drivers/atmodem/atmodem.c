@@ -34,7 +34,6 @@
 
 static int atmodem_init(void)
 {
-	at_voicecall_init();
 	at_devinfo_init();
 	at_call_barring_init();
 	at_call_forwarding_init();
@@ -64,7 +63,6 @@ static void atmodem_exit(void)
 	at_call_barring_exit();
 	at_netreg_exit();
 	at_devinfo_exit();
-	at_voicecall_exit();
 	at_cbs_exit();
 	at_call_volume_exit();
 	at_gprs_exit();

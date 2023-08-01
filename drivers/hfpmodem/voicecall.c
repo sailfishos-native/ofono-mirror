@@ -35,10 +35,11 @@
 #include <ofono/modem.h>
 #include <ofono/voicecall.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "common.h"
 #include "hfp.h"
 
-#include "hfpmodem.h"
 #include "slc.h"
 
 #define POLL_CLCC_INTERVAL 2000
@@ -1303,7 +1304,6 @@ static void hfp_voicecall_remove(struct ofono_voicecall *vc)
 }
 
 static const struct ofono_voicecall_driver driver = {
-	.name			= "hfpmodem",
 	.probe			= hfp_voicecall_probe,
 	.remove			= hfp_voicecall_remove,
 	.dial			= hfp_dial,
@@ -1324,12 +1324,4 @@ static const struct ofono_voicecall_driver driver = {
 	.send_tones		= hfp_send_dtmf
 };
 
-void hfp_voicecall_init(void)
-{
-	ofono_voicecall_driver_register(&driver);
-}
-
-void hfp_voicecall_exit(void)
-{
-	ofono_voicecall_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(voicecall, hfpmodem, &driver)

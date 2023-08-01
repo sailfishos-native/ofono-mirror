@@ -35,11 +35,11 @@
 #include <ofono/modem.h>
 #include <ofono/voicecall.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 #include "common.h"
-
-#include "stemodem.h"
 
 enum call_status_ste {
 	STE_CALL_STATUS_IDLE =		0,
@@ -582,7 +582,6 @@ static void ste_voicecall_remove(struct ofono_voicecall *vc)
 }
 
 static const struct ofono_voicecall_driver driver = {
-	.name			= "stemodem",
 	.probe			= ste_voicecall_probe,
 	.remove			= ste_voicecall_remove,
 	.dial			= ste_dial,
@@ -601,12 +600,4 @@ static const struct ofono_voicecall_driver driver = {
 	.send_tones		= ste_send_dtmf
 };
 
-void ste_voicecall_init(void)
-{
-	ofono_voicecall_driver_register(&driver);
-}
-
-void ste_voicecall_exit(void)
-{
-	ofono_voicecall_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(voicecall, stemodem, &driver)

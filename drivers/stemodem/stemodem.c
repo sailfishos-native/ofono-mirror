@@ -36,7 +36,6 @@
 
 static int stemodem_init(void)
 {
-	ste_voicecall_init();
 	ste_gprs_context_init();
 	ste_radio_settings_init();
 
@@ -45,7 +44,6 @@ static int stemodem_init(void)
 
 static void stemodem_exit(void)
 {
-	ste_voicecall_exit();
 	ste_gprs_context_exit();
 	ste_radio_settings_exit();
 }

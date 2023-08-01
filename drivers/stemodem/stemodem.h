@@ -25,8 +25,5 @@
 extern void ste_gprs_context_init(void);
 extern void ste_gprs_context_exit(void);
 
-extern void ste_voicecall_init(void);
-extern void ste_voicecall_exit(void);
-
 extern void ste_radio_settings_init(void);
 extern void ste_radio_settings_exit(void);

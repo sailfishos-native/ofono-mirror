@@ -34,11 +34,12 @@
 #include <ofono/modem.h>
 #include <ofono/voicecall.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 
 #include "common.h"
-#include "huaweimodem.h"
 
 static const char *none_prefix[] = { NULL };
 
@@ -497,7 +498,6 @@ static void huawei_voicecall_remove(struct ofono_voicecall *vc)
 }
 
 static const struct ofono_voicecall_driver driver = {
-	.name			= "huaweimodem",
 	.probe			= huawei_voicecall_probe,
 	.remove			= huawei_voicecall_remove,
 	.dial			= huawei_dial,
@@ -506,12 +506,4 @@ static const struct ofono_voicecall_driver driver = {
 	.release_specific	= huawei_release_specific,
 };
 
-void huawei_voicecall_init(void)
-{
-	ofono_voicecall_driver_register(&driver);
-}
-
-void huawei_voicecall_exit(void)
-{
-	ofono_voicecall_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(voicecall, huaweimodem, &driver)

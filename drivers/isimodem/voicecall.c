@@ -38,7 +38,6 @@
 #include <ofono/modem.h>
 #include <ofono/voicecall.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "call.h"
 #include "debug.h"
@@ -1935,7 +1934,6 @@ static void isi_remove(struct ofono_voicecall *call)
 }
 
 static const struct ofono_voicecall_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_probe,
 	.remove			= isi_remove,
 	.dial			= isi_dial,
@@ -1954,12 +1952,4 @@ static const struct ofono_voicecall_driver driver = {
 	.send_tones		= isi_send_tones,
 };
 
-void isi_voicecall_init(void)
-{
-	ofono_voicecall_driver_register(&driver);
-}
-
-void isi_voicecall_exit(void)
-{
-	ofono_voicecall_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(voicecall, isimodem, &driver)

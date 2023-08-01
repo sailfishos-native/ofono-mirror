@@ -41,7 +41,7 @@
 #include <gril/gril.h>
 
 #include "common.h"
-#include "rilmodem.h"
+#include "rilutil.h"
 #include "voicecall.h"
 
 /* Amount of ms we wait between CLCC calls */
@@ -866,7 +866,6 @@ void ril_voicecall_remove(struct ofono_voicecall *vc)
 }
 
 static const struct ofono_voicecall_driver driver = {
-	.name			= RILMODEM,
 	.probe			= ril_voicecall_probe,
 	.remove			= ril_voicecall_remove,
 	.dial			= ril_dial,
@@ -883,12 +882,4 @@ static const struct ofono_voicecall_driver driver = {
 	.release_all_active	= ril_release_all_active,
 };
 
-void ril_voicecall_init(void)
-{
-	ofono_voicecall_driver_register(&driver);
-}
-
-void ril_voicecall_exit(void)
-{
-	ofono_voicecall_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(voicecall, rilmodem, &driver)
