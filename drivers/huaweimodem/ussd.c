@@ -31,12 +31,13 @@
 #include <ofono/log.h>
 #include <ofono/modem.h>
 #include <ofono/ussd.h>
+
+#include <drivers/atmodem/atutil.h>
+
 #include "util.h"
 
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "huaweimodem.h"
 
 static const char *cusd_prefix[] = { "+CUSD:", NULL };
 static const char *none_prefix[] = { NULL };
@@ -205,19 +206,10 @@ static void huawei_ussd_remove(struct ofono_ussd *ussd)
 }
 
 static const struct ofono_ussd_driver driver = {
-	.name		= "huaweimodem",
 	.probe		= huawei_ussd_probe,
 	.remove		= huawei_ussd_remove,
 	.request	= huawei_ussd_request,
 	.cancel		= huawei_ussd_cancel,
 };
 
-void huawei_ussd_init(void)
-{
-	ofono_ussd_driver_register(&driver);
-}
-
-void huawei_ussd_exit(void)
-{
-	ofono_ussd_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(ussd, huaweimodem, &driver)

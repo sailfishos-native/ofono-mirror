@@ -31,11 +31,12 @@
 #include <ofono/log.h>
 #include <ofono/modem.h>
 #include <ofono/ussd.h>
+
+#include <drivers/atmodem/atutil.h>
+
 #include "util.h"
 
 #include "gatchat.h"
-
-#include "speedupmodem.h"
 
 static const char *cusd_prefix[] = { "+CUSD:", NULL };
 static const char *none_prefix[] = { NULL };
@@ -205,19 +206,10 @@ static void speedup_ussd_remove(struct ofono_ussd *ussd)
 }
 
 static const struct ofono_ussd_driver driver = {
-	.name		= "speedupmodem",
 	.probe		= speedup_ussd_probe,
 	.remove		= speedup_ussd_remove,
 	.request	= speedup_ussd_request,
 	.cancel		= speedup_ussd_cancel,
 };
 
-void speedup_ussd_init(void)
-{
-	ofono_ussd_driver_register(&driver);
-}
-
-void speedup_ussd_exit(void)
-{
-	ofono_ussd_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(ussd, speedupmodem, &driver)

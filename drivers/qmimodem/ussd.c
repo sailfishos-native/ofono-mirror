@@ -33,9 +33,7 @@
 #include <ofono/ussd.h>
 #include <smsutil.h>
 #include "qmi.h"
-
-#include "qmimodem.h"
-
+#include "util.h"
 #include "voice.h"
 
 struct ussd_data {
@@ -314,19 +312,10 @@ error:
 }
 
 static const struct ofono_ussd_driver driver = {
-	.name		= "qmimodem",
 	.probe		= qmi_ussd_probe,
 	.remove		= qmi_ussd_remove,
 	.request	= qmi_ussd_request,
 	.cancel		= qmi_ussd_cancel
 };
 
-void qmi_ussd_init(void)
-{
-	ofono_ussd_driver_register(&driver);
-}
-
-void qmi_ussd_exit(void)
-{
-	ofono_ussd_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(ussd, qmimodem, &driver)

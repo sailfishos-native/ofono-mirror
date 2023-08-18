@@ -38,8 +38,7 @@
 #include <util.h>
 
 #include "gril.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 struct ussd_data {
 	GRil *ril;
@@ -242,19 +241,10 @@ static void ril_ussd_remove(struct ofono_ussd *ussd)
 }
 
 static const struct ofono_ussd_driver driver = {
-	.name		= RILMODEM,
 	.probe		= ril_ussd_probe,
 	.remove		= ril_ussd_remove,
 	.request	= ril_ussd_request,
 	.cancel		= ril_ussd_cancel
 };
 
-void ril_ussd_init(void)
-{
-	ofono_ussd_driver_register(&driver);
-}
-
-void ril_ussd_exit(void)
-{
-	ofono_ussd_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(ussd, rilmodem, &driver)

@@ -529,10 +529,7 @@ builtin_sources += drivers/atmodem/atutil.h \
 			drivers/hfpmodem/handsfree.c \
 			drivers/hfpmodem/siri.c
 
-builtin_modules += speedupmodem
 builtin_sources += drivers/atmodem/atutil.h \
-			drivers/speedupmodem/speedupmodem.h \
-			drivers/speedupmodem/speedupmodem.c \
 			drivers/speedupmodem/ussd.c
 
 builtin_modules += ubloxmodem

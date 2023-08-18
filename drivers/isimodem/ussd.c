@@ -41,7 +41,6 @@
 #include "smsutil.h"
 #include "util.h"
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "ss.h"
 #include "debug.h"
@@ -276,19 +275,10 @@ static void isi_ussd_remove(struct ofono_ussd *ussd)
 }
 
 static const struct ofono_ussd_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_ussd_probe,
 	.remove			= isi_ussd_remove,
 	.request		= isi_request,
 	.cancel			= isi_cancel
 };
 
-void isi_ussd_init(void)
-{
-	ofono_ussd_driver_register(&driver);
-}
-
-void isi_ussd_exit(void)
-{
-	ofono_ussd_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(ussd, isimodem, &driver)

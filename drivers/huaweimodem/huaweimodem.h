@@ -21,9 +21,6 @@
 
 #include <drivers/atmodem/atutil.h>
 
-extern void huawei_ussd_init(void);
-extern void huawei_ussd_exit(void);
-
 extern void huawei_audio_settings_init(void);
 extern void huawei_audio_settings_exit(void);
 
