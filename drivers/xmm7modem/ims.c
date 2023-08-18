@@ -34,10 +34,10 @@
 #include <ofono/log.h>
 #include <ofono/ims.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "xmm7modem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *cireg_prefix[] = { "+CIREG:", NULL };
@@ -200,7 +200,7 @@ static void cireg_support_cb(gboolean ok, GAtResult *result,
 				xmm_cireg_set_cb, ims, NULL);
 }
 
-static int xmm_ims_probe(struct ofono_ims *ims, void *data)
+static int xmm_ims_probe(struct ofono_ims *ims, unsigned int vendor, void *data)
 {
 	GAtChat *chat = data;
 	struct ims_driver_data *idd;
@@ -235,7 +235,6 @@ static void xmm_ims_remove(struct ofono_ims *ims)
 }
 
 static const struct ofono_ims_driver driver = {
-	.name				= "xmm7modem",
 	.probe				= xmm_ims_probe,
 	.remove				= xmm_ims_remove,
 	.ims_register			= xmm_ims_register,
@@ -243,12 +242,4 @@ static const struct ofono_ims_driver driver = {
 	.registration_status		= xmm_ims_registration_status,
 };
 
-void xmm_ims_init(void)
-{
-	ofono_ims_driver_register(&driver);
-}
-
-void xmm_ims_exit(void)
-{
-	ofono_ims_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(ims, xmm7modem, &driver)

@@ -1667,7 +1667,7 @@ static void xmm7xxx_post_online(struct ofono_modem *modem)
 		}
 	}
 
-	ofono_ims_create(modem, "xmm7modem", data->chat);
+	ofono_ims_create(modem, 0, "xmm7modem", data->chat);
 	ofono_netmon_create(modem, 0, "xmm7modem", data->chat);
 }
 
