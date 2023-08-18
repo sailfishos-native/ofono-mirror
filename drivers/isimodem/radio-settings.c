@@ -37,7 +37,6 @@
 #include <ofono/modem.h>
 #include <ofono/radio-settings.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "debug.h"
 #include "gpds.h"
@@ -364,7 +363,6 @@ static void isi_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_radio_settings_probe,
 	.remove			= isi_radio_settings_remove,
 	.query_rat_mode		= isi_query_rat_mode,
@@ -373,12 +371,4 @@ static const struct ofono_radio_settings_driver driver = {
 	.set_fast_dormancy	= isi_set_fast_dormancy,
 };
 
-void isi_radio_settings_init(void)
-{
-	ofono_radio_settings_driver_register(&driver);
-}
-
-void isi_radio_settings_exit(void)
-{
-	ofono_radio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, isidriver, &driver)

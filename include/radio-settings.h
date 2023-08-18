@@ -85,7 +85,6 @@ typedef void (*ofono_radio_settings_available_rats_query_cb_t)(
 						void *data);
 
 struct ofono_radio_settings_driver {
-	const char *name;
 	int (*probe)(struct ofono_radio_settings *rs, unsigned int vendor,
 			void *data);
 	void (*remove)(struct ofono_radio_settings *rs);
@@ -114,11 +113,6 @@ struct ofono_radio_settings_driver {
 			ofono_radio_settings_available_rats_query_cb_t cb,
 			void *data);
 };
-
-int ofono_radio_settings_driver_register(
-				const struct ofono_radio_settings_driver *d);
-void ofono_radio_settings_driver_unregister(
-				const struct ofono_radio_settings_driver *d);
 
 struct ofono_radio_settings *ofono_radio_settings_create(
 						struct ofono_modem *modem,

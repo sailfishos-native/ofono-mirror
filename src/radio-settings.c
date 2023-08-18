@@ -39,8 +39,6 @@
 #define SETTINGS_GROUP "Settings"
 #define RADIO_SETTINGS_FLAG_CACHED 0x1
 
-static GSList *g_drivers = NULL;
-
 struct ofono_radio_settings {
 	DBusMessage *pending;
 	int flags;
@@ -705,28 +703,6 @@ static const GDBusSignalTable radio_signals[] = {
 	{ }
 };
 
-int ofono_radio_settings_driver_register(const struct ofono_radio_settings_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d == NULL || d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_radio_settings_driver_unregister(const struct ofono_radio_settings_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d == NULL)
-		return;
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void radio_settings_unregister(struct ofono_atom *atom)
 {
 	struct ofono_radio_settings *rs = __ofono_atom_get_data(atom);
@@ -761,41 +737,9 @@ static void radio_settings_remove(struct ofono_atom *atom)
 	g_free(rs);
 }
 
-struct ofono_radio_settings *ofono_radio_settings_create(struct ofono_modem *modem,
-							unsigned int vendor,
-							const char *driver,
-							void *data)
-{
-	struct ofono_radio_settings *rs;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	rs = g_try_new0(struct ofono_radio_settings, 1);
-	if (rs == NULL)
-		return NULL;
-
-	rs->mode = -1;
-
-	rs->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_RADIO_SETTINGS,
-						radio_settings_remove, rs);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_radio_settings_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver) != 0)
-			continue;
-
-		if (drv->probe(rs, vendor, data) < 0)
-			continue;
-
-		rs->driver = drv;
-		break;
-	}
-
-	return rs;
-}
+OFONO_DEFINE_ATOM_CREATE(radio_settings, OFONO_ATOM_TYPE_RADIO_SETTINGS, {
+	atom->mode = -1;
+})
 
 static void ofono_radio_finish_register(struct ofono_radio_settings *rs)
 {

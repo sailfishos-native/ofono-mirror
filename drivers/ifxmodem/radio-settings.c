@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/radio-settings.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "ifxmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *xrat_prefix[] = { "+XRAT:", NULL };
@@ -200,19 +200,10 @@ static void ifx_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.name			= "ifxmodem",
 	.probe			= ifx_radio_settings_probe,
 	.remove			= ifx_radio_settings_remove,
 	.query_rat_mode		= ifx_query_rat_mode,
 	.set_rat_mode		= ifx_set_rat_mode
 };
 
-void ifx_radio_settings_init(void)
-{
-	ofono_radio_settings_driver_register(&driver);
-}
-
-void ifx_radio_settings_exit(void)
-{
-	ofono_radio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, ifxmodem, &driver)

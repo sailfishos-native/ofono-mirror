@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/radio-settings.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "iceramodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *ipbm_prefix[] = { "%IPBM:", NULL };
@@ -212,19 +212,10 @@ static void icera_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.name			= "iceramodem",
 	.probe			= icera_radio_settings_probe,
 	.remove			= icera_radio_settings_remove,
 	.query_rat_mode		= icera_query_rat_mode,
 	.set_rat_mode		= icera_set_rat_mode
 };
 
-void icera_radio_settings_init(void)
-{
-	ofono_radio_settings_driver_register(&driver);
-}
-
-void icera_radio_settings_exit(void)
-{
-	ofono_radio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, iceramodem, &driver)

@@ -35,7 +35,6 @@
 static int hsomodem_init(void)
 {
 	hso_gprs_context_init();
-	hso_radio_settings_init();
 
 	return 0;
 }
@@ -43,7 +42,6 @@ static int hsomodem_init(void)
 static void hsomodem_exit(void)
 {
 	hso_gprs_context_exit();
-	hso_radio_settings_exit();
 }
 
 OFONO_PLUGIN_DEFINE(hsomodem, "HSO modem driver", VERSION,

@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/radio-settings.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "huaweimodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *syscfg_prefix[] = { "^SYSCFG:", NULL };
@@ -583,7 +583,6 @@ static void huawei_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.name			= "huaweimodem",
 	.probe			= huawei_radio_settings_probe,
 	.remove			= huawei_radio_settings_remove,
 	.query_rat_mode		= huawei_query_rat_mode,
@@ -592,12 +591,4 @@ static const struct ofono_radio_settings_driver driver = {
 	.set_band		= huawei_set_band,
 };
 
-void huawei_radio_settings_init(void)
-{
-	ofono_radio_settings_driver_register(&driver);
-}
-
-void huawei_radio_settings_exit(void)
-{
-	ofono_radio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, huaweimodem, &driver)

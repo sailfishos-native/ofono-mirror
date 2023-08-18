@@ -46,9 +46,6 @@ extern void isi_call_barring_exit(void);
 extern void isi_call_meter_init(void);
 extern void isi_call_meter_exit(void);
 
-extern void isi_radio_settings_init(void);
-extern void isi_radio_settings_exit(void);
-
 extern void isi_gprs_init(void);
 extern void isi_gprs_exit(void);
 

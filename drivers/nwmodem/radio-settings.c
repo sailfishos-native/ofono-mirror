@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/radio-settings.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "nwmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *nwrat_prefix[] = { "$NWRAT:", NULL };
@@ -194,19 +194,10 @@ static void nw_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.name			= "nwmodem",
 	.probe			= nw_radio_settings_probe,
 	.remove			= nw_radio_settings_remove,
 	.query_rat_mode		= nw_query_rat_mode,
 	.set_rat_mode		= nw_set_rat_mode
 };
 
-void nw_radio_settings_init(void)
-{
-	ofono_radio_settings_driver_register(&driver);
-}
-
-void nw_radio_settings_exit(void)
-{
-	ofono_radio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, nwmodem, &driver)

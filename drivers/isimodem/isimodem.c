@@ -46,7 +46,6 @@ static int isimodem_init(void)
 	isi_call_settings_init();
 	isi_call_barring_init();
 	isi_call_meter_init();
-	isi_radio_settings_init();
 	isi_gprs_init();
 	isi_gprs_context_init();
 	isi_audio_settings_init();
@@ -65,7 +64,6 @@ static void isimodem_exit(void)
 	isi_call_settings_exit();
 	isi_call_barring_exit();
 	isi_call_meter_exit();
-	isi_radio_settings_exit();
 	isi_gprs_exit();
 	isi_gprs_context_exit();
 	isi_audio_settings_exit();

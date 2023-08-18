@@ -35,14 +35,12 @@
 
 static int xmm7modem_init(void)
 {
-	xmm_radio_settings_init();
 	xmm_netmon_init();
 	return 0;
 }
 
 static void xmm7modem_exit(void)
 {
-	xmm_radio_settings_exit();
 	xmm_netmon_exit();
 }
 

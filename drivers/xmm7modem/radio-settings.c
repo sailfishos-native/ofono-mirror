@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/radio-settings.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "xmm7modem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *xact_prefix[] = { "+XACT:", NULL };
@@ -222,19 +222,10 @@ static void xmm_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.name			= "xmm7modem",
 	.probe			= xmm_radio_settings_probe,
 	.remove			= xmm_radio_settings_remove,
 	.query_rat_mode		= xmm_query_rat_mode,
 	.set_rat_mode		= xmm_set_rat_mode
 };
 
-void xmm_radio_settings_init(void)
-{
-	ofono_radio_settings_driver_register(&driver);
-}
-
-void xmm_radio_settings_exit(void)
-{
-	ofono_radio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, xmm7modem, &driver)

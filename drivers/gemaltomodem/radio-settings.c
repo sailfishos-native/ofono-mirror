@@ -35,10 +35,10 @@
 #include <ofono/modem.h>
 #include <ofono/radio-settings.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "gemaltomodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *sxrat_prefix[] = { "^SXRAT:", NULL };
@@ -246,19 +246,10 @@ static void gemalto_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.name			= "gemaltomodem",
 	.probe			= gemalto_radio_settings_probe,
 	.remove			= gemalto_radio_settings_remove,
 	.query_rat_mode		= gemalto_query_rat_mode,
 	.set_rat_mode		= gemalto_set_rat_mode
 };
 
-void gemalto_radio_settings_init(void)
-{
-	ofono_radio_settings_driver_register(&driver);
-}
-
-void gemalto_radio_settings_exit(void)
-{
-	ofono_radio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, gemaltomodem, &driver)

@@ -30,6 +30,3 @@ extern void gemalto_gprs_context_exit();
 
 extern void gemalto_netmon_init(void);
 extern void gemalto_netmon_exit(void);
-
-extern void gemalto_radio_settings_init(void);
-extern void gemalto_radio_settings_exit(void);

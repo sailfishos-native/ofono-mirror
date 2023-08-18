@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/radio-settings.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "ztemodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *zsnt_prefix[] = { "+ZSNT:", NULL };
@@ -194,19 +194,10 @@ static void zte_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.name			= "ztemodem",
 	.probe			= zte_radio_settings_probe,
 	.remove			= zte_radio_settings_remove,
 	.query_rat_mode		= zte_query_rat_mode,
 	.set_rat_mode		= zte_set_rat_mode
 };
 
-void zte_radio_settings_init(void)
-{
-	ofono_radio_settings_driver_register(&driver);
-}
-
-void zte_radio_settings_exit(void)
-{
-	ofono_radio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, ztemodem, &driver)

@@ -23,8 +23,5 @@
 
 #define XMM7MODEM "xmm7modem"
 
-extern void xmm_radio_settings_init(void);
-extern void xmm_radio_settings_exit(void);
-
 extern void xmm_netmon_init(void);
 extern void xmm_netmon_exit(void);
