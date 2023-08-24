@@ -34,7 +34,6 @@
 
 static int huaweimodem_init(void)
 {
-	huawei_audio_settings_init();
 	huawei_gprs_context_init();
 
 	return 0;
@@ -43,7 +42,6 @@ static int huaweimodem_init(void)
 static void huaweimodem_exit(void)
 {
 	huawei_gprs_context_exit();
-	huawei_audio_settings_exit();
 }
 
 OFONO_PLUGIN_DEFINE(huaweimodem, "Huawei modem driver", VERSION,

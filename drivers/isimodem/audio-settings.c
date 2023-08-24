@@ -39,7 +39,6 @@
 #include <gisi/message.h>
 
 #include "isiutil.h"
-#include "isimodem.h"
 #include "call.h"
 #include "debug.h"
 
@@ -117,17 +116,8 @@ static void isi_audio_settings_remove(struct ofono_audio_settings *as)
 }
 
 static const struct ofono_audio_settings_driver driver = {
-	.name		= "isimodem",
 	.probe		= isi_audio_settings_probe,
 	.remove		= isi_audio_settings_remove,
 };
 
-void isi_audio_settings_init(void)
-{
-	ofono_audio_settings_driver_register(&driver);
-}
-
-void isi_audio_settings_exit(void)
-{
-	ofono_audio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(audio_settings, isimodem, &driver)

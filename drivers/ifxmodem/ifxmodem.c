@@ -34,7 +34,6 @@
 
 static int ifxmodem_init(void)
 {
-	ifx_audio_settings_init();
 	ifx_gprs_context_init();
 	ifx_ctm_init();
 
@@ -44,7 +43,6 @@ static int ifxmodem_init(void)
 static void ifxmodem_exit(void)
 {
 	ifx_gprs_context_exit();
-	ifx_audio_settings_exit();
 	ifx_ctm_exit();
 }
 

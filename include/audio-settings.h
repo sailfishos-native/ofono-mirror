@@ -31,7 +31,6 @@ extern "C" {
 struct ofono_audio_settings;
 
 struct ofono_audio_settings_driver {
-	const char *name;
 	int (*probe)(struct ofono_audio_settings *as,
 				unsigned int vendor, void *data);
 	void (*remove)(struct ofono_audio_settings *as);
@@ -41,11 +40,6 @@ void ofono_audio_settings_active_notify(struct ofono_audio_settings *as,
 						ofono_bool_t active);
 void ofono_audio_settings_mode_notify(struct ofono_audio_settings *as,
 						const char *mode);
-
-int ofono_audio_settings_driver_register(
-				const struct ofono_audio_settings_driver *d);
-void ofono_audio_settings_driver_unregister(
-				const struct ofono_audio_settings_driver *d);
 
 struct ofono_audio_settings *ofono_audio_settings_create(
 						struct ofono_modem *modem,

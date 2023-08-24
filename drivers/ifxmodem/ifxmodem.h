@@ -22,9 +22,6 @@
 #include <drivers/atmodem/atutil.h>
 #include <drivers/atmodem/vendor.h>
 
-extern void ifx_audio_settings_init(void);
-extern void ifx_audio_settings_exit(void);
-
 extern void ifx_gprs_context_init(void);
 extern void ifx_gprs_context_exit(void);
 

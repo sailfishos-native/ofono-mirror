@@ -37,8 +37,6 @@
 #include "gatchat.h"
 #include "gatresult.h"
 
-#include "huaweimodem.h"
-
 static const char *cvoice_prefix[] = { "^CVOICE:", NULL };
 
 struct audio_settings_data {
@@ -113,17 +111,8 @@ static void huawei_audio_settings_remove(struct ofono_audio_settings *as)
 }
 
 static const struct ofono_audio_settings_driver driver = {
-	.name		= "huaweimodem",
 	.probe		= huawei_audio_settings_probe,
 	.remove		= huawei_audio_settings_remove,
 };
 
-void huawei_audio_settings_init(void)
-{
-	ofono_audio_settings_driver_register(&driver);
-}
-
-void huawei_audio_settings_exit(void)
-{
-	ofono_audio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(audio_settings, huaweimodem, &driver)

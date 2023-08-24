@@ -21,8 +21,5 @@
 
 #include <drivers/atmodem/atutil.h>
 
-extern void huawei_audio_settings_init(void);
-extern void huawei_audio_settings_exit(void);
-
 extern void huawei_gprs_context_init(void);
 extern void huawei_gprs_context_exit(void);

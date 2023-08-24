@@ -37,8 +37,6 @@
 #include "gatchat.h"
 #include "gatresult.h"
 
-#include "ifxmodem.h"
-
 static const char *none_prefix[] = { NULL };
 static const char *xprogress_prefix[] = { "+XPROGRESS:", NULL };
 static const char *xdrv_prefix[] = { "+XDRV:", NULL };
@@ -382,17 +380,8 @@ static void ifx_audio_settings_remove(struct ofono_audio_settings *as)
 }
 
 static const struct ofono_audio_settings_driver driver = {
-	.name		= "ifxmodem",
 	.probe		= ifx_audio_settings_probe,
 	.remove		= ifx_audio_settings_remove,
 };
 
-void ifx_audio_settings_init(void)
-{
-	ofono_audio_settings_driver_register(&driver);
-}
-
-void ifx_audio_settings_exit(void)
-{
-	ofono_audio_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(audio_settings, ifxmodem, &driver)
