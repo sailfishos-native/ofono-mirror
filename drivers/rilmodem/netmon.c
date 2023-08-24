@@ -36,8 +36,7 @@
 #include <ofono/netmon.h>
 
 #include "gril.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 /*
  * Defined below are copy of
@@ -392,19 +391,10 @@ static void ril_netmon_periodic_update(struct ofono_netmon *netmon,
 }
 
 static const struct ofono_netmon_driver driver = {
-	.name			= RILMODEM,
 	.probe			= ril_netmon_probe,
 	.remove			= ril_netmon_remove,
 	.request_update		= ril_netmon_request_update,
 	.enable_periodic_update	= ril_netmon_periodic_update,
 };
 
-void ril_netmon_init(void)
-{
-	ofono_netmon_driver_register(&driver);
-}
-
-void ril_netmon_exit(void)
-{
-	ofono_netmon_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netmon, rilmodem, &driver)

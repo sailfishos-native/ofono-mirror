@@ -44,8 +44,6 @@
 	ofono_dbus_dict_append(p_dict, key, dbus_type, &value); \
 } while (0)
 
-static GSList *g_drivers = NULL;
-
 struct ofono_netmon {
 	const struct ofono_netmon_driver *driver;
 	DBusMessage *pending;
@@ -552,25 +550,6 @@ static const GDBusMethodTable netmon_methods[] = {
 	{ }
 };
 
-int ofono_netmon_driver_register(const struct ofono_netmon_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_netmon_driver_unregister(const struct ofono_netmon_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void netmon_unregister(struct ofono_atom *atom)
 {
 	DBusConnection *conn = ofono_dbus_get_connection();
@@ -594,38 +573,7 @@ static void netmon_remove(struct ofono_atom *atom)
 	g_free(netmon);
 }
 
-struct ofono_netmon *ofono_netmon_create(struct ofono_modem *modem,
-			unsigned int vendor, const char *driver, void *data)
-{
-	struct ofono_netmon *netmon;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	netmon = g_try_new0(struct ofono_netmon, 1);
-
-	if (netmon == NULL)
-		return NULL;
-
-	netmon->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_NETMON,
-						netmon_remove, netmon);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_netmon_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(netmon, vendor, data) < 0)
-			continue;
-
-		netmon->driver = drv;
-		break;
-	}
-
-	return netmon;
-}
+OFONO_DEFINE_ATOM_CREATE(netmon, OFONO_ATOM_TYPE_NETMON)
 
 void ofono_netmon_register(struct ofono_netmon *netmon)
 {

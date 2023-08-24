@@ -35,11 +35,11 @@
 #include <ofono/modem.h>
 #include <ofono/netmon.h>
 
+#include "src/common.h"
+
 #include "qmi.h"
 #include "nas.h"
-
-#include "qmimodem.h"
-#include "src/common.h"
+#include "util.h"
 
 struct netmon_data {
 	struct qmi_service *nas;
@@ -261,18 +261,9 @@ static void qmi_netmon_remove(struct ofono_netmon *netmon)
 }
 
 static const struct ofono_netmon_driver driver = {
-	.name			= "qmimodem",
 	.probe			= qmi_netmon_probe,
 	.remove			= qmi_netmon_remove,
 	.request_update		= qmi_netmon_request_update,
 };
 
-void qmi_netmon_init(void)
-{
-	ofono_netmon_driver_register(&driver);
-}
-
-void qmi_netmon_exit(void)
-{
-	ofono_netmon_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netmon, qmimodem, &driver)

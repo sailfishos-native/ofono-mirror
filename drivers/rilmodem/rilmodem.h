@@ -54,8 +54,5 @@ extern void ril_call_barring_exit(void);
 extern void ril_phonebook_init(void);
 extern void ril_phonebook_exit(void);
 
-extern void ril_netmon_init(void);
-extern void ril_netmon_exit(void);
-
 extern void ril_cbs_init(void);
 extern void ril_cbs_exit(void);

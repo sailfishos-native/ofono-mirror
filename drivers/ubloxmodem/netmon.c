@@ -336,18 +336,9 @@ static void ublox_netmon_remove(struct ofono_netmon *netmon)
 }
 
 static const struct ofono_netmon_driver driver = {
-	.name			= UBLOXMODEM,
 	.probe			= ublox_netmon_probe,
 	.remove			= ublox_netmon_remove,
 	.request_update		= ublox_netmon_request_update,
 };
 
-void ublox_netmon_init(void)
-{
-	ofono_netmon_driver_register(&driver);
-}
-
-void ublox_netmon_exit(void)
-{
-	ofono_netmon_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netmon, ubloxmodem, &driver)

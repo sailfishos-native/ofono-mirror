@@ -34,11 +34,13 @@
 #include <ofono/netreg.h>
 #include <ofono/netmon.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 
 #include "common.h"
-#include "gemaltomodem.h"
+
 #include "drivers/atmodem/vendor.h"
 
 static const char *smoni_prefix[] = { "^SMONI:", NULL };
@@ -634,18 +636,9 @@ static void gemalto_netmon_remove(struct ofono_netmon *netmon)
 }
 
 static const struct ofono_netmon_driver driver = {
-	.name			= "gemaltomodem",
 	.probe			= gemalto_netmon_probe,
 	.remove			= gemalto_netmon_remove,
 	.request_update		= gemalto_netmon_request_update,
 };
 
-void gemalto_netmon_init(void)
-{
-	ofono_netmon_driver_register(&driver);
-}
-
-void gemalto_netmon_exit(void)
-{
-	ofono_netmon_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netmon, gemaltomodem, &driver)

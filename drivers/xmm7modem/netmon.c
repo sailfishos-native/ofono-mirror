@@ -36,11 +36,12 @@
 #include <ofono/netreg.h>
 #include <ofono/netmon.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 
 #include "common.h"
-#include "xmm7modem.h"
 #include "drivers/atmodem/vendor.h"
 
 static const char *xmci_prefix[] = { "+XMCI:", NULL };
@@ -309,19 +310,10 @@ static void xmm7modem_netmon_remove(struct ofono_netmon *netmon)
 }
 
 static const struct ofono_netmon_driver driver = {
-	.name			= XMM7MODEM,
 	.probe			= xmm7modem_netmon_probe,
 	.remove			= xmm7modem_netmon_remove,
 	.request_update		= xmm7modem_netmon_request_update,
 	.neighbouring_cell_update = xmm7modem_neighbouring_cell_update,
 };
 
-void xmm_netmon_init(void)
-{
-	ofono_netmon_driver_register(&driver);
-}
-
-void xmm_netmon_exit(void)
-{
-	ofono_netmon_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netmon, xmm7modem, &driver)

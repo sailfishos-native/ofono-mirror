@@ -33,7 +33,6 @@ struct ofono_netmon;
 typedef void (*ofono_netmon_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_netmon_driver {
-	const char *name;
 	int (*probe)(struct ofono_netmon *netmon, unsigned int vendor,
 					void *data);
 	void (*remove)(struct ofono_netmon *netmon);
@@ -92,10 +91,6 @@ enum ofono_netmon_info {
 void ofono_netmon_serving_cell_notify(struct ofono_netmon *netmon,
 					enum ofono_netmon_cell_type type,
 					int info_type, ...);
-
-int ofono_netmon_driver_register(const struct ofono_netmon_driver *d);
-
-void ofono_netmon_driver_unregister(const struct ofono_netmon_driver *d);
 
 struct ofono_netmon *ofono_netmon_create(struct ofono_modem *modem,
 						unsigned int vendor,
