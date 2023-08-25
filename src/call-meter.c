@@ -38,8 +38,6 @@
 #define CALL_METER_FLAG_CACHED 0x1
 #define CALL_METER_FLAG_HAVE_PUCT 0x2
 
-static GSList *g_drivers = NULL;
-
 struct ofono_call_meter {
 	int flags;
 	DBusMessage *pending;
@@ -681,25 +679,6 @@ void ofono_call_meter_maximum_notify(struct ofono_call_meter *cm)
 			"NearMaximumWarning", DBUS_TYPE_INVALID);
 }
 
-int ofono_call_meter_driver_register(const struct ofono_call_meter_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_call_meter_driver_unregister(const struct ofono_call_meter_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void call_meter_unregister(struct ofono_atom *atom)
 {
 	struct ofono_call_meter *cm = __ofono_atom_get_data(atom);
@@ -726,41 +705,7 @@ static void call_meter_remove(struct ofono_atom *atom)
 	g_free(cm);
 }
 
-struct ofono_call_meter *ofono_call_meter_create(struct ofono_modem *modem,
-							unsigned int vendor,
-							const char *driver,
-							void *data)
-{
-	struct ofono_call_meter *cm;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	cm = g_try_new0(struct ofono_call_meter, 1);
-
-	if (cm == NULL)
-		return NULL;
-
-	cm->atom = __ofono_modem_add_atom(modem,
-						OFONO_ATOM_TYPE_CALL_METER,
-						call_meter_remove, cm);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_call_meter_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(cm, vendor, data) < 0)
-			continue;
-
-		cm->driver = drv;
-		break;
-	}
-
-	return cm;
-}
+OFONO_DEFINE_ATOM_CREATE(call_meter, OFONO_ATOM_TYPE_CALL_METER)
 
 void ofono_call_meter_register(struct ofono_call_meter *cm)
 {

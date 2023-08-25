@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/call-meter.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "atmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *caoc_prefix[] = { "+CAOC:", NULL };
@@ -332,7 +332,6 @@ static void at_caoc_remove(struct ofono_call_meter *cm)
 }
 
 static const struct ofono_call_meter_driver driver = {
-	.name = "atmodem",
 	.probe = at_caoc_probe,
 	.remove = at_caoc_remove,
 	.call_meter_query = at_caoc_query,
@@ -344,12 +343,4 @@ static const struct ofono_call_meter_driver driver = {
 	.puct_set = at_cpuc_set,
 };
 
-void at_call_meter_init(void)
-{
-	ofono_call_meter_driver_register(&driver);
-}
-
-void at_call_meter_exit(void)
-{
-	ofono_call_meter_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_meter, atmodem, &driver)

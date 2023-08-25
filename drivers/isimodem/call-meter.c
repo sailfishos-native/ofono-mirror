@@ -36,7 +36,6 @@
 #include <ofono/modem.h>
 #include <ofono/call-meter.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "ss.h"
 
@@ -118,7 +117,6 @@ static void isi_call_meter_remove(struct ofono_call_meter *cm)
 }
 
 static const struct ofono_call_meter_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_call_meter_probe,
 	.remove			= isi_call_meter_remove,
 	.call_meter_query	= isi_call_meter_query,
@@ -130,12 +128,4 @@ static const struct ofono_call_meter_driver driver = {
 	.puct_set		= isi_puct_set
 };
 
-void isi_call_meter_init(void)
-{
-	ofono_call_meter_driver_register(&driver);
-}
-
-void isi_call_meter_exit(void)
-{
-	ofono_call_meter_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_meter, isimodem, &driver)
