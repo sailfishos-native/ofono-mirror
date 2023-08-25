@@ -30,6 +30,7 @@
 #include <stdint.h>
 
 #include <glib.h>
+#include <ell/ell.h>
 #include <gdbus.h>
 
 #include "ofono.h"
@@ -1039,8 +1040,7 @@ static void voicecall_set_call_name(struct voicecall *v,
 			cnap_validity == CNAP_VALIDITY_NOT_AVAILABLE)
 		return;
 
-	strncpy(call->name, name, OFONO_MAX_CALLER_NAME_LENGTH);
-	call->name[OFONO_MAX_CALLER_NAME_LENGTH] = '\0';
+	l_strlcpy(call->name, name, sizeof(call->name));
 	call->cnap_validity = cnap_validity;
 
 	path = voicecall_build_path(v->vc, call);
