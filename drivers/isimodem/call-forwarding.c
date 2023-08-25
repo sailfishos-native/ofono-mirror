@@ -38,7 +38,6 @@
 #include <ofono/modem.h>
 #include <ofono/call-forwarding.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "ss.h"
 #include "debug.h"
@@ -457,22 +456,11 @@ static void isi_call_forwarding_remove(struct ofono_call_forwarding *cf)
 }
 
 static const struct ofono_call_forwarding_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_call_forwarding_probe,
 	.remove			= isi_call_forwarding_remove,
-	.activation		= NULL,
 	.registration		= isi_registration,
-	.deactivation		= NULL,
 	.erasure		= isi_erasure,
 	.query			= isi_query
 };
 
-void isi_call_forwarding_init(void)
-{
-	ofono_call_forwarding_driver_register(&driver);
-}
-
-void isi_call_forwarding_exit(void)
-{
-	ofono_call_forwarding_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_forwarding, isimodem, &driver)

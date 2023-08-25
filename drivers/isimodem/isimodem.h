@@ -34,9 +34,6 @@ extern void isi_sms_exit(void);
 extern void isi_cbs_init(void);
 extern void isi_cbs_exit(void);
 
-extern void isi_call_forwarding_init(void);
-extern void isi_call_forwarding_exit(void);
-
 extern void isi_call_settings_init(void);
 extern void isi_call_settings_exit(void);
 

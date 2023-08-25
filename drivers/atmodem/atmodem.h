@@ -24,9 +24,6 @@
 extern void at_netreg_init(void);
 extern void at_netreg_exit(void);
 
-extern void at_call_forwarding_init(void);
-extern void at_call_forwarding_exit(void);
-
 extern void at_call_settings_init(void);
 extern void at_call_settings_exit(void);
 

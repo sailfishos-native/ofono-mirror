@@ -33,10 +33,10 @@
 #include <ofono/modem.h>
 #include <ofono/call-forwarding.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "atmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *ccfc_prefix[] = { "+CCFC:", NULL };
@@ -264,7 +264,6 @@ static void at_ccfc_remove(struct ofono_call_forwarding *cf)
 }
 
 static const struct ofono_call_forwarding_driver driver = {
-	.name		= "atmodem",
 	.probe		= at_ccfc_probe,
 	.remove		= at_ccfc_remove,
 	.registration	= at_ccfc_registration,
@@ -274,12 +273,4 @@ static const struct ofono_call_forwarding_driver driver = {
 	.erasure	= at_ccfc_erasure
 };
 
-void at_call_forwarding_init(void)
-{
-	ofono_call_forwarding_driver_register(&driver);
-}
-
-void at_call_forwarding_exit(void)
-{
-	ofono_call_forwarding_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_forwarding, atmodem, &driver)

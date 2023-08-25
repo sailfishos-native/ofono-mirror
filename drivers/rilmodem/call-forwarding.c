@@ -42,8 +42,7 @@
 #endif
 
 #include "gril.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 struct forw_data {
 	GRil *ril;
@@ -379,7 +378,6 @@ static void ril_call_forwarding_remove(struct ofono_call_forwarding *cf)
 }
 
 static const struct ofono_call_forwarding_driver driver = {
-	.name			= RILMODEM,
 	.probe			= ril_call_forwarding_probe,
 	.remove			= ril_call_forwarding_remove,
 	.erasure		= ril_erasure,
@@ -389,12 +387,4 @@ static const struct ofono_call_forwarding_driver driver = {
 	.activation		= ril_activate
 };
 
-void ril_call_forwarding_init(void)
-{
-	ofono_call_forwarding_driver_register(&driver);
-}
-
-void ril_call_forwarding_exit(void)
-{
-	ofono_call_forwarding_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_forwarding, rilmodem, &driver)
