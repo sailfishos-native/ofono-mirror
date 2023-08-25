@@ -33,9 +33,6 @@ extern void at_call_settings_exit(void);
 extern void at_call_meter_init(void);
 extern void at_call_meter_exit(void);
 
-extern void at_call_barring_init(void);
-extern void at_call_barring_exit(void);
-
 extern void at_sms_init(void);
 extern void at_sms_exit(void);
 

@@ -39,7 +39,6 @@
 #include <ofono/call-barring.h>
 #include "util.h"
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "ss.h"
 #include "debug.h"
@@ -429,7 +428,6 @@ static void isi_call_barring_remove(struct ofono_call_barring *barr)
 }
 
 static const struct ofono_call_barring_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_call_barring_probe,
 	.remove			= isi_call_barring_remove,
 	.set			= isi_set,
@@ -437,12 +435,4 @@ static const struct ofono_call_barring_driver driver = {
 	.set_passwd		= isi_set_passwd
 };
 
-void isi_call_barring_init(void)
-{
-	ofono_call_barring_driver_register(&driver);
-}
-
-void isi_call_barring_exit(void)
-{
-	ofono_call_barring_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_barring, isimodem, &driver)

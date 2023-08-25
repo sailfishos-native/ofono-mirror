@@ -411,13 +411,12 @@ static const struct cb_data testdata_set_passwd_invalid_1 = {
 };
 
 /* Declarations && Re-implementations of core functions. */
-void ril_call_barring_exit(void);
-void ril_call_barring_init(void);
-
 struct ofono_call_barring {
 	void *driver_data;
 	const struct cb_data *cbd;
 };
+
+extern struct ofono_atom_driver_desc __start___call_barring[];
 
 struct ofono_call_barring *ofono_call_barring_create(struct ofono_modem *modem,
 							unsigned int vendor,
@@ -428,18 +427,12 @@ struct ofono_call_barring *ofono_call_barring_create(struct ofono_modem *modem,
 	struct ofono_call_barring *cb = g_new0(struct ofono_call_barring, 1);
 	int retval;
 
+	cbdriver = __start___call_barring[0].driver;
+
 	retval = cbdriver->probe(cb, OFONO_RIL_VENDOR_AOSP, rsd->ril);
 	g_assert(retval == 0);
 
 	return cb;
-}
-
-int ofono_call_barring_driver_register(const struct ofono_call_barring_driver *d)
-{
-	if (cbdriver == NULL)
-		cbdriver = d;
-
-	return 0;
 }
 
 void ofono_call_barring_set_data(struct ofono_call_barring *cb, void *data)
@@ -453,10 +446,6 @@ void *ofono_call_barring_get_data(struct ofono_call_barring *cb)
 }
 
 void ofono_call_barring_register(struct ofono_call_barring *cb)
-{
-}
-
-void ofono_call_barring_driver_unregister(const struct ofono_call_barring_driver *d)
 {
 }
 
@@ -494,8 +483,6 @@ static void test_call_barring_func(gconstpointer data)
 	const struct cb_data *sd = data;
 	struct rilmodem_cb_data *rsd;
 
-	ril_call_barring_init();
-
 	rsd = g_new0(struct rilmodem_cb_data, 1);
 
 	rsd->test_data = sd;
@@ -516,8 +503,6 @@ static void test_call_barring_func(gconstpointer data)
 	g_free(rsd);
 
 	rilmodem_test_server_close(rsd->serverd);
-
-	ril_call_barring_exit();
 }
 
 #endif

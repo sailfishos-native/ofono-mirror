@@ -39,8 +39,6 @@
 #define CALL_BARRING_FLAG_CACHED 0x1
 #define NUM_OF_BARRINGS 5
 
-static GSList *g_drivers = NULL;
-
 static void cb_ss_query_next_lock(struct ofono_call_barring *cb);
 static void get_query_next_lock(struct ofono_call_barring *cb);
 static void set_query_next_lock(struct ofono_call_barring *cb);
@@ -996,25 +994,6 @@ static const GDBusSignalTable cb_signals[] = {
 	{ }
 };
 
-int ofono_call_barring_driver_register(const struct ofono_call_barring_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_call_barring_driver_unregister(const struct ofono_call_barring_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void call_barring_unregister(struct ofono_atom *atom)
 {
 	struct ofono_call_barring *cb = __ofono_atom_get_data(atom);
@@ -1047,40 +1026,7 @@ static void call_barring_remove(struct ofono_atom *atom)
 	g_free(cb);
 }
 
-struct ofono_call_barring *ofono_call_barring_create(struct ofono_modem *modem,
-							unsigned int vendor,
-							const char *driver,
-							void *data)
-{
-	struct ofono_call_barring *cb;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	cb = g_try_new0(struct ofono_call_barring, 1);
-
-	if (cb == NULL)
-		return NULL;
-
-	cb->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_CALL_BARRING,
-						call_barring_remove, cb);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_call_barring_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(cb, vendor, data) < 0)
-			continue;
-
-		cb->driver = drv;
-		break;
-	}
-
-	return cb;
-}
+OFONO_DEFINE_ATOM_CREATE(call_barring, OFONO_ATOM_TYPE_CALL_BARRING)
 
 static void ussd_watch(struct ofono_atom *atom,
 			enum ofono_atom_watch_condition cond, void *data)

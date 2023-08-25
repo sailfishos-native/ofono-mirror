@@ -31,8 +31,7 @@
 #include "common.h"
 
 #include "gril.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 struct barring_data {
 	GRil *ril;
@@ -271,7 +270,6 @@ static void ril_call_barring_remove(struct ofono_call_barring *cb)
 }
 
 static const struct ofono_call_barring_driver driver = {
-	.name			= "rilmodem",
 	.probe			= ril_call_barring_probe,
 	.remove			= ril_call_barring_remove,
 	.query			= ril_call_barring_query,
@@ -279,12 +277,4 @@ static const struct ofono_call_barring_driver driver = {
 	.set_passwd		= ril_call_barring_set_passwd
 };
 
-void ril_call_barring_init(void)
-{
-	ofono_call_barring_driver_register(&driver);
-}
-
-void ril_call_barring_exit(void)
-{
-	ofono_call_barring_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_barring, rilmodem, &driver)

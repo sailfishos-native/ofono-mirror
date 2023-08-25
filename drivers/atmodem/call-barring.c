@@ -33,10 +33,10 @@
 #include <ofono/modem.h>
 #include <ofono/call-barring.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "atmodem.h"
 
 static const char *clck_prefix[] = { "+CLCK:", NULL };
 static const char *none_prefix[] = { NULL };
@@ -212,7 +212,6 @@ static void at_call_barring_remove(struct ofono_call_barring *cb)
 }
 
 static const struct ofono_call_barring_driver driver = {
-	.name		= "atmodem",
 	.probe		= at_call_barring_probe,
 	.remove		= at_call_barring_remove,
 	.set		= at_call_barring_set,
@@ -220,12 +219,4 @@ static const struct ofono_call_barring_driver driver = {
 	.set_passwd	= at_call_barring_set_passwd,
 };
 
-void at_call_barring_init(void)
-{
-	ofono_call_barring_driver_register(&driver);
-}
-
-void at_call_barring_exit(void)
-{
-	ofono_call_barring_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_barring, atmodem, &driver)

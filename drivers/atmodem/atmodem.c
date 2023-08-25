@@ -35,7 +35,6 @@
 static int atmodem_init(void)
 {
 	at_devinfo_init();
-	at_call_barring_init();
 	at_call_forwarding_init();
 	at_call_meter_init();
 	at_call_settings_init();
@@ -58,7 +57,6 @@ static void atmodem_exit(void)
 	at_call_settings_exit();
 	at_call_meter_exit();
 	at_call_forwarding_exit();
-	at_call_barring_exit();
 	at_netreg_exit();
 	at_devinfo_exit();
 	at_cbs_exit();

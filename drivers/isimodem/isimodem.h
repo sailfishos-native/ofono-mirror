@@ -40,9 +40,6 @@ extern void isi_call_forwarding_exit(void);
 extern void isi_call_settings_init(void);
 extern void isi_call_settings_exit(void);
 
-extern void isi_call_barring_init(void);
-extern void isi_call_barring_exit(void);
-
 extern void isi_call_meter_init(void);
 extern void isi_call_meter_exit(void);
 
