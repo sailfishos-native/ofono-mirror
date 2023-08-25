@@ -37,8 +37,6 @@
 
 #define CALL_SETTINGS_FLAG_CACHED 0x1
 
-static GSList *g_drivers = NULL;
-
 /* 27.007 Section 7.7 */
 enum clir_status {
 	CLIR_STATUS_NOT_PROVISIONED =		0,
@@ -1350,25 +1348,6 @@ static const GDBusSignalTable cs_signals[] = {
 	{ }
 };
 
-int ofono_call_settings_driver_register(const struct ofono_call_settings_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_call_settings_driver_unregister(const struct ofono_call_settings_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void call_settings_unregister(struct ofono_atom *atom)
 {
 	struct ofono_call_settings *cs = __ofono_atom_get_data(atom);
@@ -1401,46 +1380,14 @@ static void call_settings_remove(struct ofono_atom *atom)
 	g_free(cs);
 }
 
-struct ofono_call_settings *ofono_call_settings_create(struct ofono_modem *modem,
-							unsigned int vendor,
-							const char *driver,
-							void *data)
-{
-	struct ofono_call_settings *cs;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	cs = g_try_new0(struct ofono_call_settings, 1);
-
-	if (cs == NULL)
-		return NULL;
-
+OFONO_DEFINE_ATOM_CREATE(call_settings, OFONO_ATOM_TYPE_CALL_SETTINGS, {
 	/* Set all the settings to unknown state */
-	cs->clip = CLIP_STATUS_UNKNOWN;
-	cs->cnap = CNAP_STATUS_UNKNOWN;
-	cs->clir = CLIR_STATUS_UNKNOWN;
-	cs->colp = COLP_STATUS_UNKNOWN;
-	cs->colr = COLR_STATUS_UNKNOWN;
-	cs->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_CALL_SETTINGS,
-						call_settings_remove, cs);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_call_settings_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(cs, vendor, data) < 0)
-			continue;
-
-		cs->driver = drv;
-		break;
-	}
-
-	return cs;
-}
+	atom->clip = CLIP_STATUS_UNKNOWN;
+	atom->cnap = CNAP_STATUS_UNKNOWN;
+	atom->clir = CLIR_STATUS_UNKNOWN;
+	atom->colp = COLP_STATUS_UNKNOWN;
+	atom->colr = COLR_STATUS_UNKNOWN;
+})
 
 static void ussd_watch(struct ofono_atom *atom,
 			enum ofono_atom_watch_condition cond, void *data)

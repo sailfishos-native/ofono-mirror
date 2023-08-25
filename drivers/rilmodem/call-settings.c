@@ -39,8 +39,7 @@
 #include "common.h"
 
 #include "gril.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 struct settings_data {
 	GRil *ril;
@@ -320,7 +319,6 @@ static void ril_call_settings_remove(struct ofono_call_settings *cs)
 }
 
 static const struct ofono_call_settings_driver driver = {
-	.name			= RILMODEM,
 	.probe			= ril_call_settings_probe,
 	.remove			= ril_call_settings_remove,
 	.clip_query		= ril_clip_query,
@@ -336,12 +334,4 @@ static const struct ofono_call_settings_driver driver = {
 	 */
 };
 
-void ril_call_settings_init(void)
-{
-	ofono_call_settings_driver_register(&driver);
-}
-
-void ril_call_settings_exit(void)
-{
-	ofono_call_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_settings, rilmodem, &driver)

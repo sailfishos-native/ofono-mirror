@@ -34,12 +34,6 @@ extern void isi_sms_exit(void);
 extern void isi_cbs_init(void);
 extern void isi_cbs_exit(void);
 
-extern void isi_call_settings_init(void);
-extern void isi_call_settings_exit(void);
-
-extern void isi_call_meter_init(void);
-extern void isi_call_meter_exit(void);
-
 extern void isi_gprs_init(void);
 extern void isi_gprs_exit(void);
 

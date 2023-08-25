@@ -37,7 +37,6 @@
 #include <ofono/modem.h>
 #include <ofono/call-settings.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "ss.h"
 #include "debug.h"
@@ -405,24 +404,13 @@ static void isi_call_settings_remove(struct ofono_call_settings *cs)
 }
 
 static const struct ofono_call_settings_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_call_settings_probe,
 	.remove			= isi_call_settings_remove,
 	.clip_query		= isi_clip_query,
 	.colp_query		= isi_colp_query,
 	.colr_query		= isi_colr_query,
-	.clir_query		= NULL,
-	.clir_set		= NULL,
 	.cw_query		= isi_cw_query,
 	.cw_set			= isi_cw_set
 };
 
-void isi_call_settings_init(void)
-{
-	ofono_call_settings_driver_register(&driver);
-}
-
-void isi_call_settings_exit(void)
-{
-	ofono_call_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_settings, isimodem, &driver)

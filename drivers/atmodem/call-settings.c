@@ -33,10 +33,10 @@
 #include <ofono/modem.h>
 #include <ofono/call-settings.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "atmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *clir_prefix[] = { "+CLIR:", NULL };
@@ -398,7 +398,6 @@ static void at_call_settings_remove(struct ofono_call_settings *cs)
 }
 
 static const struct ofono_call_settings_driver driver = {
-	.name = "atmodem",
 	.probe = at_call_settings_probe,
 	.remove = at_call_settings_remove,
 	.clip_query = at_clip_query,
@@ -412,12 +411,4 @@ static const struct ofono_call_settings_driver driver = {
 	.cw_set = at_ccwa_set,
 };
 
-void at_call_settings_init(void)
-{
-	ofono_call_settings_driver_register(&driver);
-}
-
-void at_call_settings_exit(void)
-{
-	ofono_call_settings_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_settings, atmodem, &driver)

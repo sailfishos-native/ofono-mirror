@@ -388,12 +388,11 @@ static const struct cs_data testdata_clir_set_invalid_1 = {
 };
 
 /* Declarations && Re-implementations of core functions. */
-void ril_call_settings_exit(void);
-void ril_call_settings_init(void);
-
 struct ofono_call_settings {
 	void *driver_data;
 };
+
+extern struct ofono_atom_driver_desc __start___call_settings[];
 
 struct ofono_call_settings *ofono_call_settings_create(struct ofono_modem *modem,
 							unsigned int vendor,
@@ -404,18 +403,12 @@ struct ofono_call_settings *ofono_call_settings_create(struct ofono_modem *modem
 	struct ofono_call_settings *cs = g_new0(struct ofono_call_settings, 1);
 	int retval;
 
+	csdriver = __start___call_settings[0].driver;
+
 	retval = csdriver->probe(cs, OFONO_RIL_VENDOR_AOSP, rcd->ril);
 	g_assert(retval == 0);
 
 	return cs;
-}
-
-int ofono_call_settings_driver_register(const struct ofono_call_settings_driver *d)
-{
-	if (csdriver == NULL)
-		csdriver = d;
-
-	return 0;
 }
 
 void ofono_call_settings_set_data(struct ofono_call_settings *cs, void *data)
@@ -429,10 +422,6 @@ void *ofono_call_settings_get_data(struct ofono_call_settings *cs)
 }
 
 void ofono_call_settings_register(struct ofono_call_settings *cs)
-{
-}
-
-void ofono_call_settings_driver_unregister(const struct ofono_call_settings_driver *d)
 {
 }
 
@@ -471,8 +460,6 @@ static void test_cs_func(gconstpointer data)
 	const struct cs_data *csd = data;
 	struct rilmodem_cs_data *rcd;
 
-	ril_call_settings_init();
-
 	rcd = g_new0(struct rilmodem_cs_data, 1);
 
 	rcd->test_data = csd;
@@ -493,8 +480,6 @@ static void test_cs_func(gconstpointer data)
 	g_free(rcd);
 
 	rilmodem_test_server_close(rcd->serverd);
-
-	ril_call_settings_exit();
 }
 
 #endif

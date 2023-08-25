@@ -42,7 +42,6 @@ static int isimodem_init(void)
 	isi_netreg_init();
 	isi_sms_init();
 	isi_cbs_init();
-	isi_call_settings_init();
 	isi_gprs_init();
 	isi_gprs_context_init();
 
@@ -56,7 +55,6 @@ static void isimodem_exit(void)
 	isi_netreg_exit();
 	isi_sms_exit();
 	isi_cbs_exit();
-	isi_call_settings_exit();
 	isi_gprs_exit();
 	isi_gprs_context_exit();
 }
