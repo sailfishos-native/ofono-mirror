@@ -309,14 +309,12 @@ static gboolean sco_connect_cb(GIOChannel *io, GIOCondition cond,
 
 {
 	struct ofono_handsfree_card *card = user_data;
-	DBusMessage *reply;
+	DBusMessage *reply = NULL;
 	int sk;
 
-	if (agent == NULL) {
-		/* There's no agent, so there's no one to reply to */
-		reply = NULL;
+	/* There's no agent, so there's no one to reply to */
+	if (agent == NULL)
 		goto done;
-	}
 
 	if (cond & (G_IO_ERR | G_IO_HUP | G_IO_NVAL)) {
 		if (card->msg)
