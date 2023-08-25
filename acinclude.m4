@@ -52,14 +52,22 @@ AC_DEFUN([COMPILER_FLAGS], [
 		CFLAGS="-Wall -fsigned-char -fno-exceptions"
 	fi
 	if (test "$USE_MAINTAINER_MODE" = "yes"); then
-		CFLAGS="$CFLAGS -Werror -Wextra"
-		CFLAGS="$CFLAGS -Wno-unused-parameter"
-		CFLAGS="$CFLAGS -Wno-missing-field-initializers"
-		CFLAGS="$CFLAGS -Wdeclaration-after-statement"
-		CFLAGS="$CFLAGS -Wmissing-declarations"
-		CFLAGS="$CFLAGS -Wredundant-decls"
+		CFLAGS+=" -Werror -Wextra"
+		CFLAGS+=" -Wno-unused-parameter"
+		CFLAGS+=" -Wno-missing-field-initializers"
+		CFLAGS+=" -Wdeclaration-after-statement"
+		CFLAGS+=" -Wmissing-declarations"
+		CFLAGS+=" -Wredundant-decls"
+		CFLAGS+=" -Wno-format-truncation"
+		CFLAGS+=" -DG_DISABLE_DEPRECATED"
+	fi
+
+	if (test "$CC" = "clang"); then
+		CFLAGS+=" -Wno-unknown-warning-option"
+		CFLAGS+=" -Wno-unknown-pragmas"
+	fi
+
+	if (test "$CC" = "gcc"); then
 		CFLAGS="$CFLAGS -Wcast-align"
-		CFLAGS="$CFLAGS -Wno-format-truncation"
-		CFLAGS="$CFLAGS -DG_DISABLE_DEPRECATED"
 	fi
 ])
