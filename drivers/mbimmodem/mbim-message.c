@@ -365,11 +365,14 @@ static bool _iter_enter_array(struct mbim_message_iter *iter,
 		iter->sig_pos += sig_end - sig_start + 1;
 
 	if (fixed) {
+_Pragma("GCC diagnostic push")
+_Pragma("GCC diagnostic ignored \"-Wmaybe-uninitialized\"")
 		_iter_init_internal(array, CONTAINER_TYPE_ARRAY,
 					sig_start, sig_end,
 					iter->iov, iter->n_iov,
 					iter->len, iter->base_offset,
 					offset, n_elem);
+_Pragma("GCC diagnostic pop")
 		return true;
 	}
 
