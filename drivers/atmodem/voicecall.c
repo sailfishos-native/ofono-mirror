@@ -29,6 +29,7 @@
 #include <errno.h>
 
 #include <glib.h>
+#include <ell/ell.h>
 
 #include <ofono/log.h>
 #include <ofono/modem.h>
@@ -226,9 +227,7 @@ static void clcc_poll_cb(gboolean ok, GAtResult *result, gpointer user_data)
 			 * CNAP doesn't arrive as part of CLCC, always
 			 * re-use from the old call
 			 */
-			strncpy(nc->name, oc->name,
-					OFONO_MAX_CALLER_NAME_LENGTH);
-			nc->name[OFONO_MAX_CALLER_NAME_LENGTH] = '\0';
+			l_strlcpy(nc->name, oc->name, sizeof(nc->name));
 			nc->cnap_validity = oc->cnap_validity;
 
 			/*

@@ -29,6 +29,7 @@
 #include <stdio.h>
 
 #include <glib.h>
+#include <ell/ell.h>
 
 #include <ofono/log.h>
 #include <ofono/modem.h>
@@ -357,14 +358,9 @@ static void cops_cb(gboolean ok, GAtResult *result, gpointer user_data)
 	if (g_at_result_iter_next_number(&iter, &tech) == FALSE)
 		tech = ACCESS_TECHNOLOGY_GSM;
 
-	strncpy(op.name, name, OFONO_MAX_OPERATOR_NAME_LENGTH);
-	op.name[OFONO_MAX_OPERATOR_NAME_LENGTH] = '\0';
-
-	strncpy(op.mcc, nd->mcc, OFONO_MAX_MCC_LENGTH);
-	op.mcc[OFONO_MAX_MCC_LENGTH] = '\0';
-
-	strncpy(op.mnc, nd->mnc, OFONO_MAX_MNC_LENGTH);
-	op.mnc[OFONO_MAX_MNC_LENGTH] = '\0';
+	l_strlcpy(op.name, name, sizeof(op.name));
+	l_strlcpy(op.mcc, nd->mcc, sizeof(op.mcc));
+	l_strlcpy(op.mnc, nd->mnc, sizeof(op.mnc));
 
 	/* Set to current */
 	op.status = 2;
