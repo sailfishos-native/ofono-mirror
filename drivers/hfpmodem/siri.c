@@ -37,7 +37,8 @@
 #include <ofono/modem.h>
 #include <ofono/siri.h>
 
-#include "hfpmodem.h"
+#include <drivers/atmodem/atutil.h>
+
 #include "hfp.h"
 #include "slc.h"
 
@@ -196,18 +197,9 @@ static void hfp_siri_set_eyes_free_mode(struct ofono_siri *siri,
 }
 
 static const struct ofono_siri_driver driver = {
-	.name = "hfpmodem",
 	.probe = hfp_siri_probe,
 	.remove = hfp_siri_remove,
 	.set_eyes_free_mode = hfp_siri_set_eyes_free_mode,
 };
 
-void hfp_siri_init(void)
-{
-	ofono_siri_driver_register(&driver);
-}
-
-void hfp_siri_exit(void)
-{
-	ofono_siri_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(siri, hfpmodem, &driver)

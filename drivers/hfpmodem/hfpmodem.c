@@ -36,7 +36,6 @@ static int hfpmodem_init(void)
 {
 	hfp_netreg_init();
 	hfp_handsfree_init();
-	hfp_siri_init();
 
 	return 0;
 }
@@ -45,7 +44,6 @@ static void hfpmodem_exit(void)
 {
 	hfp_netreg_exit();
 	hfp_handsfree_exit();
-	hfp_siri_exit();
 }
 
 OFONO_PLUGIN_DEFINE(hfpmodem, "Hands-Free Profile Driver", VERSION,

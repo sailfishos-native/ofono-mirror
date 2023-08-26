@@ -39,8 +39,6 @@
 #include "ofono.h"
 #include "common.h"
 
-static GSList *g_drivers = NULL;
-
 struct ofono_siri {
 	ofono_bool_t siri_status;
 	unsigned int eyes_free_mode;
@@ -229,40 +227,7 @@ static void siri_remove(struct ofono_atom *atom)
 	g_free(siri);
 }
 
-struct ofono_siri *ofono_siri_create(struct ofono_modem *modem,
-			unsigned int vendor, const char *driver, void *data)
-{
-	struct ofono_siri *siri;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	siri = g_try_new0(struct ofono_siri, 1);
-	if (siri == NULL)
-		return NULL;
-
-	siri->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_SIRI,
-						siri_remove, siri);
-
-	siri->eyes_free_mode = 0;
-	siri->pending_eyes_free_mode = 0;
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_siri_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(siri, vendor, data) < 0)
-			continue;
-
-		siri->driver = drv;
-		break;
-	}
-
-	return siri;
-}
+OFONO_DEFINE_ATOM_CREATE(siri, OFONO_ATOM_TYPE_SIRI)
 
 static void ofono_siri_unregister(struct ofono_atom *atom)
 {
@@ -297,24 +262,6 @@ void ofono_siri_register(struct ofono_siri *siri)
 
 	ofono_modem_add_interface(modem, OFONO_SIRI_INTERFACE);
 	__ofono_atom_register(siri->atom, ofono_siri_unregister);
-}
-
-int ofono_siri_driver_register(const struct ofono_siri_driver *driver)
-{
-	DBG("driver: %p, name: %s", driver, driver->name);
-
-	if (driver->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) driver);
-
-	return 0;
-}
-
-void ofono_siri_driver_unregister(const struct ofono_siri_driver *driver)
-{
-	DBG("driver: %p, name: %s", driver, driver->name);
-	g_drivers = g_slist_remove(g_drivers, (void *) driver);
 }
 
 void ofono_siri_remove(struct ofono_siri *siri)

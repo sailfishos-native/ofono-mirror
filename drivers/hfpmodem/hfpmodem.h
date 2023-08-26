@@ -27,6 +27,3 @@ extern void hfp_netreg_exit(void);
 
 extern void hfp_handsfree_init(void);
 extern void hfp_handsfree_exit(void);
-
-extern void hfp_siri_init(void);
-extern void hfp_siri_exit(void);

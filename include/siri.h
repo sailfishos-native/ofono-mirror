@@ -34,7 +34,6 @@ typedef void (*ofono_siri_cb_t)(const struct ofono_error *error,
 					struct ofono_siri *siri);
 
 struct ofono_siri_driver {
-	const char *name;
 	int (*probe)(struct ofono_siri *siri, unsigned int vendor, void *data);
 	void (*remove)(struct ofono_siri *siri);
 	void (*set_eyes_free_mode) (struct ofono_siri *siri, ofono_siri_cb_t cb,
@@ -42,9 +41,6 @@ struct ofono_siri_driver {
 };
 
 void ofono_siri_set_status(struct ofono_siri *siri, int value);
-
-int ofono_siri_driver_register(const struct ofono_siri_driver *driver);
-void ofono_siri_driver_unregister(const struct ofono_siri_driver *driver);
 
 struct ofono_siri *ofono_siri_create(struct ofono_modem *modem,
 					unsigned int vendor,
