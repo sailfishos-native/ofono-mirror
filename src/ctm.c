@@ -36,8 +36,6 @@
 
 #define CTM_FLAG_CACHED 0x1
 
-static GSList *g_drivers = NULL;
-
 struct ofono_ctm {
 	DBusMessage *pending;
 	int flags;
@@ -216,28 +214,6 @@ static const GDBusSignalTable ctm_signals[] = {
 	{ }
 };
 
-int ofono_ctm_driver_register(const struct ofono_ctm_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d == NULL || d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *)d);
-
-	return 0;
-}
-
-void ofono_ctm_driver_unregister(const struct ofono_ctm_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d == NULL)
-		return;
-
-	g_drivers = g_slist_remove(g_drivers, (void *)d);
-}
-
 static void text_telephony_unregister(struct ofono_atom *atom)
 {
 	struct ofono_ctm *ctm = __ofono_atom_get_data(atom);
@@ -249,7 +225,7 @@ static void text_telephony_unregister(struct ofono_atom *atom)
 	g_dbus_unregister_interface(conn, path, OFONO_TEXT_TELEPHONY_INTERFACE);
 }
 
-static void text_telephony_remove(struct ofono_atom *atom)
+static void ctm_remove(struct ofono_atom *atom)
 {
 	struct ofono_ctm *ctm = __ofono_atom_get_data(atom);
 
@@ -264,38 +240,7 @@ static void text_telephony_remove(struct ofono_atom *atom)
 	g_free(ctm);
 }
 
-struct ofono_ctm *ofono_ctm_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver, void *data)
-{
-	struct ofono_ctm *ctm;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	ctm = g_try_new0(struct ofono_ctm, 1);
-	if (ctm == NULL)
-		return NULL;
-
-	ctm->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_CTM,
-						text_telephony_remove, ctm);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_ctm_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver) != 0)
-			continue;
-
-		if (drv->probe(ctm, vendor, data) < 0)
-			continue;
-
-		ctm->driver = drv;
-		break;
-	}
-
-	return ctm;
-}
+OFONO_DEFINE_ATOM_CREATE(ctm, OFONO_ATOM_TYPE_CTM)
 
 void ofono_ctm_register(struct ofono_ctm *ctm)
 {

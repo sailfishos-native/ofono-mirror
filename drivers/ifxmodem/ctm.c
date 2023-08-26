@@ -34,10 +34,10 @@
 #include <ofono/modem.h>
 #include <ofono/ctm.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "ifxmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *xctms_prefix[] = { "+XCTMS:", NULL };
@@ -167,19 +167,10 @@ static void ifx_ctm_remove(struct ofono_ctm *ctm)
 }
 
 static const struct ofono_ctm_driver driver = {
-	.name           = "ifxmodem",
 	.probe          = ifx_ctm_probe,
 	.remove         = ifx_ctm_remove,
 	.query_tty      = ifx_query_tty,
 	.set_tty        = ifx_set_tty,
 };
 
-void ifx_ctm_init(void)
-{
-	ofono_ctm_driver_register(&driver);
-}
-
-void ifx_ctm_exit(void)
-{
-	ofono_ctm_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(ctm, ifxmodem, &driver)

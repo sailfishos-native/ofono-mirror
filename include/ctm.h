@@ -37,7 +37,6 @@ typedef void (*ofono_ctm_query_cb_t)(const struct ofono_error *error,
 					ofono_bool_t enable, void *data);
 
 struct ofono_ctm_driver {
-	const char *name;
 	int (*probe)(struct ofono_ctm *ctm, unsigned int vendor, void *data);
 	void (*remove)(struct ofono_ctm *ctm);
 	void (*query_tty)(struct ofono_ctm *ctm,
@@ -45,9 +44,6 @@ struct ofono_ctm_driver {
 	void (*set_tty)(struct ofono_ctm *ctm, ofono_bool_t enable,
 				ofono_ctm_set_cb_t cb, void *data);
 };
-
-int ofono_ctm_driver_register(const struct ofono_ctm_driver *d);
-void ofono_ctm_driver_unregister(const struct ofono_ctm_driver *d);
 
 struct ofono_ctm *ofono_ctm_create(struct ofono_modem *modem,
 					unsigned int vendor,
