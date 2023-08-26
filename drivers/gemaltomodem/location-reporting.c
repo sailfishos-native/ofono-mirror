@@ -35,11 +35,11 @@
 #include <ofono/modem.h>
 #include <ofono/location-reporting.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 #include "gattty.h"
-
-#include "gemaltomodem.h"
 
 static const char *sgpsc_prefix[] = { "^SGPSC:", NULL };
 
@@ -217,7 +217,6 @@ static void gemalto_location_reporting_remove(struct ofono_location_reporting *l
 }
 
 static const struct ofono_location_reporting_driver driver = {
-	.name			= "gemaltomodem",
 	.type			= OFONO_LOCATION_REPORTING_TYPE_NMEA,
 	.probe			= gemalto_location_reporting_probe,
 	.remove			= gemalto_location_reporting_remove,
@@ -225,12 +224,4 @@ static const struct ofono_location_reporting_driver driver = {
 	.disable		= gemalto_location_reporting_disable,
 };
 
-void gemalto_location_reporting_init()
-{
-	ofono_location_reporting_driver_register(&driver);
-}
-
-void gemalto_location_reporting_exit()
-{
-	ofono_location_reporting_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(location_reporting, gemaltomodem, &driver)

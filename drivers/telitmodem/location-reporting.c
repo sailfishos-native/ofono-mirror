@@ -35,11 +35,11 @@
 #include <ofono/modem.h>
 #include <ofono/location-reporting.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 #include "gattty.h"
-
-#include "telitmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *portcfg_prefix[] = { "#PORTCFG:", NULL };
@@ -295,7 +295,6 @@ static void telit_location_reporting_remove(struct ofono_location_reporting *lr)
 }
 
 static const struct ofono_location_reporting_driver driver = {
-	.name			= "telitmodem",
 	.type			= OFONO_LOCATION_REPORTING_TYPE_NMEA,
 	.probe			= telit_location_reporting_probe,
 	.remove			= telit_location_reporting_remove,
@@ -303,12 +302,4 @@ static const struct ofono_location_reporting_driver driver = {
 	.disable		= telit_location_reporting_disable,
 };
 
-void telit_location_reporting_init()
-{
-	ofono_location_reporting_driver_register(&driver);
-}
-
-void telit_location_reporting_exit()
-{
-	ofono_location_reporting_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(location_reporting, telitmodem, &driver)

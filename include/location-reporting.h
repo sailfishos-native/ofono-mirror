@@ -43,7 +43,6 @@ typedef void (*ofono_location_reporting_disable_cb_t)(
 						void *data);
 
 struct ofono_location_reporting_driver {
-	const char *name;
 	enum ofono_location_reporting_type type;
 	int (*probe)(struct ofono_location_reporting *lr, unsigned int vendor,
 								void *data);
@@ -53,11 +52,6 @@ struct ofono_location_reporting_driver {
 	void (*disable)(struct ofono_location_reporting *lr,
 			ofono_location_reporting_disable_cb_t cb, void *data);
 };
-
-int ofono_location_reporting_driver_register(
-			const struct ofono_location_reporting_driver *d);
-void ofono_location_reporting_driver_unregister(
-			const struct ofono_location_reporting_driver *d);
 
 struct ofono_location_reporting *ofono_location_reporting_create(
 						struct ofono_modem *modem,

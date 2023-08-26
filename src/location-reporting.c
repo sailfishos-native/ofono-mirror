@@ -39,8 +39,6 @@
 #define DBUS_TYPE_UNIX_FD -1
 #endif
 
-static GSList *g_drivers = NULL;
-
 struct ofono_location_reporting {
 	DBusMessage *pending;
 	const struct ofono_location_reporting_driver *driver;
@@ -257,30 +255,6 @@ static const GDBusSignalTable location_reporting_signals[] = {
 	{ }
 };
 
-int ofono_location_reporting_driver_register(
-				const struct ofono_location_reporting_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d == NULL || d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_location_reporting_driver_unregister(
-				const struct ofono_location_reporting_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d == NULL)
-		return;
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 struct ofono_modem *ofono_location_reporting_get_modem(
 					struct ofono_location_reporting *lr)
 {
@@ -314,44 +288,8 @@ static void location_reporting_remove(struct ofono_atom *atom)
 	g_free(lr);
 }
 
-struct ofono_location_reporting *ofono_location_reporting_create(
-						struct ofono_modem *modem,
-						unsigned int vendor,
-						const char *driver, void *data)
-{
-	struct ofono_location_reporting *lr;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	/* Only D-Bus >= 1.3 supports fd-passing */
-	if (DBUS_TYPE_UNIX_FD == -1)
-		return NULL;
-
-	lr = g_try_new0(struct ofono_location_reporting, 1);
-	if (lr == NULL)
-		return NULL;
-
-	lr->atom = __ofono_modem_add_atom(modem,
-					OFONO_ATOM_TYPE_LOCATION_REPORTING,
-					location_reporting_remove, lr);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_location_reporting_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver) != 0)
-			continue;
-
-		if (drv->probe(lr, vendor, data) < 0)
-			continue;
-
-		lr->driver = drv;
-		break;
-	}
-
-	return lr;
-}
+OFONO_DEFINE_ATOM_CREATE(location_reporting,
+				OFONO_ATOM_TYPE_LOCATION_REPORTING)
 
 void ofono_location_reporting_register(struct ofono_location_reporting *lr)
 {

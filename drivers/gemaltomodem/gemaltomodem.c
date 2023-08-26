@@ -35,7 +35,6 @@
 
 static int gemaltomodem_init(void)
 {
-	gemalto_location_reporting_init();
 	gemalto_gprs_context_init();
 
 	return 0;
@@ -43,7 +42,6 @@ static int gemaltomodem_init(void)
 
 static void gemaltomodem_exit(void)
 {
-	gemalto_location_reporting_exit();
 	gemalto_gprs_context_exit();
 }
 

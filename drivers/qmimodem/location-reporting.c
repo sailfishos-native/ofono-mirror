@@ -33,8 +33,7 @@
 
 #include "qmi.h"
 #include "pds.h"
-
-#include "qmimodem.h"
+#include "util.h"
 
 struct location_data {
 	struct qmi_service *pds;
@@ -266,7 +265,6 @@ static void qmi_location_reporting_remove(struct ofono_location_reporting *lr)
 }
 
 static const struct ofono_location_reporting_driver driver = {
-	.name		= "qmimodem",
 	.type		= OFONO_LOCATION_REPORTING_TYPE_NMEA,
 	.probe		= qmi_location_reporting_probe,
 	.remove		= qmi_location_reporting_remove,
@@ -274,12 +272,4 @@ static const struct ofono_location_reporting_driver driver = {
 	.disable	= qmi_location_reporting_disable,
 };
 
-void qmi_location_reporting_init()
-{
-	ofono_location_reporting_driver_register(&driver);
-}
-
-void qmi_location_reporting_exit()
-{
-	ofono_location_reporting_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(location_reporting, qmimodem, &driver)

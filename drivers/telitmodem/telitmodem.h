@@ -21,7 +21,5 @@
 
 #include <drivers/atmodem/atutil.h>
 
-extern void telit_location_reporting_init();
-extern void telit_location_reporting_exit();
 extern void telitncm_gprs_context_init();
 extern void telitncm_gprs_context_exit();

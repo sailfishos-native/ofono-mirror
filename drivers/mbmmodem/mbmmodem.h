@@ -23,6 +23,3 @@
 
 extern void mbm_gprs_context_init(void);
 extern void mbm_gprs_context_exit(void);
-
-extern void mbm_location_reporting_init();
-extern void mbm_location_reporting_exit();

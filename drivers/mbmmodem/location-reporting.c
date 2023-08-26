@@ -36,11 +36,11 @@
 #include <ofono/modem.h>
 #include <ofono/location-reporting.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 #include "gattty.h"
-
-#include "mbmmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *e2gpsctl_prefix[] = { "*E2GPSCTL:", NULL };
@@ -231,7 +231,6 @@ static void mbm_location_reporting_remove(struct ofono_location_reporting *lr)
 }
 
 static const struct ofono_location_reporting_driver driver = {
-	.name			= "mbmmodem",
 	.type			= OFONO_LOCATION_REPORTING_TYPE_NMEA,
 	.probe			= mbm_location_reporting_probe,
 	.remove			= mbm_location_reporting_remove,
@@ -239,12 +238,4 @@ static const struct ofono_location_reporting_driver driver = {
 	.disable		= mbm_location_reporting_disable,
 };
 
-void mbm_location_reporting_init()
-{
-	ofono_location_reporting_driver_register(&driver);
-}
-
-void mbm_location_reporting_exit()
-{
-	ofono_location_reporting_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(location_reporting, mbmmodem, &driver)
