@@ -53,8 +53,6 @@
 
 static gboolean tx_next(gpointer user_data);
 
-static GSList *g_drivers = NULL;
-
 struct sms_handler {
 	struct ofono_watchlist_item item;
 	int dst;
@@ -1687,25 +1685,6 @@ void ofono_sms_status_notify(struct ofono_sms *sms, const unsigned char *pdu,
 	handle_sms_status_report(sms, &s);
 }
 
-int ofono_sms_driver_register(const struct ofono_sms_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_sms_driver_unregister(const struct ofono_sms_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void sms_unregister(struct ofono_atom *atom)
 {
 	struct ofono_sms *sms = __ofono_atom_get_data(atom);
@@ -1813,56 +1792,12 @@ static void sms_remove(struct ofono_atom *atom)
 	g_free(sms);
 }
 
-
-/*
- * Create a SMS driver
- *
- * This creates a SMS driver that is hung off a @modem
- * object. However, for the driver to be used by the system, it has to
- * be registered with the oFono core using ofono_sms_register().
- *
- * This is done once the modem driver determines that SMS is properly
- * supported by the hardware.
- */
-struct ofono_sms *ofono_sms_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver,
-					void *data)
-{
-	struct ofono_sms *sms;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	sms = g_try_new0(struct ofono_sms, 1);
-
-	if (sms == NULL)
-		return NULL;
-
-	sms->sca.type = 129;
-	sms->ref = 1;
-	sms->txq = g_queue_new();
-	sms->messages = g_hash_table_new(uuid_hash, uuid_equal);
-
-	sms->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_SMS,
-						sms_remove, sms);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_sms_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(sms, vendor, data) < 0)
-			continue;
-
-		sms->driver = drv;
-		break;
-	}
-
-	return sms;
-}
+OFONO_DEFINE_ATOM_CREATE(sms, OFONO_ATOM_TYPE_SMS, {
+	atom->sca.type = 129;
+	atom->ref = 1;
+	atom->txq = g_queue_new();
+	atom->messages = g_hash_table_new(uuid_hash, uuid_equal);
+})
 
 static void mw_watch(struct ofono_atom *atom,
 			enum ofono_atom_watch_condition cond, void *data)

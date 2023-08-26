@@ -25,9 +25,6 @@ extern void isi_phonebook_exit(void);
 extern void isi_netreg_init(void);
 extern void isi_netreg_exit(void);
 
-extern void isi_sms_init(void);
-extern void isi_sms_exit(void);
-
 extern void isi_gprs_init(void);
 extern void isi_gprs_exit(void);
 

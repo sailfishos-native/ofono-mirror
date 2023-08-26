@@ -43,7 +43,6 @@ typedef void (*ofono_sms_bearer_query_cb_t)(const struct ofono_error *error,
 						int bearer, void *data);
 
 struct ofono_sms_driver {
-	const char *name;
 	int (*probe)(struct ofono_sms *sms, unsigned int vendor, void *data);
 	void (*remove)(struct ofono_sms *sms);
 	void (*sca_query)(struct ofono_sms *sms, ofono_sms_sca_query_cb_t cb,
@@ -64,9 +63,6 @@ void ofono_sms_deliver_notify(struct ofono_sms *sms, const unsigned char *pdu,
 				int len, int tpdu_len);
 void ofono_sms_status_notify(struct ofono_sms *sms, const unsigned char *pdu,
 				int len, int tpdu_len);
-
-int ofono_sms_driver_register(const struct ofono_sms_driver *d);
-void ofono_sms_driver_unregister(const struct ofono_sms_driver *d);
 
 struct ofono_sms *ofono_sms_create(struct ofono_modem *modem,
 					unsigned int vendor,

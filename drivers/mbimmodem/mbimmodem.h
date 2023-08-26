@@ -32,9 +32,6 @@ enum MBIM_GROUP {
 extern void mbim_netreg_init(void);
 extern void mbim_netreg_exit(void);
 
-extern void mbim_sms_init(void);
-extern void mbim_sms_exit(void);
-
 extern void mbim_gprs_init(void);
 extern void mbim_gprs_exit(void);
 

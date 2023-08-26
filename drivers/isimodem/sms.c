@@ -42,7 +42,6 @@
 #include <ofono/sms.h>
 
 #include "smsutil.h"
-#include "isimodem.h"
 #include "isiutil.h"
 #include "sms.h"
 #include "sim.h"
@@ -1121,7 +1120,6 @@ static void isi_sms_remove(struct ofono_sms *sms)
 }
 
 static const struct ofono_sms_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_sms_probe,
 	.remove			= isi_sms_remove,
 	.sca_query		= isi_sca_query,
@@ -1131,12 +1129,4 @@ static const struct ofono_sms_driver driver = {
 	.bearer_set		= isi_bearer_set,
 };
 
-void isi_sms_init(void)
-{
-	ofono_sms_driver_register(&driver);
-}
-
-void isi_sms_exit(void)
-{
-	ofono_sms_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sms, isimodem, &driver)

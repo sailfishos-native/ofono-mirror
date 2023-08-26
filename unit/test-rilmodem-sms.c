@@ -423,6 +423,8 @@ struct ofono_sms {
 	const struct sms_data *sd;
 };
 
+extern struct ofono_atom_driver_desc __start___sms[];
+
 struct ofono_sms *ofono_sms_create(struct ofono_modem *modem,
 					unsigned int vendor,
 					const char *driver,
@@ -432,18 +434,12 @@ struct ofono_sms *ofono_sms_create(struct ofono_modem *modem,
 	struct ofono_sms *sms = g_new0(struct ofono_sms, 1);
 	int retval;
 
+	smsdriver = __start___sms[0].driver;
+
 	retval = smsdriver->probe(sms, OFONO_RIL_VENDOR_AOSP, rsd->ril);
 	g_assert(retval == 0);
 
 	return sms;
-}
-
-int ofono_sms_driver_register(const struct ofono_sms_driver *d)
-{
-	if (smsdriver == NULL)
-		smsdriver = d;
-
-	return 0;
 }
 
 void ofono_sms_set_data(struct ofono_sms *sms, void *data)
@@ -457,10 +453,6 @@ void *ofono_sms_get_data(struct ofono_sms *sms)
 }
 
 void ofono_sms_register(struct ofono_sms *sms)
-{
-}
-
-void ofono_sms_driver_unregister(const struct ofono_sms_driver *d)
 {
 }
 
@@ -514,8 +506,6 @@ static void test_sms_func(gconstpointer data)
 	const struct sms_data *sd = data;
 	struct rilmodem_sms_data *rsd;
 
-	ril_sms_init();
-
 	rsd = g_new0(struct rilmodem_sms_data, 1);
 
 	rsd->test_data = sd;
@@ -536,8 +526,6 @@ static void test_sms_func(gconstpointer data)
 	g_free(rsd);
 
 	rilmodem_test_server_close(rsd->serverd);
-
-	ril_sms_exit();
 }
 
 #endif

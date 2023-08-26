@@ -37,10 +37,10 @@
 #include "util.h"
 #include "vendor.h"
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "atmodem.h"
 
 static const char *csca_prefix[] = { "+CSCA:", NULL };
 static const char *cgsms_prefix[] = { "+CGSMS:", NULL };
@@ -1358,7 +1358,6 @@ static void at_sms_remove(struct ofono_sms *sms)
 }
 
 static const struct ofono_sms_driver driver = {
-	.name		= "atmodem",
 	.probe		= at_sms_probe,
 	.remove		= at_sms_remove,
 	.sca_query	= at_csca_query,
@@ -1368,12 +1367,4 @@ static const struct ofono_sms_driver driver = {
 	.bearer_set	= at_cgsms_set,
 };
 
-void at_sms_init(void)
-{
-	ofono_sms_driver_register(&driver);
-}
-
-void at_sms_exit(void)
-{
-	ofono_sms_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sms, atmodem, &driver)

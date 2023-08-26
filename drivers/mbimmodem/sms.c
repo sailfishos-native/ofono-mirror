@@ -496,7 +496,6 @@ static void mbim_sms_remove(struct ofono_sms *sms)
 }
 
 static const struct ofono_sms_driver driver = {
-	.name		= "mbim",
 	.probe		= mbim_sms_probe,
 	.remove		= mbim_sms_remove,
 	.sca_query	= mbim_sca_query,
@@ -504,12 +503,4 @@ static const struct ofono_sms_driver driver = {
 	.submit		= mbim_submit,
 };
 
-void mbim_sms_init(void)
-{
-	ofono_sms_driver_register(&driver);
-}
-
-void mbim_sms_exit(void)
-{
-	ofono_sms_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sms, mbim, &driver)

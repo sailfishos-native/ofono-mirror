@@ -41,8 +41,7 @@
 #include "smsutil.h"
 #include "util.h"
 #include "common.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 struct sms_data {
 	GRil *ril;
@@ -503,7 +502,6 @@ static void ril_sms_remove(struct ofono_sms *sms)
 }
 
 static const struct ofono_sms_driver driver = {
-	.name		= RILMODEM,
 	.probe		= ril_sms_probe,
 	.sca_query	= ril_csca_query,
 	.sca_set	= ril_csca_set,
@@ -513,12 +511,4 @@ static const struct ofono_sms_driver driver = {
 	.bearer_set	= ril_sms_bearer_set
 };
 
-void ril_sms_init(void)
-{
-	ofono_sms_driver_register(&driver);
-}
-
-void ril_sms_exit(void)
-{
-	ofono_sms_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sms, rilmodem, &driver)

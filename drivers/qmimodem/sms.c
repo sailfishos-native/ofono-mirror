@@ -32,8 +32,7 @@
 
 #include "qmi.h"
 #include "wms.h"
-
-#include "qmimodem.h"
+#include "util.h"
 
 struct sms_data {
 	struct qmi_service *wms;
@@ -814,7 +813,6 @@ static void qmi_sms_remove(struct ofono_sms *sms)
 }
 
 static const struct ofono_sms_driver driver = {
-	.name		= "qmimodem",
 	.probe		= qmi_sms_probe,
 	.remove		= qmi_sms_remove,
 	.sca_query	= qmi_sca_query,
@@ -824,12 +822,4 @@ static const struct ofono_sms_driver driver = {
 	.bearer_set	= qmi_bearer_set,
 };
 
-void qmi_sms_init(void)
-{
-	ofono_sms_driver_register(&driver);
-}
-
-void qmi_sms_exit(void)
-{
-	ofono_sms_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(sms, qmimodem, &driver)

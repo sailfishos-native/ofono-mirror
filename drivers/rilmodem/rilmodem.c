@@ -38,7 +38,6 @@ static int rilmodem_init(void)
 {
 	DBG("");
 
-	ril_sms_init();
 	ril_netreg_init();
 	ril_gprs_init();
 	ril_gprs_context_init();
@@ -50,7 +49,6 @@ static void rilmodem_exit(void)
 {
 	DBG("");
 
-	ril_sms_exit();
 	ril_netreg_exit();
 	ril_gprs_exit();
 	ril_gprs_context_exit();
