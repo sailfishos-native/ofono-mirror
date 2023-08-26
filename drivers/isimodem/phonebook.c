@@ -38,7 +38,6 @@
 #include <ofono/phonebook.h>
 #include "util.h"
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "sim.h"
 #include "debug.h"
@@ -341,18 +340,9 @@ static void isi_phonebook_remove(struct ofono_phonebook *pb)
 }
 
 static const struct ofono_phonebook_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_phonebook_probe,
 	.remove			= isi_phonebook_remove,
 	.export_entries		= isi_export_entries
 };
 
-void isi_phonebook_init(void)
-{
-	ofono_phonebook_driver_register(&driver);
-}
-
-void isi_phonebook_exit(void)
-{
-	ofono_phonebook_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(phonebook, isimodem, &driver)

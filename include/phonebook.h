@@ -37,7 +37,6 @@ typedef void (*ofono_phonebook_cb_t)(const struct ofono_error *error,
  * occurs, ofono_phonebook_entry should not be called
  */
 struct ofono_phonebook_driver {
-	const char *name;
 	int (*probe)(struct ofono_phonebook *pb, unsigned int vendor,
 			void *data);
 	void (*remove)(struct ofono_phonebook *pb);
@@ -52,9 +51,6 @@ void ofono_phonebook_entry(struct ofono_phonebook *pb, int index,
 				const char *adnumber, int adtype,
 				const char *secondtext, const char *email,
 				const char *sip_uri, const char *tel_uri);
-
-int ofono_phonebook_driver_register(const struct ofono_phonebook_driver *d);
-void ofono_phonebook_driver_unregister(const struct ofono_phonebook_driver *d);
 
 struct ofono_phonebook *ofono_phonebook_create(struct ofono_modem *modem,
 							unsigned int vendor,

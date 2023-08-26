@@ -36,10 +36,11 @@
 #include <ofono/phonebook.h>
 #include "util.h"
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 
-#include "atmodem.h"
 #include "vendor.h"
 
 #define INDEX_INVALID -1
@@ -590,18 +591,9 @@ static void at_phonebook_remove(struct ofono_phonebook *pb)
 }
 
 static const struct ofono_phonebook_driver driver = {
-	.name		= "atmodem",
 	.probe		= at_phonebook_probe,
 	.remove		= at_phonebook_remove,
 	.export_entries	= at_export_entries
 };
 
-void at_phonebook_init(void)
-{
-	ofono_phonebook_driver_register(&driver);
-}
-
-void at_phonebook_exit(void)
-{
-	ofono_phonebook_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(phonebook, atmodem, &driver)

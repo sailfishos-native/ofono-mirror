@@ -41,8 +41,6 @@
 
 #define PHONEBOOK_FLAG_CACHED 0x1
 
-static GSList *g_drivers = NULL;
-
 enum phonebook_number_type {
 	TEL_TYPE_HOME,
 	TEL_TYPE_MOBILE,
@@ -493,25 +491,6 @@ static const GDBusSignalTable phonebook_signals[] = {
 	{ }
 };
 
-int ofono_phonebook_driver_register(const struct ofono_phonebook_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_phonebook_driver_unregister(const struct ofono_phonebook_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void phonebook_unregister(struct ofono_atom *atom)
 {
 	struct ofono_phonebook *pb = __ofono_atom_get_data(atom);
@@ -539,40 +518,9 @@ static void phonebook_remove(struct ofono_atom *atom)
 	g_free(pb);
 }
 
-struct ofono_phonebook *ofono_phonebook_create(struct ofono_modem *modem,
-						unsigned int vendor,
-						const char *driver, void *data)
-{
-	struct ofono_phonebook *pb;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	pb = g_try_new0(struct ofono_phonebook, 1);
-
-	if (pb == NULL)
-		return NULL;
-
-	pb->vcards = g_string_new(NULL);
-	pb->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_PHONEBOOK,
-						phonebook_remove, pb);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_phonebook_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(pb, vendor, data) < 0)
-			continue;
-
-		pb->driver = drv;
-		break;
-	}
-
-	return pb;
-}
+OFONO_DEFINE_ATOM_CREATE(phonebook, OFONO_ATOM_TYPE_PHONEBOOK, {
+	atom->vcards = g_string_new(NULL);
+})
 
 void ofono_phonebook_register(struct ofono_phonebook *pb)
 {
