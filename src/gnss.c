@@ -38,8 +38,6 @@
 #include "common.h"
 #include "gnssagent.h"
 
-static GSList *g_drivers = NULL;
-
 struct ofono_gnss {
 	const struct ofono_gnss_driver *driver;
 	void *driver_data;
@@ -294,59 +292,7 @@ void ofono_gnss_register(struct ofono_gnss *gnss)
 	__ofono_atom_register(gnss->atom, gnss_unregister);
 }
 
-int ofono_gnss_driver_register(const struct ofono_gnss_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_gnss_driver_unregister(const struct ofono_gnss_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
-struct ofono_gnss *ofono_gnss_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver,
-					void *data)
-{
-	struct ofono_gnss *gnss;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	gnss = g_try_new0(struct ofono_gnss, 1);
-
-	if (gnss == NULL)
-		return NULL;
-
-	gnss->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_GNSS,
-						gnss_remove, gnss);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_gnss_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(gnss, vendor, data) < 0)
-			continue;
-
-		gnss->driver = drv;
-		break;
-	}
-
-	return gnss;
-}
+OFONO_DEFINE_ATOM_CREATE(gnss, OFONO_ATOM_TYPE_GNSS)
 
 void ofono_gnss_notify_posr_request(struct ofono_gnss *gnss, const char *xml)
 {

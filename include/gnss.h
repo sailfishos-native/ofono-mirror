@@ -34,7 +34,6 @@ struct ofono_gnss;
 typedef void (*ofono_gnss_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_gnss_driver {
-	const char *name;
 	int (*probe)(struct ofono_gnss *gnss, unsigned int vendor, void *data);
 	void (*remove)(struct ofono_gnss *gnss);
 	void (*send_element)(struct ofono_gnss *gnss,
@@ -48,8 +47,6 @@ struct ofono_gnss_driver {
 
 void ofono_gnss_notify_posr_request(struct ofono_gnss *gnss, const char *xml);
 void ofono_gnss_notify_posr_reset(struct ofono_gnss *gnss);
-int ofono_gnss_driver_register(const struct ofono_gnss_driver *d);
-void ofono_gnss_driver_unregister(const struct ofono_gnss_driver *d);
 
 struct ofono_gnss *ofono_gnss_create(struct ofono_modem *modem,
 					unsigned int vendor,

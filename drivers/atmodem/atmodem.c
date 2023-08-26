@@ -39,7 +39,6 @@ static int atmodem_init(void)
 	at_netreg_init();
 	at_gprs_init();
 	at_gprs_context_init();
-	at_gnss_init();
 
 	return 0;
 }
@@ -51,7 +50,6 @@ static void atmodem_exit(void)
 	at_netreg_exit();
 	at_gprs_exit();
 	at_gprs_context_exit();
-	at_gnss_exit();
 }
 
 OFONO_PLUGIN_DEFINE(atmodem, "AT modem driver", VERSION,

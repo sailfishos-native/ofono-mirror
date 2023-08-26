@@ -35,10 +35,11 @@
 #include <ofono/modem.h>
 #include <ofono/gnss.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 
-#include "atmodem.h"
 #include "vendor.h"
 
 struct gnss_data {
@@ -263,19 +264,10 @@ static void at_gnss_remove(struct ofono_gnss *gnss)
 }
 
 static const struct ofono_gnss_driver driver = {
-	.name			= "atmodem",
 	.probe			= at_gnss_probe,
 	.remove			= at_gnss_remove,
 	.send_element		= at_gnss_send_element,
 	.set_position_reporting	= at_gnss_position_reporting,
 };
 
-void at_gnss_init(void)
-{
-	ofono_gnss_driver_register(&driver);
-}
-
-void at_gnss_exit(void)
-{
-	ofono_gnss_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gnss, atmodem, &driver)

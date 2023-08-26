@@ -38,6 +38,3 @@ extern void at_gprs_context_exit(void);
 
 extern void at_sim_auth_init(void);
 extern void at_sim_auth_exit(void);
-
-extern void at_gnss_init(void);
-extern void at_gnss_exit(void);
