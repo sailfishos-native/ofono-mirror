@@ -37,7 +37,8 @@
 #include <ofono/modem.h>
 #include <ofono/call-volume.h>
 
-#include "hfpmodem.h"
+#include <drivers/atmodem/atutil.h>
+
 #include "slc.h"
 
 #define HFP_CALL_VOLUME_MAX 15
@@ -218,7 +219,6 @@ static void hfp_call_volume_remove(struct ofono_call_volume *cv)
 }
 
 static const struct ofono_call_volume_driver driver = {
-	.name			= "hfpmodem",
 	.probe			= hfp_call_volume_probe,
 	.remove			= hfp_call_volume_remove,
 	.speaker_volume		= hfp_speaker_volume,
@@ -226,12 +226,4 @@ static const struct ofono_call_volume_driver driver = {
 	.mute			= NULL,
 };
 
-void hfp_call_volume_init(void)
-{
-	ofono_call_volume_driver_register(&driver);
-}
-
-void hfp_call_volume_exit(void)
-{
-	ofono_call_volume_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_volume, hfpmodem, &driver)

@@ -35,7 +35,6 @@ typedef void (*ofono_call_volume_cb_t)(const struct ofono_error *error,
 					void *data);
 
 struct ofono_call_volume_driver {
-	const char *name;
 	int (*probe)(struct ofono_call_volume *cv, unsigned int vendor,
 			void *data);
 	void (*remove)(struct ofono_call_volume *cv);
@@ -54,10 +53,6 @@ void ofono_call_volume_set_speaker_volume(struct ofono_call_volume *cv,
 void ofono_call_volume_set_microphone_volume(struct ofono_call_volume *cv,
 						unsigned char percent);
 void ofono_call_volume_set_muted(struct ofono_call_volume *cv, int muted);
-
-int ofono_call_volume_driver_register(const struct ofono_call_volume_driver *d);
-void ofono_call_volume_driver_unregister(
-			const struct ofono_call_volume_driver *d);
 
 struct ofono_call_volume *ofono_call_volume_create(struct ofono_modem *modem,
 			unsigned int vendor, const char *driver, void *data);

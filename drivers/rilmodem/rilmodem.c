@@ -41,7 +41,6 @@ static int rilmodem_init(void)
 	ril_devinfo_init();
 	ril_sms_init();
 	ril_netreg_init();
-	ril_call_volume_init();
 	ril_gprs_init();
 	ril_gprs_context_init();
 	ril_cbs_init();
@@ -56,7 +55,6 @@ static void rilmodem_exit(void)
 	ril_devinfo_exit();
 	ril_sms_exit();
 	ril_netreg_exit();
-	ril_call_volume_exit();
 	ril_gprs_exit();
 	ril_gprs_context_exit();
 	ril_cbs_exit();

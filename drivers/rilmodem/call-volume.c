@@ -36,8 +36,7 @@
 #include "common.h"
 
 #include "gril.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 struct cv_data {
 	GRil *ril;
@@ -170,18 +169,9 @@ static void ril_call_volume_remove(struct ofono_call_volume *cv)
 }
 
 static const struct ofono_call_volume_driver driver = {
-	.name = RILMODEM,
 	.probe = ril_call_volume_probe,
 	.remove = ril_call_volume_remove,
 	.mute = ril_call_volume_mute,
 };
 
-void ril_call_volume_init(void)
-{
-	ofono_call_volume_driver_register(&driver);
-}
-
-void ril_call_volume_exit(void)
-{
-	ofono_call_volume_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_volume, rilmodem, &driver)

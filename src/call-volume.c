@@ -39,8 +39,6 @@
 #include "ofono.h"
 #include "common.h"
 
-static GSList *g_drivers = NULL;
-
 struct ofono_call_volume {
 	DBusMessage *pending;
 	unsigned char speaker_volume;
@@ -331,40 +329,7 @@ static void call_volume_remove(struct ofono_atom *atom)
 	g_free(cv);
 }
 
-struct ofono_call_volume *ofono_call_volume_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver,
-					void *data)
-{
-	struct ofono_call_volume *cv;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	cv = g_try_new0(struct ofono_call_volume, 1);
-	if (cv == NULL)
-		return NULL;
-
-	cv->atom = __ofono_modem_add_atom(modem,
-					OFONO_ATOM_TYPES_CALL_VOLUME,
-					call_volume_remove, cv);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_call_volume_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(cv, vendor, data) < 0)
-			continue;
-
-		cv->driver = drv;
-		break;
-	}
-
-	return cv;
-}
+OFONO_DEFINE_ATOM_CREATE(call_volume, OFONO_ATOM_TYPE_CALL_VOLUME)
 
 static void call_volume_unregister(struct ofono_atom *atom)
 {
@@ -396,26 +361,6 @@ void ofono_call_volume_register(struct ofono_call_volume *cv)
 	ofono_modem_add_interface(modem, OFONO_CALL_VOLUME_INTERFACE);
 
 	__ofono_atom_register(cv->atom, call_volume_unregister);
-}
-
-int ofono_call_volume_driver_register(const struct ofono_call_volume_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_call_volume_driver_unregister(
-				const struct ofono_call_volume_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
 }
 
 void ofono_call_volume_remove(struct ofono_call_volume *cv)

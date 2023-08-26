@@ -32,10 +32,10 @@
 #include <ofono/modem.h>
 #include <ofono/call-volume.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "atmodem.h"
 
 static const char *clvl_prefix[] = { "+CLVL:", NULL };
 static const char *cmut_prefix[] = { "+CMUT:", NULL };
@@ -207,19 +207,10 @@ static void at_call_volume_remove(struct ofono_call_volume *cv)
 }
 
 static const struct ofono_call_volume_driver driver = {
-	.name = "atmodem",
 	.probe = at_call_volume_probe,
 	.remove = at_call_volume_remove,
 	.speaker_volume = at_call_volume_speaker_volume,
 	.mute = at_call_volume_mute,
 };
 
-void at_call_volume_init(void)
-{
-	ofono_call_volume_driver_register(&driver);
-}
-
-void at_call_volume_exit(void)
-{
-	ofono_call_volume_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(call_volume, atmodem, &driver)

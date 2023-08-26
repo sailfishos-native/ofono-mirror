@@ -39,7 +39,6 @@ static int atmodem_init(void)
 	at_sms_init();
 	at_netreg_init();
 	at_cbs_init();
-	at_call_volume_init();
 	at_gprs_init();
 	at_gprs_context_init();
 	at_gnss_init();
@@ -54,7 +53,6 @@ static void atmodem_exit(void)
 	at_netreg_exit();
 	at_devinfo_exit();
 	at_cbs_exit();
-	at_call_volume_exit();
 	at_gprs_exit();
 	at_gprs_context_exit();
 	at_gnss_exit();

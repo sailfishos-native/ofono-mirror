@@ -36,9 +36,6 @@ extern void at_devinfo_exit(void);
 extern void at_cbs_init(void);
 extern void at_cbs_exit(void);
 
-extern void at_call_volume_init(void);
-extern void at_call_volume_exit(void);
-
 extern void at_gprs_init(void);
 extern void at_gprs_exit(void);
 
