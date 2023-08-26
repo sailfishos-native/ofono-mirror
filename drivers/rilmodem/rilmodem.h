@@ -41,6 +41,3 @@ extern void ril_gprs_context_exit(void);
 
 extern void ril_phonebook_init(void);
 extern void ril_phonebook_exit(void);
-
-extern void ril_cbs_init(void);
-extern void ril_cbs_exit(void);

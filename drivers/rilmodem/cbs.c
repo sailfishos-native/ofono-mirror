@@ -37,7 +37,7 @@
 #include <gril.h>
 #include <parcel.h>
 
-#include "rilmodem.h"
+#include "rilutil.h"
 #include "vendor.h"
 
 struct cbs_data {
@@ -194,19 +194,10 @@ static void ril_cbs_remove(struct ofono_cbs *cbs)
 }
 
 static const struct ofono_cbs_driver driver = {
-	.name = RILMODEM,
 	.probe = ril_cbs_probe,
 	.remove = ril_cbs_remove,
 	.set_topics = ril_cbs_set_topics,
 	.clear_topics = ril_cbs_clear_topics,
 };
 
-void ril_cbs_init(void)
-{
-	ofono_cbs_driver_register(&driver);
-}
-
-void ril_cbs_exit(void)
-{
-	ofono_cbs_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(cbs, rilmodem, &driver)

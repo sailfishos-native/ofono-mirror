@@ -34,7 +34,6 @@ typedef void (*ofono_cbs_set_cb_t)(const struct ofono_error *error,
 					void *data);
 
 struct ofono_cbs_driver {
-	const char *name;
 	int (*probe)(struct ofono_cbs *cbs, unsigned int vendor, void *data);
 	void (*remove)(struct ofono_cbs *cbs);
 	void (*set_topics)(struct ofono_cbs *cbs, const char *topics,
@@ -44,9 +43,6 @@ struct ofono_cbs_driver {
 };
 
 void ofono_cbs_notify(struct ofono_cbs *cbs, const unsigned char *pdu, int len);
-
-int ofono_cbs_driver_register(const struct ofono_cbs_driver *d);
-void ofono_cbs_driver_unregister(const struct ofono_cbs_driver *d);
 
 struct ofono_cbs *ofono_cbs_create(struct ofono_modem *modem,
 					unsigned int vendor,

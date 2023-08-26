@@ -31,9 +31,6 @@ extern void isi_netreg_exit(void);
 extern void isi_sms_init(void);
 extern void isi_sms_exit(void);
 
-extern void isi_cbs_init(void);
-extern void isi_cbs_exit(void);
-
 extern void isi_gprs_init(void);
 extern void isi_gprs_exit(void);
 

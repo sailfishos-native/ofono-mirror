@@ -39,7 +39,6 @@
 #include <ofono/modem.h>
 #include <ofono/cbs.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "sms.h"
 #include "debug.h"
@@ -227,19 +226,10 @@ static void isi_cbs_remove(struct ofono_cbs *cbs)
 }
 
 static const struct ofono_cbs_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_cbs_probe,
 	.remove			= isi_cbs_remove,
 	.set_topics		= isi_set_topics,
 	.clear_topics		= isi_clear_topics
 };
 
-void isi_cbs_init(void)
-{
-	ofono_cbs_driver_register(&driver);
-}
-
-void isi_cbs_exit(void)
-{
-	ofono_cbs_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(cbs, isimodem, &driver)

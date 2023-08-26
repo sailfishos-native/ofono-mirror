@@ -31,12 +31,14 @@
 #include <ofono/log.h>
 #include <ofono/modem.h>
 #include <ofono/cbs.h>
+
 #include "util.h"
+
+#include <drivers/atmodem/atutil.h>
 
 #include "gatchat.h"
 #include "gatresult.h"
 
-#include "atmodem.h"
 #include "vendor.h"
 
 static const char *none_prefix[] = { NULL };
@@ -304,19 +306,10 @@ static void at_cbs_remove(struct ofono_cbs *cbs)
 }
 
 static const struct ofono_cbs_driver driver = {
-	.name = "atmodem",
 	.probe = at_cbs_probe,
 	.remove = at_cbs_remove,
 	.set_topics = at_cbs_set_topics,
 	.clear_topics = at_cbs_clear_topics,
 };
 
-void at_cbs_init(void)
-{
-	ofono_cbs_driver_register(&driver);
-}
-
-void at_cbs_exit(void)
-{
-	ofono_cbs_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(cbs, atmodem, &driver)

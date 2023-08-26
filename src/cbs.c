@@ -41,8 +41,6 @@
 #define SETTINGS_STORE "cbs"
 #define SETTINGS_GROUP "Settings"
 
-static GSList *g_drivers = NULL;
-
 enum etws_topic_type {
 	ETWS_TOPIC_TYPE_EARTHQUAKE =		4352,
 	ETWS_TOPIC_TYPE_TSUNAMI =		4353,
@@ -557,25 +555,6 @@ static const GDBusSignalTable cbs_signals[] = {
 	{ }
 };
 
-int ofono_cbs_driver_register(const struct ofono_cbs_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_cbs_driver_unregister(const struct ofono_cbs_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void cbs_unregister(struct ofono_atom *atom)
 {
 	struct ofono_cbs *cbs = __ofono_atom_get_data(atom);
@@ -659,41 +638,9 @@ static void cbs_remove(struct ofono_atom *atom)
 	g_free(cbs);
 }
 
-struct ofono_cbs *ofono_cbs_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver,
-					void *data)
-{
-	struct ofono_cbs *cbs;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	cbs = g_try_new0(struct ofono_cbs, 1);
-
-	if (cbs == NULL)
-		return NULL;
-
-	cbs->assembly = cbs_assembly_new();
-	cbs->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_CBS,
-						cbs_remove, cbs);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_cbs_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(cbs, vendor, data) < 0)
-			continue;
-
-		cbs->driver = drv;
-		break;
-	}
-
-	return cbs;
-}
+OFONO_DEFINE_ATOM_CREATE(cbs, OFONO_ATOM_TYPE_CBS, {
+	atom->assembly = cbs_assembly_new();
+})
 
 static void cbs_got_file_contents(struct ofono_cbs *cbs)
 {

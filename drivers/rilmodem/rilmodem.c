@@ -43,7 +43,6 @@ static int rilmodem_init(void)
 	ril_netreg_init();
 	ril_gprs_init();
 	ril_gprs_context_init();
-	ril_cbs_init();
 
 	return 0;
 }
@@ -57,7 +56,6 @@ static void rilmodem_exit(void)
 	ril_netreg_exit();
 	ril_gprs_exit();
 	ril_gprs_context_exit();
-	ril_cbs_exit();
 }
 
 OFONO_PLUGIN_DEFINE(rilmodem, "RIL modem driver", VERSION,
