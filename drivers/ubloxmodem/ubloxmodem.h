@@ -43,6 +43,3 @@ int ublox_is_toby_l4(const struct ublox_model *model);
 
 extern void ublox_gprs_context_init(void);
 extern void ublox_gprs_context_exit(void);
-
-void ublox_netreg_init(void);
-void ublox_netreg_exit(void);

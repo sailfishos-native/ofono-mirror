@@ -43,7 +43,7 @@
 #include <gril/gril.h>
 
 #include "common.h"
-#include "rilmodem.h"
+#include "rilutil.h"
 
 struct netreg_data {
 	GRil *ril;
@@ -836,7 +836,6 @@ static void ril_netreg_remove(struct ofono_netreg *netreg)
 }
 
 static const struct ofono_netreg_driver driver = {
-	.name				= RILMODEM,
 	.probe				= ril_netreg_probe,
 	.remove				= ril_netreg_remove,
 	.registration_status		= ril_registration_status,
@@ -847,12 +846,4 @@ static const struct ofono_netreg_driver driver = {
 	.strength			= ril_signal_strength,
 };
 
-void ril_netreg_init(void)
-{
-	ofono_netreg_driver_register(&driver);
-}
-
-void ril_netreg_exit(void)
-{
-	ofono_netreg_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netreg, rilmodem, &driver)

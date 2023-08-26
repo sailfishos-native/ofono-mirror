@@ -38,7 +38,6 @@
 #include <ofono/modem.h>
 #include <ofono/netreg.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "network.h"
 #include "debug.h"
@@ -1164,8 +1163,7 @@ static void isi_netreg_remove(struct ofono_netreg *netreg)
 	g_free(data);
 }
 
-static const struct ofono_netreg_driver isimodem = {
-	.name			= "isimodem",
+static const struct ofono_netreg_driver driver = {
 	.probe			= isi_netreg_probe,
 	.remove			= isi_netreg_remove,
 	.registration_status	= isi_registration_status,
@@ -1176,12 +1174,4 @@ static const struct ofono_netreg_driver isimodem = {
 	.strength		= isi_strength,
 };
 
-void isi_netreg_init(void)
-{
-	ofono_netreg_driver_register(&isimodem);
-}
-
-void isi_netreg_exit(void)
-{
-	ofono_netreg_driver_unregister(&isimodem);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netreg, isimodem, &driver)

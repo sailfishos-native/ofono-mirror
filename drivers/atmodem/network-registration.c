@@ -35,11 +35,12 @@
 #include <ofono/modem.h>
 #include <ofono/netreg.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 
 #include "common.h"
-#include "atmodem.h"
 #include "vendor.h"
 
 #include "network-registration.h"
@@ -2231,7 +2232,6 @@ void at_netreg_remove(struct ofono_netreg *netreg)
 }
 
 static const struct ofono_netreg_driver driver = {
-	.name				= "atmodem",
 	.probe				= at_netreg_probe,
 	.remove				= at_netreg_remove,
 	.registration_status		= at_registration_status,
@@ -2242,12 +2242,4 @@ static const struct ofono_netreg_driver driver = {
 	.strength			= at_signal_strength,
 };
 
-void at_netreg_init(void)
-{
-	ofono_netreg_driver_register(&driver);
-}
-
-void at_netreg_exit(void)
-{
-	ofono_netreg_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netreg, atmodem, &driver)

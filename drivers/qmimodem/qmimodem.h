@@ -21,9 +21,6 @@
 
 #include "util.h"
 
-extern void qmi_netreg_init(void);
-extern void qmi_netreg_exit(void);
-
 extern void qmi_gprs_init(void);
 extern void qmi_gprs_exit(void);
 

@@ -69,7 +69,6 @@ typedef void (*ofono_netreg_strength_cb_t)(const struct ofono_error *error,
  * vendor extensions for signal strength notification.
  */
 struct ofono_netreg_driver {
-	const char *name;
 	int (*probe)(struct ofono_netreg *netreg, unsigned int vendor,
 			void *data);
 	void (*remove)(struct ofono_netreg *netreg);
@@ -93,9 +92,6 @@ void ofono_netreg_status_notify(struct ofono_netreg *netreg, int status,
 					int lac, int ci, int tech);
 void ofono_netreg_time_notify(struct ofono_netreg *netreg,
 				struct ofono_network_time *info);
-
-int ofono_netreg_driver_register(const struct ofono_netreg_driver *d);
-void ofono_netreg_driver_unregister(const struct ofono_netreg_driver *d);
 
 struct ofono_netreg *ofono_netreg_create(struct ofono_modem *modem,
 						unsigned int vendor,

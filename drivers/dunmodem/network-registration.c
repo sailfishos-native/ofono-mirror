@@ -33,8 +33,9 @@
 #include <ofono/modem.h>
 #include <ofono/netreg.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "common.h"
-#include "dunmodem.h"
 
 static const char *cops_prefix[] = { "+COPS:", NULL };
 
@@ -108,19 +109,10 @@ static void dun_netreg_remove(struct ofono_netreg *netreg)
 }
 
 static const struct ofono_netreg_driver driver = {
-	.name			= "dunmodem",
 	.probe			= dun_netreg_probe,
 	.remove			= dun_netreg_remove,
 	.registration_status	= dun_registration_status,
 	.current_operator	= dun_current_operator,
 };
 
-void dun_netreg_init(void)
-{
-	ofono_netreg_driver_register(&driver);
-}
-
-void dun_netreg_exit(void)
-{
-	ofono_netreg_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netreg, dunmodem, &driver)

@@ -36,9 +36,9 @@
 #include <ofono/modem.h>
 #include <ofono/netreg.h>
 
-#include "common.h"
+#include <drivers/atmodem/atutil.h>
 
-#include "hfpmodem.h"
+#include "common.h"
 #include "slc.h"
 
 #define HFP_MAX_OPERATOR_NAME_LENGTH 16
@@ -343,7 +343,6 @@ static void hfp_netreg_remove(struct ofono_netreg *netreg)
 }
 
 static const struct ofono_netreg_driver driver = {
-	.name				= "hfpmodem",
 	.probe				= hfp_netreg_probe,
 	.remove				= hfp_netreg_remove,
 	.registration_status		= hfp_registration_status,
@@ -351,12 +350,4 @@ static const struct ofono_netreg_driver driver = {
 	.strength			= hfp_signal_strength,
 };
 
-void hfp_netreg_init(void)
-{
-	ofono_netreg_driver_register(&driver);
-}
-
-void hfp_netreg_exit(void)
-{
-	ofono_netreg_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netreg, hfpmodem, &driver)

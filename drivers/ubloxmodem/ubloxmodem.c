@@ -124,7 +124,6 @@ int ublox_is_toby_l4(const struct ublox_model *model)
 static int ubloxmodem_init(void)
 {
 	ublox_gprs_context_init();
-	ublox_netreg_init();
 
 	return 0;
 }
@@ -132,7 +131,6 @@ static int ubloxmodem_init(void)
 static void ubloxmodem_exit(void)
 {
 	ublox_gprs_context_exit();
-	ublox_netreg_exit();
 }
 
 OFONO_PLUGIN_DEFINE(ubloxmodem, "U-Blox Toby L2 high speed modem driver",

@@ -524,7 +524,6 @@ static int ublox_netreg_probe(struct ofono_netreg *netreg,
 }
 
 static const struct ofono_netreg_driver driver = {
-	.name				= "ubloxmodem",
 	.probe				= ublox_netreg_probe,
 	.remove				= at_netreg_remove,
 	.registration_status		= at_registration_status,
@@ -535,12 +534,4 @@ static const struct ofono_netreg_driver driver = {
 	.strength			= at_signal_strength,
 };
 
-void ublox_netreg_init(void)
-{
-	ofono_netreg_driver_register(&driver);
-}
-
-void ublox_netreg_exit(void)
-{
-	ofono_netreg_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netreg, ubloxmodem, &driver)

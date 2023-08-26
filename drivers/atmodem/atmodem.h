@@ -21,9 +21,6 @@
 
 #include "atutil.h"
 
-extern void at_netreg_init(void);
-extern void at_netreg_exit(void);
-
 extern void at_gprs_init(void);
 extern void at_gprs_exit(void);
 

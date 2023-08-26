@@ -88,8 +88,6 @@ struct network_operator_data {
 	struct ofono_netreg *netreg;
 };
 
-static GSList *g_drivers = NULL;
-
 static const char *registration_mode_to_string(int mode)
 {
 	switch (mode) {
@@ -1744,25 +1742,6 @@ const char *ofono_netreg_get_mnc(struct ofono_netreg *netreg)
 	return netreg->current_operator->mnc;
 }
 
-int ofono_netreg_driver_register(const struct ofono_netreg_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_netreg_driver_unregister(const struct ofono_netreg_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
-}
-
 static void emulator_remove_handler(struct ofono_atom *atom, void *data)
 {
 	struct ofono_emulator *em = __ofono_atom_get_data(atom);
@@ -1859,46 +1838,13 @@ static void netreg_remove(struct ofono_atom *atom)
 	g_free(netreg);
 }
 
-struct ofono_netreg *ofono_netreg_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver,
-					void *data)
-{
-	struct ofono_netreg *netreg;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	netreg = g_try_new0(struct ofono_netreg, 1);
-
-	if (netreg == NULL)
-		return NULL;
-
-	netreg->status = NETWORK_REGISTRATION_STATUS_UNKNOWN;
-	netreg->location = -1;
-	netreg->cellid = -1;
-	netreg->technology = -1;
-	netreg->signal_strength = -1;
-
-	netreg->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_NETREG,
-						netreg_remove, netreg);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_netreg_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(netreg, vendor, data) < 0)
-			continue;
-
-		netreg->driver = drv;
-		break;
-	}
-
-	return netreg;
-}
+OFONO_DEFINE_ATOM_CREATE(netreg, OFONO_ATOM_TYPE_NETREG, {
+	atom->status = NETWORK_REGISTRATION_STATUS_UNKNOWN;
+	atom->location = -1;
+	atom->cellid = -1;
+	atom->technology = -1;
+	atom->signal_strength = -1;
+})
 
 static void netreg_load_settings(struct ofono_netreg *netreg)
 {

@@ -30,7 +30,6 @@
 
 static int mbimmodem_init(void)
 {
-	mbim_netreg_init();
 	mbim_gprs_init();
 	mbim_gprs_context_init();
 	return 0;
@@ -40,7 +39,6 @@ static void mbimmodem_exit(void)
 {
 	mbim_gprs_context_exit();
 	mbim_gprs_exit();
-	mbim_netreg_exit();
 }
 
 OFONO_PLUGIN_DEFINE(mbimmodem, "MBIM modem driver", VERSION,

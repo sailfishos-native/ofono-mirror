@@ -34,7 +34,6 @@
 
 static int hfpmodem_init(void)
 {
-	hfp_netreg_init();
 	hfp_handsfree_init();
 
 	return 0;
@@ -42,7 +41,6 @@ static int hfpmodem_init(void)
 
 static void hfpmodem_exit(void)
 {
-	hfp_netreg_exit();
 	hfp_handsfree_exit();
 }
 

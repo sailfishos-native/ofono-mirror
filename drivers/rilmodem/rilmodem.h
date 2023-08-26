@@ -24,9 +24,6 @@
 
 #define RILMODEM "rilmodem"
 
-extern void ril_netreg_init(void);
-extern void ril_netreg_exit(void);
-
 extern void ril_gprs_init(void);
 extern void ril_gprs_exit(void);
 

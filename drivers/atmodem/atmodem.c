@@ -34,7 +34,6 @@
 
 static int atmodem_init(void)
 {
-	at_netreg_init();
 	at_gprs_init();
 	at_gprs_context_init();
 
@@ -43,7 +42,6 @@ static int atmodem_init(void)
 
 static void atmodem_exit(void)
 {
-	at_netreg_exit();
 	at_gprs_exit();
 	at_gprs_context_exit();
 }

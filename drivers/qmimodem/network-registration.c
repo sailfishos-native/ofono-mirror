@@ -34,8 +34,8 @@
 
 #include "qmi.h"
 #include "nas.h"
+#include "util.h"
 
-#include "qmimodem.h"
 #include "src/common.h"
 
 struct netreg_data {
@@ -745,7 +745,6 @@ static void qmi_netreg_remove(struct ofono_netreg *netreg)
 }
 
 static const struct ofono_netreg_driver driver = {
-	.name			= "qmimodem",
 	.probe			= qmi_netreg_probe,
 	.remove			= qmi_netreg_remove,
 	.registration_status	= qmi_registration_status,
@@ -756,12 +755,4 @@ static const struct ofono_netreg_driver driver = {
 	.strength		= qmi_signal_strength,
 };
 
-void qmi_netreg_init(void)
-{
-	ofono_netreg_driver_register(&driver);
-}
-
-void qmi_netreg_exit(void)
-{
-	ofono_netreg_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(netreg, qmimodem, &driver)
