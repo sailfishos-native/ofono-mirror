@@ -510,10 +510,7 @@ builtin_sources += drivers/atmodem/atutil.h \
 			drivers/dunmodem/network-registration.c \
 			drivers/dunmodem/gprs.c
 
-builtin_modules += hfpmodem
 builtin_sources += drivers/atmodem/atutil.h \
-			drivers/hfpmodem/hfpmodem.h \
-			drivers/hfpmodem/hfpmodem.c \
 			drivers/hfpmodem/slc.h \
 			drivers/hfpmodem/slc.c \
 			drivers/hfpmodem/voicecall.c \

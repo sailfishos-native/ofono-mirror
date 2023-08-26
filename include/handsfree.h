@@ -42,7 +42,6 @@ typedef void (*ofono_handsfree_cnum_query_cb_t)(const struct ofono_error *error,
 				void *data);
 
 struct ofono_handsfree_driver {
-	const char *name;
 	int (*probe)(struct ofono_handsfree *hf, unsigned int vendor,
 			void *data);
 	void (*remove)(struct ofono_handsfree *hf);
@@ -79,10 +78,6 @@ void ofono_handsfree_hf_indicator_active_notify(struct ofono_handsfree *hf,
 
 void ofono_handsfree_battchg_notify(struct ofono_handsfree *hf,
 					unsigned char level);
-
-int ofono_handsfree_driver_register(const struct ofono_handsfree_driver *d);
-void ofono_handsfree_driver_unregister(
-			const struct ofono_handsfree_driver *d);
 
 struct ofono_handsfree *ofono_handsfree_create(struct ofono_modem *modem,
 			unsigned int vendor, const char *driver, void *data);

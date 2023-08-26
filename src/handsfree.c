@@ -41,8 +41,6 @@
 #include "common.h"
 #include "hfp.h"
 
-static GSList *g_drivers = NULL;
-
 #define HANDSFREE_FLAG_CACHED 0x1
 
 struct ofono_handsfree {
@@ -639,41 +637,9 @@ static void handsfree_remove(struct ofono_atom *atom)
 	g_free(hf);
 }
 
-struct ofono_handsfree *ofono_handsfree_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver,
-					void *data)
-{
-	struct ofono_handsfree *hf;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	hf = g_try_new0(struct ofono_handsfree, 1);
-	if (hf == NULL)
-		return NULL;
-
-	hf->atom = __ofono_modem_add_atom(modem,
-					OFONO_ATOM_TYPE_HANDSFREE,
-					handsfree_remove, hf);
-	hf->nrec = TRUE;
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_handsfree_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(hf, vendor, data) < 0)
-			continue;
-
-		hf->driver = drv;
-		break;
-	}
-
-	return hf;
-}
+OFONO_DEFINE_ATOM_CREATE(handsfree, OFONO_ATOM_TYPE_HANDSFREE, {
+	atom->nrec = TRUE;
+})
 
 static void handsfree_unregister(struct ofono_atom *atom)
 {
@@ -714,26 +680,6 @@ void ofono_handsfree_register(struct ofono_handsfree *hf)
 	ofono_modem_add_interface(modem, OFONO_HANDSFREE_INTERFACE);
 
 	__ofono_atom_register(hf->atom, handsfree_unregister);
-}
-
-int ofono_handsfree_driver_register(const struct ofono_handsfree_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_handsfree_driver_unregister(
-				const struct ofono_handsfree_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *) d);
 }
 
 void ofono_handsfree_remove(struct ofono_handsfree *hf)

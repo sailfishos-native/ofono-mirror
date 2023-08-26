@@ -38,7 +38,8 @@
 #include <ofono/modem.h>
 #include <ofono/handsfree.h>
 
-#include "hfpmodem.h"
+#include <drivers/atmodem/atutil.h>
+
 #include "hfp.h"
 #include "slc.h"
 
@@ -411,7 +412,6 @@ static void hfp_hf_indicator(struct ofono_handsfree *hf,
 }
 
 static const struct ofono_handsfree_driver driver = {
-	.name			= "hfpmodem",
 	.probe			= hfp_handsfree_probe,
 	.remove			= hfp_handsfree_remove,
 	.cnum_query		= hfp_cnum_query,
@@ -421,12 +421,4 @@ static const struct ofono_handsfree_driver driver = {
 	.hf_indicator		= hfp_hf_indicator,
 };
 
-void hfp_handsfree_init(void)
-{
-	ofono_handsfree_driver_register(&driver);
-}
-
-void hfp_handsfree_exit(void)
-{
-	ofono_handsfree_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(handsfree, hfpmodem, &driver)
