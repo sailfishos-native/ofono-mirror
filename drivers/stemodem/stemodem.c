@@ -32,18 +32,18 @@
 #include <ofono/plugin.h>
 #include <ofono/types.h>
 
-#include "stemodem.h"
+#include "caif_rtnl.h"
 
 static int stemodem_init(void)
 {
-	ste_gprs_context_init();
+	caif_rtnl_init();
 
 	return 0;
 }
 
 static void stemodem_exit(void)
 {
-	ste_gprs_context_exit();
+	caif_rtnl_exit();
 }
 
 OFONO_PLUGIN_DEFINE(stemodem, "STE modem driver", VERSION,

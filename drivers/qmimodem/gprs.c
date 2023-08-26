@@ -32,7 +32,7 @@
 #include "wds.h"
 
 #include "src/common.h"
-#include "qmimodem.h"
+#include "util.h"
 
 struct gprs_data {
 	struct qmi_device *dev;
@@ -430,19 +430,10 @@ static void qmi_gprs_remove(struct ofono_gprs *gprs)
 }
 
 static const struct ofono_gprs_driver driver = {
-	.name			= "qmimodem",
 	.probe			= qmi_gprs_probe,
 	.remove			= qmi_gprs_remove,
 	.set_attached		= qmi_set_attached,
 	.attached_status	= qmi_attached_status,
 };
 
-void qmi_gprs_init(void)
-{
-	ofono_gprs_driver_register(&driver);
-}
-
-void qmi_gprs_exit(void)
-{
-	ofono_gprs_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs, qmimodem, &driver)

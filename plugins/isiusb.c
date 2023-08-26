@@ -55,7 +55,6 @@
 #include <ofono/gprs-context.h>
 #include <ofono/message-waiting.h>
 
-#include "drivers/isimodem/isimodem.h"
 #include "drivers/isimodem/isiutil.h"
 #include "drivers/isimodem/mtc.h"
 #include "drivers/isimodem/debug.h"

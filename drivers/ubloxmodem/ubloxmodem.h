@@ -40,6 +40,3 @@ const struct ublox_model *ublox_model_from_id(int id);
 int ublox_model_to_id(const struct ublox_model *model);
 int ublox_is_toby_l2(const struct ublox_model *model);
 int ublox_is_toby_l4(const struct ublox_model *model);
-
-extern void ublox_gprs_context_init(void);
-extern void ublox_gprs_context_exit(void);

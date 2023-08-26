@@ -583,7 +583,6 @@ static void ublox_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "ubloxmodem",
 	.probe			= ublox_gprs_context_probe,
 	.remove			= ublox_gprs_context_remove,
 	.activate_primary	= ublox_gprs_activate_primary,
@@ -591,12 +590,4 @@ static const struct ofono_gprs_context_driver driver = {
 	.read_settings		= ublox_gprs_read_settings,
 };
 
-void ublox_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void ublox_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, ubloxmodem, &driver)

@@ -454,7 +454,6 @@ static void mbim_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "mbim",
 	.probe			= mbim_gprs_context_probe,
 	.remove			= mbim_gprs_context_remove,
 	.activate_primary	= mbim_gprs_activate_primary,
@@ -462,12 +461,4 @@ static const struct ofono_gprs_context_driver driver = {
 	.detach_shutdown	= mbim_gprs_detach_shutdown
 };
 
-void mbim_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void mbim_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, mbim, &driver)

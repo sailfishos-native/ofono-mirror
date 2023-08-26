@@ -34,11 +34,12 @@
 #include <ofono/modem.h>
 #include <ofono/gprs-context.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 #include "gattty.h"
 
-#include "huaweimodem.h"
 #include "src/missing.h"
 
 static const char *none_prefix[] = { NULL };
@@ -335,19 +336,10 @@ static void huawei_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "huaweimodem",
 	.probe			= huawei_gprs_context_probe,
 	.remove			= huawei_gprs_context_remove,
 	.activate_primary	= huawei_gprs_activate_primary,
 	.deactivate_primary	= huawei_gprs_deactivate_primary,
 };
 
-void huawei_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void huawei_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, huaweimodem, &driver)

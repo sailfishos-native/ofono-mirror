@@ -39,9 +39,8 @@
 
 #include <gril/gril.h>
 
+#include "rilutil.h"
 #include "ofono.h"
-
-#include "rilmodem.h"
 
 #define NUM_DEACTIVATION_RETRIES 4
 #define TIME_BETWEEN_DEACT_RETRIES_S 2
@@ -857,7 +856,6 @@ static void ril_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= RILMODEM,
 	.probe			= ril_gprs_context_probe,
 	.remove			= ril_gprs_context_remove,
 	.activate_primary       = ril_gprs_context_activate_primary,
@@ -865,12 +863,4 @@ static const struct ofono_gprs_context_driver driver = {
 	.detach_shutdown        = ril_gprs_context_detach_shutdown,
 };
 
-void ril_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void ril_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, rilmodem, &driver)

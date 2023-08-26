@@ -28,9 +28,3 @@ enum MBIM_GROUP {
 	GPRS_GROUP = 4,
 	GPRS_CONTEXT_GROUP = 101,
 };
-
-extern void mbim_gprs_init(void);
-extern void mbim_gprs_exit(void);
-
-extern void mbim_gprs_context_init(void);
-extern void mbim_gprs_context_exit(void);

@@ -42,9 +42,10 @@
 #include <sys/ioctl.h>
 #include <arpa/inet.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-#include "stemodem.h"
 #include "caif_socket.h"
 #include "if_caif.h"
 #include "caif_rtnl.h"
@@ -425,21 +426,10 @@ out:
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "stemodem",
 	.probe			= ste_gprs_context_probe,
 	.remove			= ste_gprs_context_remove,
 	.activate_primary	= ste_gprs_activate_primary,
 	.deactivate_primary	= ste_gprs_deactivate_primary,
 };
 
-void ste_gprs_context_init(void)
-{
-	caif_rtnl_init();
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void ste_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-	caif_rtnl_exit();
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, stemodem, &driver)

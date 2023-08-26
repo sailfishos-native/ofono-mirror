@@ -37,7 +37,6 @@ typedef void (*ofono_gprs_status_cb_t)(const struct ofono_error *error,
 typedef void (*ofono_gprs_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_gprs_driver {
-	const char *name;
 	int (*probe)(struct ofono_gprs *gprs, unsigned int vendor,
 			void *data);
 	void (*remove)(struct ofono_gprs *gprs);
@@ -64,9 +63,6 @@ void ofono_gprs_resume_notify(struct ofono_gprs *gprs);
 void ofono_gprs_bearer_notify(struct ofono_gprs *gprs, int bearer);
 
 struct ofono_modem *ofono_gprs_get_modem(struct ofono_gprs *gprs);
-
-int ofono_gprs_driver_register(const struct ofono_gprs_driver *d);
-void ofono_gprs_driver_unregister(const struct ofono_gprs_driver *d);
 
 struct ofono_gprs *ofono_gprs_create(struct ofono_modem *modem,
 					unsigned int vendor, const char *driver,

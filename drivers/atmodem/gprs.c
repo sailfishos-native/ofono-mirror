@@ -36,10 +36,11 @@
 #include <ofono/modem.h>
 #include <ofono/gprs.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 
-#include "atmodem.h"
 #include "vendor.h"
 
 #define MAX_CONTEXTS 255
@@ -863,7 +864,6 @@ static void at_gprs_remove(struct ofono_gprs *gprs)
 }
 
 static const struct ofono_gprs_driver driver = {
-	.name			= "atmodem",
 	.probe			= at_gprs_probe,
 	.remove			= at_gprs_remove,
 	.set_attached		= at_gprs_set_attached,
@@ -871,12 +871,4 @@ static const struct ofono_gprs_driver driver = {
 	.list_active_contexts	= at_gprs_list_active_contexts,
 };
 
-void at_gprs_init(void)
-{
-	ofono_gprs_driver_register(&driver);
-}
-
-void at_gprs_exit(void)
-{
-	ofono_gprs_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs, atmodem, &driver)

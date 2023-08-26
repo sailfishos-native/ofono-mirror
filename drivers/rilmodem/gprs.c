@@ -42,7 +42,7 @@
 #include <gril/grilutil.h>
 
 #include "common.h"
-#include "rilmodem.h"
+#include "rilutil.h"
 
 /* Time between get data status retries */
 #define GET_STATUS_TIMER_MS 5000
@@ -515,19 +515,10 @@ static void ril_gprs_remove(struct ofono_gprs *gprs)
 }
 
 static const struct ofono_gprs_driver driver = {
-	.name			= RILMODEM,
 	.probe			= ril_gprs_probe,
 	.remove			= ril_gprs_remove,
 	.set_attached		= ril_gprs_set_attached,
 	.attached_status	= ril_gprs_registration_status,
 };
 
-void ril_gprs_init(void)
-{
-	ofono_gprs_driver_register(&driver);
-}
-
-void ril_gprs_exit(void)
-{
-	ofono_gprs_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs, rilmodem, &driver)

@@ -45,9 +45,6 @@
 static const struct ofono_gprs_driver *gprs_drv;
 
 /* Declarations && Re-implementations of core functions. */
-void ril_gprs_exit(void);
-void ril_gprs_init(void);
-
 struct ofono_modem;
 
 struct ofono_gprs {
@@ -60,19 +57,6 @@ struct ofono_gprs {
 struct ofono_modem {
 	struct ofono_gprs *gprs;
 };
-
-int ofono_gprs_driver_register(const struct ofono_gprs_driver *d)
-{
-	if (gprs_drv == NULL)
-		gprs_drv = d;
-
-	return 0;
-}
-
-void ofono_gprs_driver_unregister(const struct ofono_gprs_driver *d)
-{
-	gprs_drv = NULL;
-}
 
 void ofono_gprs_register(struct ofono_gprs *gprs)
 {
@@ -669,6 +653,8 @@ struct rilmodem_test_data test_5 = {
 	.num_steps = G_N_ELEMENTS(steps_test_5)
 };
 
+extern struct ofono_atom_driver_desc __start___gprs[];
+
 static void server_connect_cb(gpointer data)
 {
 	struct ofono_gprs *gprs = data;
@@ -679,6 +665,7 @@ static void server_connect_cb(gpointer data)
 	 * to retrieve currently active data calls. Test steps must start from
 	 * there.
 	 */
+	gprs_drv = __start___gprs[0].driver;
 	retval = gprs_drv->probe(gprs, OFONO_RIL_VENDOR_AOSP, gprs->ril);
 	g_assert(retval == 0);
 }
@@ -697,8 +684,6 @@ static void test_function(gconstpointer data)
 	const struct rilmodem_test_data *test_data = data;
 	struct ofono_gprs *gprs;
 	struct ofono_modem *modem;
-
-	ril_gprs_init();
 
 	gprs = g_malloc0(sizeof(*gprs));
 	modem = g_malloc0(sizeof(*modem));
@@ -722,8 +707,6 @@ static void test_function(gconstpointer data)
 	g_free(gprs);
 
 	rilmodem_test_engine_remove(gprs->engined);
-
-	ril_gprs_exit();
 }
 
 #endif

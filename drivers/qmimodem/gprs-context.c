@@ -34,8 +34,7 @@
 
 #include "qmi.h"
 #include "wds.h"
-
-#include "qmimodem.h"
+#include "util.h"
 
 struct gprs_context_data {
 	struct qmi_service *wds;
@@ -486,7 +485,6 @@ static void qmi_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "qmimodem",
 	.probe			= qmi_gprs_context_probe,
 	.remove			= qmi_gprs_context_remove,
 	.activate_primary	= qmi_activate_primary,
@@ -495,12 +493,4 @@ static const struct ofono_gprs_context_driver driver = {
 	.detach_shutdown	= qmi_gprs_context_detach_shutdown,
 };
 
-void qmi_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void qmi_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, qmimodem, &driver)

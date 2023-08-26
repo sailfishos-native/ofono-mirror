@@ -54,7 +54,6 @@
 #include <ofono/gprs-context.h>
 #include <ofono/audio-settings.h>
 
-#include "drivers/isimodem/isimodem.h"
 #include "drivers/isimodem/isiutil.h"
 #include "drivers/isimodem/infoserver.h"
 #include "drivers/isimodem/mtc.h"

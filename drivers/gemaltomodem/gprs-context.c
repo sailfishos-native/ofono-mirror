@@ -35,11 +35,11 @@
 #include <ofono/modem.h>
 #include <ofono/gprs-context.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 #include "gattty.h"
-
-#include "gemaltomodem.h"
 
 static const char *none_prefix[] = { NULL };
 
@@ -341,7 +341,6 @@ static void gemalto_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "gemaltomodem",
 	.probe			= gemalto_gprs_context_probe,
 	.remove			= gemalto_gprs_context_remove,
 	.activate_primary	= gemalto_gprs_activate_primary,
@@ -349,12 +348,4 @@ static const struct ofono_gprs_context_driver driver = {
 	.read_settings		= gemalto_gprs_read_settings,
 };
 
-void gemalto_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void gemalto_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, gemaltomodem, &driver)

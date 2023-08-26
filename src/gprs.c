@@ -140,9 +140,6 @@ static void gprs_attached_update(struct ofono_gprs *gprs);
 static void gprs_netreg_update(struct ofono_gprs *gprs);
 static void gprs_deactivate_next(struct ofono_gprs *gprs);
 
-static GSList *g_drivers = NULL;
-static GSList *g_context_drivers = NULL;
-
 const char *packet_bearer_to_string(int bearer)
 {
 	switch (bearer) {
@@ -2786,27 +2783,6 @@ void ofono_gprs_context_deactivated(struct ofono_gprs_context *gc,
 	}
 }
 
-int ofono_gprs_context_driver_register(
-				const struct ofono_gprs_context_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_context_drivers = g_slist_prepend(g_context_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_gprs_context_driver_unregister(
-				const struct ofono_gprs_context_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_context_drivers = g_slist_remove(g_context_drivers, (void *) d);
-}
-
 static void gprs_context_remove(struct ofono_atom *atom)
 {
 	struct ofono_gprs_context *gc = __ofono_atom_get_data(atom);
@@ -2823,40 +2799,9 @@ static void gprs_context_remove(struct ofono_atom *atom)
 	g_free(gc);
 }
 
-struct ofono_gprs_context *ofono_gprs_context_create(struct ofono_modem *modem,
-						unsigned int vendor,
-						const char *driver, void *data)
-{
-	struct ofono_gprs_context *gc;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	gc = g_try_new0(struct ofono_gprs_context, 1);
-	if (gc == NULL)
-		return NULL;
-
-	gc->type = OFONO_GPRS_CONTEXT_TYPE_ANY;
-
-	gc->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_GPRS_CONTEXT,
-						gprs_context_remove, gc);
-
-	for (l = g_context_drivers; l; l = l->next) {
-		const struct ofono_gprs_context_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(gc, vendor, data) < 0)
-			continue;
-
-		gc->driver = drv;
-		break;
-	}
-
-	return gc;
-}
+OFONO_DEFINE_ATOM_CREATE(gprs_context, OFONO_ATOM_TYPE_GPRS_CONTEXT, {
+	atom->type = OFONO_GPRS_CONTEXT_TYPE_ANY;
+})
 
 void ofono_gprs_context_remove(struct ofono_gprs_context *gc)
 {
@@ -3025,25 +2970,6 @@ void ofono_gprs_context_set_ipv6_dns_servers(struct ofono_gprs_context *gc,
 	settings->ipv6->dns = g_strdupv((char **) dns);
 }
 
-int ofono_gprs_driver_register(const struct ofono_gprs_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_drivers = g_slist_prepend(g_drivers, (void *)d);
-
-	return 0;
-}
-
-void ofono_gprs_driver_unregister(const struct ofono_gprs_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_drivers = g_slist_remove(g_drivers, (void *)d);
-}
-
 static void free_contexts(struct ofono_gprs *gprs)
 {
 	GSList *l;
@@ -3135,42 +3061,11 @@ static void gprs_remove(struct ofono_atom *atom)
 	g_free(gprs);
 }
 
-struct ofono_gprs *ofono_gprs_create(struct ofono_modem *modem,
-					unsigned int vendor,
-					const char *driver, void *data)
-{
-	struct ofono_gprs *gprs;
-	GSList *l;
-
-	if (driver == NULL)
-		return NULL;
-
-	gprs = g_try_new0(struct ofono_gprs, 1);
-	if (gprs == NULL)
-		return NULL;
-
-	gprs->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_GPRS,
-						gprs_remove, gprs);
-
-	for (l = g_drivers; l; l = l->next) {
-		const struct ofono_gprs_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(gprs, vendor, data) < 0)
-			continue;
-
-		gprs->driver = drv;
-		break;
-	}
-
-	gprs->status = NETWORK_REGISTRATION_STATUS_UNKNOWN;
-	gprs->netreg_status = -1;
-	gprs->used_pids = l_uintset_new(MAX_CONTEXTS);
-
-	return gprs;
-}
+OFONO_DEFINE_ATOM_CREATE(gprs, OFONO_ATOM_TYPE_GPRS, {
+	atom->status = NETWORK_REGISTRATION_STATUS_UNKNOWN;
+	atom->netreg_status = -1;
+	atom->used_pids = l_uintset_new(MAX_CONTEXTS);
+})
 
 static void netreg_watch(struct ofono_atom *atom,
 				enum ofono_atom_watch_condition cond,

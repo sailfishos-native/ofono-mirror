@@ -410,12 +410,13 @@ static void phonesim_query_available_rats(struct ofono_radio_settings *rs,
 }
 
 static struct ofono_gprs_context_driver context_driver = {
-	.name			= "phonesim",
 	.probe			= phonesim_context_probe,
 	.remove			= phonesim_context_remove,
 	.activate_primary	= phonesim_activate_primary,
 	.deactivate_primary	= phonesim_deactivate_primary,
 };
+
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, phonesim, &context_driver)
 
 static struct ofono_radio_settings_driver radio_settings_driver = {
 	.probe			= phonesim_radio_settings_probe,
@@ -1151,8 +1152,6 @@ static int phonesim_init(void)
 
 	ofono_modem_driver_register(&localhfp_driver);
 
-	ofono_gprs_context_driver_register(&context_driver);
-
 	if (conf_override)
 		parse_config(conf_override);
 	else
@@ -1173,8 +1172,6 @@ static void phonesim_exit(void)
 
 	g_slist_free(modem_list);
 	modem_list = NULL;
-
-	ofono_gprs_context_driver_unregister(&context_driver);
 
 	ofono_modem_driver_unregister(&phonesim_driver);
 }

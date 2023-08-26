@@ -32,10 +32,10 @@
 #include <ofono/modem.h>
 #include <ofono/gprs-context.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "telitmodem.h"
 
 static const char *none_prefix[] = { NULL };
 static const char *cgpaddr_prefix[] = { "+CGPADDR:", NULL };
@@ -468,19 +468,10 @@ static void telitncm_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "telitncmmodem",
 	.probe			= telitncm_gprs_context_probe,
 	.remove			= telitncm_gprs_context_remove,
 	.activate_primary	= telitncm_gprs_activate_primary,
 	.deactivate_primary	= telitncm_gprs_deactivate_primary,
 };
 
-void telitncm_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void telitncm_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, telitncmmodem, &driver)

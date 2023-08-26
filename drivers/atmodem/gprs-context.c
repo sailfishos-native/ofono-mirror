@@ -35,11 +35,12 @@
 #include <ofono/modem.h>
 #include <ofono/gprs-context.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
 #include "gatppp.h"
 
-#include "atmodem.h"
 #include "vendor.h"
 
 #define TUN_DEV "/dev/net/tun"
@@ -494,7 +495,6 @@ static void at_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "atmodem",
 	.probe			= at_gprs_context_probe,
 	.remove			= at_gprs_context_remove,
 	.activate_primary	= at_gprs_activate_primary,
@@ -502,12 +502,4 @@ static const struct ofono_gprs_context_driver driver = {
 	.detach_shutdown	= at_gprs_detach_shutdown,
 };
 
-void at_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void at_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, atmodem, &driver)

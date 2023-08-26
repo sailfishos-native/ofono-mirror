@@ -61,8 +61,10 @@
 #include "ofono.h"
 
 #include "ril.h"
-#include "drivers/rilmodem/rilmodem.h"
+#include "drivers/rilmodem/rilutil.h"
 #include "drivers/rilmodem/vendor.h"
+
+#define RILMODEM "rilmodem"
 
 #define	RADIO_GID 1001
 #define	RADIO_UID 1001

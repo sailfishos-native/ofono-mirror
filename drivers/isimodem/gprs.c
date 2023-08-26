@@ -38,7 +38,6 @@
 #include <gisi/client.h>
 #include <gisi/iter.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "gpds.h"
 #include "info.h"
@@ -490,19 +489,10 @@ error:
 }
 
 static const struct ofono_gprs_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_gprs_probe,
 	.remove			= isi_gprs_remove,
 	.set_attached		= isi_gprs_set_attached,
 	.attached_status	= isi_gprs_attached_status,
 };
 
-void isi_gprs_init(void)
-{
-	ofono_gprs_driver_register(&driver);
-}
-
-void isi_gprs_exit(void)
-{
-	ofono_gprs_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs, isimodem, &driver)

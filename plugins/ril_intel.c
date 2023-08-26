@@ -51,7 +51,7 @@
 
 #include <gril/gril.h>
 
-#include "drivers/rilmodem/rilmodem.h"
+#include "drivers/rilmodem/rilutil.h"
 #include "drivers/rilmodem/vendor.h"
 #include "gdbus.h"
 

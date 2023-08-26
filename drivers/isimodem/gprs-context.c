@@ -43,7 +43,6 @@
 #include <gisi/pep.h>
 #include <gisi/pipe.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "gpds.h"
 #include "debug.h"
@@ -660,19 +659,10 @@ static void isi_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_gprs_context_probe,
 	.remove			= isi_gprs_context_remove,
 	.activate_primary	= isi_gprs_activate_primary,
 	.deactivate_primary	= isi_gprs_deactivate_primary,
 };
 
-void isi_gprs_context_init(void)
-{
-	ofono_gprs_context_driver_register(&driver);
-}
-
-void isi_gprs_context_exit(void)
-{
-	ofono_gprs_context_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(gprs_context, isimodem, &driver)
