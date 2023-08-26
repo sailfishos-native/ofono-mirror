@@ -22,9 +22,6 @@
 extern void isi_phonebook_init(void);
 extern void isi_phonebook_exit(void);
 
-extern void isi_devinfo_init(void);
-extern void isi_devinfo_exit(void);
-
 extern void isi_netreg_init(void);
 extern void isi_netreg_exit(void);
 

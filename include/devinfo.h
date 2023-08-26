@@ -34,7 +34,6 @@ typedef void (*ofono_devinfo_query_cb_t)(const struct ofono_error *error,
 					const char *attribute, void *data);
 
 struct ofono_devinfo_driver {
-	const char *name;
 	int (*probe)(struct ofono_devinfo *info, unsigned int vendor,
 			void *data);
 	void (*remove)(struct ofono_devinfo *info);
@@ -49,9 +48,6 @@ struct ofono_devinfo_driver {
 	void (*query_svn)(struct ofono_devinfo *info,
 			ofono_devinfo_query_cb_t cb, void *data);
 };
-
-int ofono_devinfo_driver_register(const struct ofono_devinfo_driver *d);
-void ofono_devinfo_driver_unregister(const struct ofono_devinfo_driver *d);
 
 struct ofono_devinfo *ofono_devinfo_create(struct ofono_modem *modem,
 							unsigned int vendor,

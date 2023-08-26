@@ -30,7 +30,6 @@
 
 static int qmimodem_init(void)
 {
-	qmi_devinfo_init();
 	qmi_netreg_init();
 	qmi_sms_init();
 	qmi_gprs_init();
@@ -47,7 +46,6 @@ static void qmimodem_exit(void)
 	qmi_gprs_exit();
 	qmi_sms_exit();
 	qmi_netreg_exit();
-	qmi_devinfo_exit();
 }
 
 OFONO_PLUGIN_DEFINE(qmimodem, "Qualcomm QMI modem driver", VERSION,

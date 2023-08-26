@@ -36,8 +36,7 @@
 #include <ofono/devinfo.h>
 
 #include "gril.h"
-
-#include "rilmodem.h"
+#include "rilutil.h"
 
 static void ril_query_manufacturer(struct ofono_devinfo *info,
 					ofono_devinfo_query_cb_t cb,
@@ -212,7 +211,6 @@ static void ril_devinfo_remove(struct ofono_devinfo *info)
 }
 
 static const struct ofono_devinfo_driver driver = {
-	.name			= RILMODEM,
 	.probe			= ril_devinfo_probe,
 	.remove			= ril_devinfo_remove,
 	.query_manufacturer	= ril_query_manufacturer,
@@ -222,12 +220,4 @@ static const struct ofono_devinfo_driver driver = {
 	.query_svn		= ril_query_svn
 };
 
-void ril_devinfo_init(void)
-{
-	ofono_devinfo_driver_register(&driver);
-}
-
-void ril_devinfo_exit(void)
-{
-	ofono_devinfo_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(devinfo, rilmodem, &driver)

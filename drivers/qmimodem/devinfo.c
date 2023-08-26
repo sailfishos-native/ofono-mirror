@@ -31,8 +31,7 @@
 
 #include "qmi.h"
 #include "dms.h"
-
-#include "qmimodem.h"
+#include "util.h"
 
 struct devinfo_data {
 	struct qmi_service *dms;
@@ -271,7 +270,6 @@ static void qmi_devinfo_remove(struct ofono_devinfo *devinfo)
 }
 
 static const struct ofono_devinfo_driver driver = {
-	.name			= "qmimodem",
 	.probe			= qmi_devinfo_probe,
 	.remove			= qmi_devinfo_remove,
 	.query_manufacturer	= qmi_query_manufacturer,
@@ -280,12 +278,4 @@ static const struct ofono_devinfo_driver driver = {
 	.query_serial		= qmi_query_serial,
 };
 
-void qmi_devinfo_init(void)
-{
-	ofono_devinfo_driver_register(&driver);
-}
-
-void qmi_devinfo_exit(void)
-{
-	ofono_devinfo_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(devinfo, qmimodem, &driver)

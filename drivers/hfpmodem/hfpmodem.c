@@ -34,7 +34,6 @@
 
 static int hfpmodem_init(void)
 {
-	hfp_devinfo_init();
 	hfp_netreg_init();
 	hfp_handsfree_init();
 	hfp_siri_init();
@@ -44,7 +43,6 @@ static int hfpmodem_init(void)
 
 static void hfpmodem_exit(void)
 {
-	hfp_devinfo_exit();
 	hfp_netreg_exit();
 	hfp_handsfree_exit();
 	hfp_siri_exit();

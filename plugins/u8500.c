@@ -672,7 +672,6 @@ static struct ofono_modem_driver driver = {
 };
 
 static struct ofono_devinfo_driver devinfo_driver = {
-	.name			= "u8500",
 	.probe			= u8500_devinfo_probe,
 	.remove			= u8500_devinfo_remove,
 	.query_manufacturer	= u8500_query_manufacturer,
@@ -681,24 +680,15 @@ static struct ofono_devinfo_driver devinfo_driver = {
 	.query_serial		= u8500_query_serial
 };
 
+OFONO_ATOM_DRIVER_BUILTIN(devinfo, u8500, &devinfo_driver)
+
 static int u8500_init(void)
 {
-	int err;
-
-	err = ofono_modem_driver_register(&driver);
-
-	if (err < 0)
-		return err;
-
-	ofono_devinfo_driver_register(&devinfo_driver);
-
-	return 0;
+	return ofono_modem_driver_register(&driver);
 }
 
 static void u8500_exit(void)
 {
-	ofono_devinfo_driver_unregister(&devinfo_driver);
-
 	ofono_modem_driver_unregister(&driver);
 }
 

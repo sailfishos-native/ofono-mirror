@@ -36,7 +36,6 @@
 
 #define DEFAULT_POWERED_TIMEOUT (20)
 
-static GSList *g_devinfo_drivers;
 static GSList *g_driver_list;
 static GSList *g_modem_list;
 
@@ -1625,25 +1624,6 @@ static void dun_watch(struct ofono_atom *atom,
 	ofono_emulator_add_handler(em, "+GCAP", gcap_cb, data, NULL);
 }
 
-int ofono_devinfo_driver_register(const struct ofono_devinfo_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_devinfo_drivers = g_slist_prepend(g_devinfo_drivers, (void *) d);
-
-	return 0;
-}
-
-void ofono_devinfo_driver_unregister(const struct ofono_devinfo_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_devinfo_drivers = g_slist_remove(g_devinfo_drivers, (void *) d);
-}
-
 static void devinfo_remove(struct ofono_atom *atom)
 {
 	struct ofono_devinfo *info = __ofono_atom_get_data(atom);
@@ -1661,34 +1641,7 @@ static void devinfo_remove(struct ofono_atom *atom)
 	g_free(info);
 }
 
-struct ofono_devinfo *ofono_devinfo_create(struct ofono_modem *modem,
-							unsigned int vendor,
-							const char *driver,
-							void *data)
-{
-	struct ofono_devinfo *info;
-	GSList *l;
-
-	info = g_new0(struct ofono_devinfo, 1);
-
-	info->atom = __ofono_modem_add_atom(modem, OFONO_ATOM_TYPE_DEVINFO,
-						devinfo_remove, info);
-
-	for (l = g_devinfo_drivers; l; l = l->next) {
-		const struct ofono_devinfo_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, driver))
-			continue;
-
-		if (drv->probe(info, vendor, data) < 0)
-			continue;
-
-		info->driver = drv;
-		break;
-	}
-
-	return info;
-}
+OFONO_DEFINE_ATOM_CREATE(devinfo, OFONO_ATOM_TYPE_DEVINFO)
 
 static void devinfo_unregister(struct ofono_atom *atom)
 {

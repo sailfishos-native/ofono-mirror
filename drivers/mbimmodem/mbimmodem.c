@@ -30,7 +30,6 @@
 
 static int mbimmodem_init(void)
 {
-	mbim_devinfo_init();
 	mbim_netreg_init();
 	mbim_sms_init();
 	mbim_gprs_init();
@@ -44,7 +43,6 @@ static void mbimmodem_exit(void)
 	mbim_gprs_exit();
 	mbim_sms_exit();
 	mbim_netreg_exit();
-	mbim_devinfo_exit();
 }
 
 OFONO_PLUGIN_DEFINE(mbimmodem, "MBIM modem driver", VERSION,

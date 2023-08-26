@@ -27,7 +27,7 @@
 #include <ofono/modem.h>
 #include <ofono/devinfo.h>
 
-#include "drivers/mbimmodem/mbimmodem.h"
+#include "util.h"
 
 struct devinfo_data {
 	struct l_idle *delayed_register;
@@ -89,19 +89,10 @@ static void mbim_devinfo_remove(struct ofono_devinfo *info)
 }
 
 static const struct ofono_devinfo_driver driver = {
-	.name			= "mbim",
 	.probe			= mbim_devinfo_probe,
 	.remove			= mbim_devinfo_remove,
 	.query_revision		= mbim_query_revision,
 	.query_serial		= mbim_query_serial,
 };
 
-void mbim_devinfo_init(void)
-{
-	ofono_devinfo_driver_register(&driver);
-}
-
-void mbim_devinfo_exit(void)
-{
-	ofono_devinfo_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(devinfo, mbim, &driver)

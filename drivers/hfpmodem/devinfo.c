@@ -34,7 +34,7 @@
 #include <ofono/modem.h>
 #include <ofono/devinfo.h>
 
-#include "hfpmodem.h"
+#include <drivers/atmodem/atutil.h>
 
 struct devinfo_data {
 	char *device_address;
@@ -92,18 +92,9 @@ static void hfp_devinfo_remove(struct ofono_devinfo *info)
 }
 
 static const struct ofono_devinfo_driver driver = {
-	.name			= "hfpmodem",
 	.probe			= hfp_devinfo_probe,
 	.remove			= hfp_devinfo_remove,
 	.query_serial		= hfp_query_serial
 };
 
-void hfp_devinfo_init(void)
-{
-	ofono_devinfo_driver_register(&driver);
-}
-
-void hfp_devinfo_exit(void)
-{
-	ofono_devinfo_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(devinfo, hfpmodem, &driver)

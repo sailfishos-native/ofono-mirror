@@ -38,7 +38,6 @@
 #include <ofono/modem.h>
 #include <ofono/devinfo.h>
 
-#include "isimodem.h"
 #include "isiutil.h"
 #include "debug.h"
 #include "info.h"
@@ -252,7 +251,6 @@ static void isi_devinfo_remove(struct ofono_devinfo *info)
 }
 
 static const struct ofono_devinfo_driver driver = {
-	.name			= "isimodem",
 	.probe			= isi_devinfo_probe,
 	.remove			= isi_devinfo_remove,
 	.query_manufacturer	= isi_query_manufacturer,
@@ -261,12 +259,4 @@ static const struct ofono_devinfo_driver driver = {
 	.query_serial		= isi_query_serial
 };
 
-void isi_devinfo_init(void)
-{
-	ofono_devinfo_driver_register(&driver);
-}
-
-void isi_devinfo_exit(void)
-{
-	ofono_devinfo_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(devinfo, isimodem, &driver)

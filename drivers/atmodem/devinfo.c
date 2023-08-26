@@ -30,10 +30,10 @@
 #include <ofono/modem.h>
 #include <ofono/devinfo.h>
 
+#include <drivers/atmodem/atutil.h>
+
 #include "gatchat.h"
 #include "gatresult.h"
-
-#include "atmodem.h"
 
 static const char *gcap_prefix[] = { "+GCAP:", NULL };
 
@@ -154,7 +154,6 @@ static void at_devinfo_remove(struct ofono_devinfo *info)
 }
 
 static const struct ofono_devinfo_driver driver = {
-	.name			= "atmodem",
 	.probe			= at_devinfo_probe,
 	.remove			= at_devinfo_remove,
 	.query_manufacturer	= at_query_manufacturer,
@@ -163,12 +162,4 @@ static const struct ofono_devinfo_driver driver = {
 	.query_serial		= at_query_serial,
 };
 
-void at_devinfo_init(void)
-{
-	ofono_devinfo_driver_register(&driver);
-}
-
-void at_devinfo_exit(void)
-{
-	ofono_devinfo_driver_unregister(&driver);
-}
+OFONO_ATOM_DRIVER_BUILTIN(devinfo, atmodem, &driver)

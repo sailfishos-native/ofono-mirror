@@ -37,7 +37,6 @@
 
 static int isimodem_init(void)
 {
-	isi_devinfo_init();
 	isi_phonebook_init();
 	isi_netreg_init();
 	isi_sms_init();
@@ -49,7 +48,6 @@ static int isimodem_init(void)
 
 static void isimodem_exit(void)
 {
-	isi_devinfo_exit();
 	isi_phonebook_exit();
 	isi_netreg_exit();
 	isi_sms_exit();
