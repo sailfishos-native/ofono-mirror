@@ -49,7 +49,8 @@ struct ussd_data {
 static void cusd_parse(GAtResult *result, struct ofono_ussd *ussd)
 {
 	GAtResultIter iter;
-	int status, dcs;
+	int status;
+	int dcs = 0;
 	const char *content;
 	unsigned char msg[160];
 	const unsigned char *msg_ptr = NULL;
@@ -66,8 +67,7 @@ static void cusd_parse(GAtResult *result, struct ofono_ussd *ussd)
 	if (!g_at_result_iter_next_string(&iter, &content))
 		goto out;
 
-	if (!g_at_result_iter_next_number(&iter, &dcs))
-		dcs = 0;
+	g_at_result_iter_next_number(&iter, &dcs);
 
 	msg_ptr = decode_hex_own_buf(content, -1, &msg_len, 0, msg);
 

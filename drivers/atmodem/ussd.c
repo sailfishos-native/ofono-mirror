@@ -119,8 +119,10 @@ static void cusd_parse(GAtResult *result, struct ofono_ussd *ussd)
 	if (!g_at_result_iter_next_number(&iter, &status))
 		return;
 
-	if (!g_at_result_iter_next_string(&iter, &content))
+	if (!g_at_result_iter_next_string(&iter, &content)) {
+		dcs = 0;
 		goto out;
+	}
 
 	if (!g_at_result_iter_next_number(&iter, &dcs))
 		dcs = 0;
