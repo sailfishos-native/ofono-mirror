@@ -218,7 +218,7 @@ int main(int argc, char *argv[])
 	char *modem_path;
 	int signal_source;
 	int data_source;
-	int ret;
+	int ret = 1;
 
 	if (DBUS_TYPE_UNIX_FD < 0) {
 		fprintf(stderr, "File-descriptor passing not supported\n");
@@ -236,10 +236,8 @@ int main(int argc, char *argv[])
 	else
 		modem_path = get_first_modem_path(conn);
 
-	if (modem_path == NULL) {
-		ret = 1;
+	if (modem_path == NULL)
 		goto out;
-	}
 
 	signal_source = setup_signals();
 	if (signal_source < 0)
