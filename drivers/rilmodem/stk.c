@@ -93,13 +93,13 @@ static void ril_stk_envelope_cb(struct ril_msg *message, gpointer user_data)
 	ofono_stk_envelope_cb_t cb = cbd->cb;
 	struct stk_data *sd = cbd->user;
 	struct parcel rilp;
-	unsigned char *response = NULL;
 
 	g_ril_print_response(sd->ril, message);
 
 	if (message->error == RIL_E_SUCCESS) {
 		char *pdu;
-		size_t len;
+		unsigned char *response = NULL;
+		size_t len = 0;
 
 		g_ril_init_parcel(message, &rilp);
 		pdu = parcel_r_string(&rilp);
