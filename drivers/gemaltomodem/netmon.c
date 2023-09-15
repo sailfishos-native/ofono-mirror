@@ -569,7 +569,7 @@ static void smoni_cb(gboolean ok, GAtResult *result, gpointer user_data)
 		ret = gemalto_parse_smoni_gsm(&iter, cbd);
 		break;
 	default:
-		break;
+		goto error;
 	}
 
 	if (ret) {
@@ -583,6 +583,7 @@ static void smoni_cb(gboolean ok, GAtResult *result, gpointer user_data)
 		return;
 
 	req_cb_data_unref(cbd);
+error:
 	CALLBACK_WITH_FAILURE(cbd->cb, cbd->data);
 }
 
