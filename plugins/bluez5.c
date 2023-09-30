@@ -241,13 +241,5 @@ void bt_connect_profile(DBusConnection *conn,
 							cb, user_data);
 }
 
-void bt_disconnect_profile(DBusConnection *conn,
-				const char *device, const char *uuid,
-				bt_finish_cb cb, gpointer user_data)
-{
-	device_send_message(conn, device, "DisconnectProfile", uuid,
-							cb, user_data);
-}
-
 OFONO_PLUGIN_DEFINE(bluez5, "BlueZ 5 Utils Plugin", VERSION,
 			OFONO_PLUGIN_PRIORITY_DEFAULT, NULL, NULL)
