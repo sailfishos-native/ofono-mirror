@@ -1356,7 +1356,7 @@ static gboolean setup_gemalto(struct modem_info *modem)
 				qmi = info->devnode;
 		}
 
-		/* Cinterion ALS3, PLS8-E, PLS8-X */
+		/* Cinterion ALS3, PLS8-E, PLS8-X, EHS5-E */
 		if (g_strcmp0(info->interface, "2/2/1") == 0) {
 			if (g_strcmp0(info->number, "00") == 0)
 				mdm = info->devnode;
@@ -1980,6 +1980,7 @@ static struct {
 	{ "gemalto",	"option",	"1e2d",	"0053"	},
 	{ "gemalto",	"cdc_wdm",	"1e2d",	"0053"	},
 	{ "gemalto",	"qmi_wwan",	"1e2d",	"0053"	},
+	{ "gemalto",	"cdc_acm",	"1e2d",	"0058"	},
 	{ "gemalto",	"cdc_acm",	"1e2d",	"0061"	},
 	{ "gemalto",	"cdc_ether",	"1e2d",	"0061"	},
 	{ "gemalto",	"cdc_acm",	"1e2d",	"005b"	},
