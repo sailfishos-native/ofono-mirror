@@ -53,15 +53,9 @@
 
 #include <drivers/atmodem/atutil.h>
 #include <drivers/atmodem/vendor.h>
+#include <drivers/gemaltomodem/models.h>
 
 #define HARDWARE_MONITOR_INTERFACE OFONO_SERVICE ".cinterion.HardwareMonitor"
-
-/* Supported gemalto's modem */
-#define GEMALTO_MODEL_PHS8P	"0053"
-/* ALS3, PLS8-E, and PLS8-X family */
-#define GEMALTO_MODEL_ALS3_PLS8x	"0061"
-/* ELS81 modem */
-#define GEMALTO_MODEL_ELS81x   "005b"
 
 static const char *none_prefix[] = { NULL };
 static const char *sctm_prefix[] = { "^SCTM:", NULL };
