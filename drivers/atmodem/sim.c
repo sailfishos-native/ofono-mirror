@@ -1640,7 +1640,16 @@ static void at_discover_apps(struct ofono_sim *sim,
 				void *data)
 {
 	struct sim_data *sd = ofono_sim_get_data(sim);
-	struct cb_data *cbd = cb_data_new(cb, data);
+	struct cb_data *cbd;
+
+	/*
+	 * QUECTEL EC2X reboots when executing the AT+CUAD command with SIM
+	 * cards of some operators
+	 */
+	if (sd->vendor == OFONO_VENDOR_QUECTEL_EC2X)
+		goto error;
+
+	cbd = cb_data_new(cb, data);
 
 	if (g_at_chat_send(sd->chat, "AT+CUAD", cuad_prefix,
 			at_discover_apps_cb, cbd, g_free) > 0)
@@ -1648,6 +1657,7 @@ static void at_discover_apps(struct ofono_sim *sim,
 
 	g_free(cbd);
 
+error:
 	CALLBACK_WITH_FAILURE(cb, NULL, 0, data);
 }
 
