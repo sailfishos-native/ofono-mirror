@@ -53,6 +53,7 @@
 #include <ofono/gprs-context.h>
 #include <ofono/log.h>
 #include <ofono/dbus.h>
+#include <ofono/radio-settings.h>
 
 #include <gdbus/gdbus.h>
 
@@ -1366,6 +1367,7 @@ static void quectel_post_sim(struct ofono_modem *modem)
 	ofono_sms_create(modem, data->vendor, "atmodem", data->aux);
 	ofono_phonebook_create(modem, data->vendor, "atmodem", data->aux);
 	ofono_call_volume_create(modem, data->vendor, "atmodem", data->aux);
+	ofono_radio_settings_create(modem, 0, "quectelmodem", data->aux);
 
 	if (data->model == QUECTEL_EC21 || data->model == QUECTEL_EC200)
 		ofono_ussd_create(modem, data->vendor, "atmodem", data->aux);
