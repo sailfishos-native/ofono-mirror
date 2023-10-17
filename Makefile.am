@@ -505,6 +505,9 @@ builtin_sources += drivers/atmodem/atutil.h \
 			drivers/xmm7modem/ims.c \
 			drivers/xmm7modem/netmon.c
 
+builtin_sources += drivers/atmodem/atutil.h \
+			drivers/quectelmodem/radio-settings.c
+
 if PHONESIM
 builtin_modules += phonesim
 builtin_sources += plugins/phonesim.c
