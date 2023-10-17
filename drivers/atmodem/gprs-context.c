@@ -359,8 +359,11 @@ static void cgev_notify(GAtResult *result, gpointer user_data)
 	struct ofono_gprs_context *gc = user_data;
 	struct gprs_context_data *gcd = ofono_gprs_context_get_data(gc);
 	const char *event;
-	int cid;
+	unsigned int cid;
+	int r;
 	GAtResultIter iter;
+
+	DBG("");
 
 	g_at_result_iter_init(&iter, result);
 
@@ -370,18 +373,23 @@ static void cgev_notify(GAtResult *result, gpointer user_data)
 	if (!g_at_result_iter_next_unquoted_string(&iter, &event))
 		return;
 
-	if (g_str_has_prefix(event, "NW DEACT") == FALSE)
+	if (g_str_has_prefix(event, "NW PDN DEACT"))
+		r = sscanf(event, "%*s %*s %*s %u", &cid);
+	else if (g_str_has_prefix(event, "ME PDN DEACT"))
+		r = sscanf(event, "%*s %*s %*s %u", &cid);
+	else if (g_str_has_prefix(event, "NW DEACT"))
+		r = sscanf(event, "%*s %*s %u", &cid);
+	else if (g_str_has_prefix(event, "ME DEACT"))
+		r = sscanf(event, "%*s %*s %u", &cid);
+	else
 		return;
 
-	if (!g_at_result_iter_skip_next(&iter))
+	if (r != 1)
 		return;
 
-	if (!g_at_result_iter_next_number(&iter, &cid))
-		return;
+	DBG("cid %u", cid);
 
-	DBG("cid %d", cid);
-
-	if ((unsigned int) cid != gcd->active_context)
+	if (cid != gcd->active_context)
 		return;
 
 	if (gcd->state != STATE_IDLE && gcd->ppp)
