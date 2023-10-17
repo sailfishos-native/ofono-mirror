@@ -1643,10 +1643,11 @@ static void at_discover_apps(struct ofono_sim *sim,
 	struct cb_data *cbd;
 
 	/*
-	 * QUECTEL EC2X reboots when executing the AT+CUAD command with SIM
-	 * cards of some operators
+	 * QUECTEL EC2X and SIMCom A7605E-H reboots when executing the AT+CUAD
+	 * command with SIM cards of some operators
 	 */
-	if (sd->vendor == OFONO_VENDOR_QUECTEL_EC2X)
+	if (sd->vendor == OFONO_VENDOR_QUECTEL_EC2X
+			|| sd->vendor == OFONO_VENDOR_SIMCOM)
 		goto error;
 
 	cbd = cb_data_new(cb, data);

@@ -41,6 +41,7 @@
 #include "gatchat.h"
 #include "gatresult.h"
 
+#include "common.h"
 #include "vendor.h"
 
 #define MAX_CONTEXTS 255
@@ -544,6 +545,54 @@ static void telit_mode_notify(GAtResult *result, gpointer user_data)
 	ofono_gprs_bearer_notify(gprs, bearer);
 }
 
+static void simcom_mode_notify(GAtResult *result, gpointer user_data)
+{
+	struct ofono_gprs *gprs = user_data;
+	GAtResultIter iter;
+	gint stat, bearer;
+
+	g_at_result_iter_init(&iter, result);
+
+	if (!g_at_result_iter_next(&iter, "+CNSMOD:"))
+		return;
+
+	if (!g_at_result_iter_next_number(&iter,&stat))
+		return;
+
+	switch (stat) {
+	case 0:
+		bearer = PACKET_BEARER_NONE;
+		break;
+	case 1:
+	case 2:
+		bearer = PACKET_BEARER_GPRS;
+		break;
+	case 3:
+		bearer = PACKET_BEARER_EGPRS;
+		break;
+	case 4:
+		bearer = PACKET_BEARER_UMTS;
+		break;
+	case 5:
+		bearer = PACKET_BEARER_HSDPA;
+		break;
+	case 6:
+		bearer = PACKET_BEARER_HSUPA;
+		break;
+	case 7:
+		bearer = PACKET_BEARER_HSUPA_HSDPA;
+		break;
+	case 8:
+		bearer = PACKET_BEARER_EPS;
+		break;
+	default:
+		bearer = PACKET_BEARER_NONE;
+		break;
+	}
+
+	ofono_gprs_bearer_notify(gprs, bearer);
+}
+
 static void ublox_ureg_notify(GAtResult *result, gpointer user_data)
 {
 	struct ofono_gprs *gprs = user_data;
@@ -624,6 +673,12 @@ static void gprs_initialized(gboolean ok, GAtResult *result, gpointer user_data)
 		g_at_chat_register(gd->chat, "#PSNT:", telit_mode_notify,
 						FALSE, gprs, NULL);
 		g_at_chat_send(gd->chat, "AT#PSNT=1", none_prefix,
+						NULL, NULL, NULL);
+		break;
+	case OFONO_VENDOR_SIMCOM:
+		g_at_chat_register(gd->chat, "+CNSMOD:", simcom_mode_notify,
+						FALSE, gprs, NULL);
+		g_at_chat_send(gd->chat, "AT+CNSMOD=1", none_prefix,
 						NULL, NULL, NULL);
 		break;
 	case OFONO_VENDOR_QUECTEL_EC2X:
@@ -749,7 +804,10 @@ retry:
 		goto error;
 
 	g_at_chat_send(gd->chat, cmd, none_prefix, NULL, NULL, NULL);
-	g_at_chat_send(gd->chat, "AT+CGAUTO=0", none_prefix, NULL, NULL, NULL);
+
+	if (gd->vendor != OFONO_VENDOR_SIMCOM)
+		g_at_chat_send(gd->chat, "AT+CGAUTO=0", none_prefix,
+					NULL, NULL, NULL);
 
 	switch (gd->vendor) {
 	case OFONO_VENDOR_MBM:
