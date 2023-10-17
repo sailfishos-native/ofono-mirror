@@ -236,6 +236,8 @@ static enum rcr_result lcp_rcr(struct pppcp_data *pppcp,
 		{
 			const guint8 *option_data =
 				ppp_option_iter_get_data(&iter);
+			guint8 option_length =
+				ppp_option_iter_get_length(&iter);
 			guint16 proto = get_host_short(option_data);
 			guint8 method = option_data[2];
 			guint8 *option;
@@ -283,6 +285,15 @@ static enum rcr_result lcp_rcr(struct pppcp_data *pppcp,
 				return RCR_NAK;
 
 			case G_AT_PPP_AUTH_METHOD_NONE:
+				option = g_try_malloc0(option_length + 2);
+				if (option == NULL)
+					return RCR_REJECT;
+
+				option[0] = AUTH_PROTO;
+				option[1] = option_length + 2;
+				memcpy(option + 2, option_data, option_length);
+				*new_options = option;
+				*new_len = option_length + 2;
 				return RCR_REJECT;
 			}
 			break;
