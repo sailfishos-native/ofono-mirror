@@ -27,6 +27,7 @@
 #include <string.h>
 #include <glib.h>
 #include <arpa/inet.h>
+#include <ell/ell.h>
 
 #include "iter.h"
 
@@ -257,8 +258,7 @@ gboolean g_isi_sb_iter_get_alpha_tag(const GIsiSubBlockIter *restrict iter,
 	if (ucs2 + len > iter->end)
 		return FALSE;
 
-	*utf8 = g_convert((const char *) ucs2, len, "UTF-8//TRANSLIT",
-				"UCS-2BE", NULL, NULL, NULL);
+	*utf8 = l_utf8_from_ucs2be((const char *) ucs2, len);
 	return *utf8 != NULL;
 }
 
