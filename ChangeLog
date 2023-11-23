@@ -1,3 +1,10 @@
+ver 2.2:
+	Fix issue with udev tracking of devices.
+	Fix issue with QMI WDA initialization.
+	Fix issue with handling QMI premultiplexed contexts.
+	Fix issue with additional context types in MBPI.
+	Remove CDMA support.
+
 ver 2.1:
 	Fix issue with SIM ecc numbers are not always read.
 	Fix issue with QMI and shared service creation logic.
