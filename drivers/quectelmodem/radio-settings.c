@@ -181,6 +181,9 @@ static void quectel_set_rat_mode(struct ofono_radio_settings *rs,
 	case OFONO_RADIO_ACCESS_MODE_LTE|OFONO_RADIO_ACCESS_MODE_GSM:
 		nwscanseq = 7;
 		break;
+	default:
+		ofono_warn("Unhandled radio mode: %d", m);
+		goto error;
 	}
 
 	snprintf(buf, sizeof(buf), "AT+QCFG=\"nwscanseq\",%u", nwscanseq);
@@ -189,6 +192,7 @@ static void quectel_set_rat_mode(struct ofono_radio_settings *rs,
 				qcfg_modify_cb, cbd, g_free) > 0)
 		return;
 
+error:
 	CALLBACK_WITH_FAILURE(cb, data);
 	g_free(cbd);
 }
