@@ -28,6 +28,7 @@
 #include <string.h>
 #include <errno.h>
 
+#include <ell/ell.h>
 #include <glib.h>
 
 #include <gisi/message.h>
@@ -80,6 +81,8 @@ struct netreg_data {
 	struct rat_info rat;
 	GIsiVersion version;
 	char nitz_name[OFONO_MAX_OPERATOR_NAME_LENGTH + 1];
+	char mcc[OFONO_MAX_MCC_LENGTH + 1];
+	char mnc[OFONO_MAX_MNC_LENGTH + 1];
 };
 
 static inline guint8 *mccmnc_to_bcd(const char *mcc, const char *mnc,
@@ -193,6 +196,12 @@ static void reg_status_ind_cb(const GIsiMessage *msg, void *data)
 	struct netreg_data *nd = ofono_netreg_get_data(netreg);
 	GIsiSubBlockIter iter;
 
+	uint8_t len = 0;
+	uint8_t type = 0;
+	char *abbrev = NULL;
+	char *an = NULL;
+	char *fn = NULL;
+
 	if (netreg == NULL || nd == NULL)
 		return;
 
@@ -208,16 +217,66 @@ static void reg_status_ind_cb(const GIsiMessage *msg, void *data)
 		case NET_REG_INFO_COMMON:
 
 			if (!parse_common_info(&iter, &nd->reg))
-				return;
+				break;
+
+			/* Parse abbreviated operator name */
+			if (!g_isi_sb_iter_get_byte(&iter, &len, 7))
+				break;
+
+			len *= 2;
+
+			g_isi_sb_iter_get_alpha_tag(&iter, &abbrev, len, 8);
 			break;
 
 		case NET_GSM_REG_INFO:
 
 			if (!parse_gsm_info(&iter, &nd->gsm))
-				return;
+				break;
+
+			/* Parse mcc and mnc */
+			g_isi_sb_iter_get_oper_code(&iter, nd->mcc,
+							   nd->mnc, 8);
+			break;
+
+		case NET_REG_STATUS_IND_OPER_NAME:
+
+			if (!g_isi_sb_iter_get_byte(&iter, &type, 2))
+				break;
+
+			if (!g_isi_sb_iter_get_byte(&iter, &len, 5))
+				break;
+
+			/* Name is UCS-2 encoded */
+			len *= 2;
+
+			switch (type) {
+			case 2:
+				/*
+				 * Alternate full name, which is similar to
+				 * long name, but may have less whitespace
+				 */
+				g_isi_sb_iter_get_alpha_tag(&iter, &an, len, 6);
+				break;
+			case 3:
+				/* Full name */
+				g_isi_sb_iter_get_alpha_tag(&iter, &fn, len, 6);
+				break;
+			}
+
 			break;
 		}
 	}
+
+	if (fn && fn[0] != '\0')
+		l_strlcpy(nd->nitz_name, fn, sizeof(nd->nitz_name));
+	else if (an && an[0] != '\0')
+		l_strlcpy(nd->nitz_name, an, sizeof(nd->nitz_name));
+	else if (abbrev && abbrev[0] != '\0')
+		l_strlcpy(nd->nitz_name, abbrev, sizeof(nd->nitz_name));
+
+	g_free(an);
+	g_free(fn);
+	g_free(abbrev);
 
 	ofono_netreg_status_notify(netreg, isi_status_to_at_status(&nd->reg),
 					nd->gsm.lac, nd->gsm.ci,
@@ -458,6 +517,8 @@ static void name_get_resp_cb(const GIsiMessage *msg, void *data)
 {
 	struct isi_cb_data *cbd = data;
 	ofono_netreg_operator_cb_t cb = cbd->cb;
+	struct ofono_netreg *netreg = cbd->user;
+	struct netreg_data *nd = ofono_netreg_get_data(netreg);
 	struct ofono_network_operator op;
 
 	GIsiSubBlockIter iter;
@@ -468,7 +529,7 @@ static void name_get_resp_cb(const GIsiMessage *msg, void *data)
 
 	if (!check_response_status(msg, NET_OLD_OPER_NAME_READ_RESP) &&
 			!check_response_status(msg, NET_OPER_NAME_READ_RESP))
-		goto error;
+		goto alt_method;
 
 	for (g_isi_sb_iter_init(&iter, msg, 6);
 			g_isi_sb_iter_is_valid(&iter);
@@ -500,8 +561,19 @@ static void name_get_resp_cb(const GIsiMessage *msg, void *data)
 		}
 	}
 
+success:
 	CALLBACK_WITH_SUCCESS(cb, &op, cbd->data);
 	return;
+
+alt_method:
+	if (nd->nitz_name[0] == '\0' || nd->mcc[0] == '\0' ||
+					nd->mnc[0] == '\0')
+		goto error;
+
+	l_strlcpy(op.name, nd->nitz_name, sizeof(op.name));
+	l_strlcpy(op.mcc, nd->mcc, sizeof(op.mcc));
+	l_strlcpy(op.mnc, nd->mnc, sizeof(op.mnc));
+	goto success;
 
 error:
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);

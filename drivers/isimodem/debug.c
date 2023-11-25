@@ -1190,6 +1190,7 @@ const char *net_subblock_name(enum net_subblock value)
 		_(NET_REGISTRATION_CONF1_INFO);
 		_(NET_ROAMING_CONF1_INFO);
 		_(NET_AVAIL_NETWORK_INFO_COMMON);
+		_(NET_REG_STATUS_IND_OPER_NAME);
 		_(NET_OPER_NAME_INFO);
 	}
 	return "NET_<UNKNOWN>";
