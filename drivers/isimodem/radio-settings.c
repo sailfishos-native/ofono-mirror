@@ -371,4 +371,4 @@ static const struct ofono_radio_settings_driver driver = {
 	.set_fast_dormancy	= isi_set_fast_dormancy,
 };
 
-OFONO_ATOM_DRIVER_BUILTIN(radio_settings, isidriver, &driver)
+OFONO_ATOM_DRIVER_BUILTIN(radio_settings, isimodem, &driver)
