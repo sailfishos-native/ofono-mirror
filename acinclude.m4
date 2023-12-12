@@ -23,8 +23,7 @@ AC_DEFUN([AC_PROG_CC_ASAN], [
 ])
 
 AC_DEFUN([AC_PROG_CC_LSAN], [
-	AC_CACHE_CHECK([whether ${CC-cc} accepts -fsanitize=leak], ac_cv_prog_cc
-_lsan, [
+	AC_CACHE_CHECK([whether ${CC-cc} accepts -fsanitize=leak], ac_cv_prog_cc_lsan, [
 		echo 'void f(){}' > conftest.c
 		if test -z "`${CC-cc} -fsanitize=leak -c conftest.c 2>&1`"; then
 			ac_cv_prog_cc_lsan=yes
