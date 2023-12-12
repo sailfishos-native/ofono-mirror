@@ -1,115 +1,142 @@
 /*
- *
  *  oFono - Open Source Telephony
- *
  *  Copyright (C) 2008-2011  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2023  Cruise, LLC
  *
- *  This program is free software; you can redistribute it and/or modify
- *  it under the terms of the GNU General Public License version 2 as
- *  published by the Free Software Foundation.
- *
- *  This program is distributed in the hope that it will be useful,
- *  but WITHOUT ANY WARRANTY; without even the implied warranty of
- *  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
- *  GNU General Public License for more details.
- *
- *  You should have received a copy of the GNU General Public License
- *  along with this program; if not, write to the Free Software
- *  Foundation, Inc., 51 Franklin St, Fifth Floor, Boston, MA  02110-1301  USA
- *
+ *  SPDX-License-Identifier: GPL-2.0-only
  */
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
 #endif
 
+#include <stdio.h>
 #include <stdlib.h>
+#include <getopt.h>
+#include <errno.h>
 
-#include <glib.h>
+#include <ell/ell.h>
 
 #define OFONO_API_SUBJECT_TO_CHANGE
 #include <ofono/modem.h>
 #include <ofono/gprs-provision.h>
 
-#include "plugins/mbpi.h"
+#include "provisiondb.h"
 
-static void lookup_apn(const char *match_mcc, const char *match_mnc,
-						gboolean allow_duplicates)
+static const char *option_file;
+
+static int lookup_apn(const char *match_mcc, const char *match_mnc,
+							const char *match_spn)
 {
-	GSList *l;
-	GSList *apns;
-	GError *error = NULL;
+	struct provision_db *pdb;
+	struct ofono_gprs_provision_data *contexts;
+	size_t n_contexts;
+	int r;
+	size_t i;
 
-	g_print("Searching for info for network: %s%s\n", match_mcc, match_mnc);
+	if (option_file) {
+		fprintf(stdout, "Opening database at: '%s'\n", option_file);
+		pdb = provision_db_new(option_file);
+	} else {
+		fprintf(stdout, "Opening database in default location\n");
+		pdb = provision_db_new_default();
+	}
 
-	apns = mbpi_lookup_apn(match_mcc, match_mnc, allow_duplicates, &error);
+	if (!pdb) {
+		fprintf(stdout, "Database opening failed\n");
+		return -EIO;
+	}
 
-	if (apns == NULL) {
-		if (error != NULL) {
-			g_printerr("Lookup failed: %s\n", error->message);
-			g_error_free(error);
+	fprintf(stdout, "Searching for info for network: %s%s, spn: %s\n",
+			match_mcc, match_mnc, match_spn ? match_spn : "<None>");
+
+	r = provision_db_lookup(pdb, match_mcc, match_mnc, match_spn,
+					&contexts, &n_contexts);
+	if (r < 0) {
+		fprintf(stderr, "Unable to lookup: %s\n", strerror(-r));
+		return r;
+	}
+
+	for (i = 0; i < n_contexts; i++) {
+		struct ofono_gprs_provision_data *ap = contexts + i;
+
+		fprintf(stdout, "\nName: %s\n", ap->name);
+		fprintf(stdout, "APN: %s\n", ap->apn);
+		fprintf(stdout, "Type: %x\n", ap->type);
+		fprintf(stdout, "Proto: %x\n", ap->proto);
+
+		if (ap->username)
+			fprintf(stdout, "Username: %s\n", ap->username);
+
+		if (ap->password)
+			fprintf(stdout, "Password: %s\n", ap->password);
+
+		if (ap->type & OFONO_GPRS_CONTEXT_TYPE_MMS) {
+			if (ap->message_proxy)
+				fprintf(stdout, "Message Proxy: %s\n",
+							ap->message_proxy);
+			fprintf(stdout, "Message Center: %s\n",
+							ap->message_center);
 		}
-
-		return;
 	}
 
-	for (l = apns; l; l = l->next) {
-		struct ofono_gprs_provision_data *ap = l->data;
+	l_free(contexts);
 
-		g_print("\n");
-		g_print("Name: %s\n", ap->name);
-		g_print("APN: %s\n", ap->apn);
-		g_print("Type: %s\n", mbpi_ap_type(ap->type));
-		g_print("Username: %s\n", ap->username);
-		g_print("Password: %s\n", ap->password);
+	provision_db_free(pdb);
 
-		mbpi_ap_free(ap);
-	}
-
-	g_slist_free(apns);
+	return 0;
 }
 
-static gboolean option_version = FALSE;
-static gboolean option_duplicates = FALSE;
+static void usage(void)
+{
+	printf("lookup-apn\nUsage:\n");
+	printf("lookup-apn [options] <mcc> <mnc> [spn]\n");
+	printf("Options:\n"
+			"\t-v, --version	Show version\n"
+			"\t-f, --file		Provision DB file to use\n"
+			"\t-h, --help		Show help options\n");
+}
 
-static GOptionEntry options[] = {
-	{ "version", 'v', 0, G_OPTION_ARG_NONE, &option_version,
-				"Show version information and exit" },
-	{ "allow-duplicates", 0, 0, G_OPTION_ARG_NONE, &option_duplicates,
-				"Allow duplicate access point types" },
-	{ NULL },
+static const struct option options[] = {
+	{ "version",	no_argument,		NULL, 'v' },
+	{ "help",	no_argument,		NULL, 'h' },
+	{ "file",	required_argument,	NULL, 'f' },
+	{ },
 };
 
 int main(int argc, char **argv)
 {
-	GOptionContext *context;
-	GError *error = NULL;
+	for (;;) {
+		int opt = getopt_long(argc, argv, "f:vh", options, NULL);
 
-	context = g_option_context_new(NULL);
-	g_option_context_add_main_entries(context, options, NULL);
+		if (opt < 0)
+			break;
 
-	if (g_option_context_parse(context, &argc, &argv, &error) == FALSE) {
-		if (error != NULL) {
-			g_printerr("%s\n", error->message);
-			g_error_free(error);
-		} else
-			g_printerr("An unknown error occurred\n");
-		exit(1);
+		switch (opt) {
+		case 'f':
+			option_file = optarg;
+			break;
+		case 'v':
+			printf("%s\n", VERSION);
+			return EXIT_SUCCESS;
+		case 'h':
+			usage();
+			return EXIT_SUCCESS;
+		default:
+			return EXIT_FAILURE;
+		}
 	}
 
-	g_option_context_free(context);
-
-	if (option_version == TRUE) {
-		g_print("%s\n", VERSION);
-		exit(0);
+	if (argc - optind > 3) {
+		fprintf(stderr, "Invalid command line parameters\n");
+		return EXIT_FAILURE;
 	}
 
-	if (argc < 2) {
-		g_printerr("Missing parameters\n");
-		exit(1);
+	if (argc - optind < 2) {
+		fprintf(stderr, "Missing MCC MNC parameters\n");
+		return EXIT_FAILURE;
 	}
 
-	lookup_apn(argv[1], argv[2], option_duplicates);
-
-	return 0;
+	return lookup_apn(argv[optind], argv[optind + 1],
+			argc - optind == 3 ? argv[optind + 2] : NULL);
 }

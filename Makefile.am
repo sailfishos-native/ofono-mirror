@@ -661,7 +661,6 @@ builtin_sources += plugins/provision.c
 
 builtin_modules += file_provision
 builtin_sources += plugins/file-provision.c
-
 endif
 
 if MAINTAINER_MODE
@@ -1010,8 +1009,9 @@ tools_auto_enable_LDADD = gdbus/libgdbus-internal.la @GLIB_LIBS@ @DBUS_LIBS@
 tools_get_location_SOURCES = tools/get-location.c
 tools_get_location_LDADD = @GLIB_LIBS@ @DBUS_LIBS@
 
-tools_lookup_apn_SOURCES = plugins/mbpi.c plugins/mbpi.h tools/lookup-apn.c
-tools_lookup_apn_LDADD = @GLIB_LIBS@
+tools_lookup_apn_SOURCES = src/provisiondb.h src/provisiondb.c \
+				tools/lookup-apn.c
+tools_lookup_apn_LDADD = $(ell_ldadd)
 
 tools_tty_redirector_SOURCES = tools/tty-redirector.c
 tools_tty_redirector_LDADD = @GLIB_LIBS@
