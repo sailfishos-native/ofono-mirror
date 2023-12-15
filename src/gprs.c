@@ -2376,6 +2376,7 @@ static void provision_context(const struct ofono_gprs_provision_data *ap,
 {
 	unsigned int id;
 	struct pri_context *context = NULL;
+	enum ofono_gprs_context_type type;
 
 	/* Sanity check */
 	if (ap == NULL)
@@ -2408,10 +2409,19 @@ static void provision_context(const struct ofono_gprs_provision_data *ap,
 							gprs->last_context_id);
 	else
 		id = l_uintset_find_unused_min(gprs->used_pids);
+
 	if (id > l_uintset_get_max(gprs->used_pids))
 		return;
 
-	context = pri_context_create(gprs, ap->name, ap->type);
+	/*
+	 * Right now oFono is not setup to handle contexts with multiple
+	 * types due to the way the D-Bus API is structured.  This mainly
+	 * affects Internet + MMS contexts.  For now, work around this
+	 * by selecting the primary (lowest bit) context type
+	 */
+	type = 1 << (__builtin_ffs(ap->type) - 1);
+
+	context = pri_context_create(gprs, ap->name, type);
 	if (context == NULL)
 		return;
 
@@ -2429,7 +2439,7 @@ static void provision_context(const struct ofono_gprs_provision_data *ap,
 	strcpy(context->context.apn, ap->apn);
 	context->context.proto = ap->proto;
 
-	if (ap->type == OFONO_GPRS_CONTEXT_TYPE_MMS) {
+	if (type == OFONO_GPRS_CONTEXT_TYPE_MMS) {
 		if (ap->message_proxy != NULL)
 			strcpy(context->message_proxy, ap->message_proxy);
 
@@ -2454,11 +2464,10 @@ static void provision_contexts(struct ofono_gprs *gprs, const char *mcc,
 				const char *mnc, const char *spn)
 {
 	struct ofono_gprs_provision_data *settings;
-	int count;
-	int i;
+	size_t count;
+	size_t i;
 
-	if (__ofono_gprs_provision_get_settings(mcc, mnc, spn,
-						&settings, &count) == FALSE) {
+	if (!__ofono_provision_get_settings(mcc, mnc, spn, &settings, &count)) {
 		ofono_warn("Provisioning failed");
 		return;
 	}
@@ -2466,7 +2475,7 @@ static void provision_contexts(struct ofono_gprs *gprs, const char *mcc,
 	for (i = 0; i < count; i++)
 		provision_context(&settings[i], gprs);
 
-	__ofono_gprs_provision_free_settings(settings, count);
+	l_free(settings);
 }
 
 static void remove_non_active_context(struct ofono_gprs *gprs,
