@@ -95,7 +95,7 @@ static const GDBusSignalTable manager_signals[] = {
 	{ }
 };
 
-int __ofono_manager_init(void)
+static int manager_init(void)
 {
 	DBusConnection *conn = ofono_dbus_get_connection();
 	gboolean ret;
@@ -111,10 +111,12 @@ int __ofono_manager_init(void)
 	return 0;
 }
 
-void __ofono_manager_cleanup(void)
+static void manager_cleanup(void)
 {
 	DBusConnection *conn = ofono_dbus_get_connection();
 
 	g_dbus_unregister_interface(conn, OFONO_MANAGER_PATH,
 					OFONO_MANAGER_INTERFACE);
 }
+
+OFONO_MODULE(manager, manager_init, manager_cleanup)

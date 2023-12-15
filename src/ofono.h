@@ -28,9 +28,6 @@
 
 void __ofono_exit(void);
 
-int __ofono_manager_init(void);
-void __ofono_manager_cleanup(void);
-
 int __ofono_handsfree_audio_manager_init(void);
 void __ofono_handsfree_audio_manager_cleanup(void);
 
@@ -96,6 +93,25 @@ unsigned int __ofono_watchlist_add_item(struct ofono_watchlist *watchlist,
 gboolean __ofono_watchlist_remove_item(struct ofono_watchlist *watchlist,
 					unsigned int id);
 void __ofono_watchlist_free(struct ofono_watchlist *watchlist);
+
+struct ofono_module_desc {
+	const char *name;
+	int (*init)(void);
+	void (*exit)(void);
+} __attribute__((aligned(8)));
+
+#define OFONO_MODULE(name, init, exit)					\
+	_Pragma("GCC diagnostic push")					\
+	_Pragma("GCC diagnostic ignored \"-Wattributes\"")		\
+	static struct ofono_module_desc __ofono_module_ ## name		\
+		__attribute__((used, retain, section("__ofono_module"),	\
+			       aligned(8))) = {				\
+			#name, init, exit				\
+		};							\
+	_Pragma("GCC diagnostic pop")
+
+int __ofono_modules_init(void);
+void __ofono_modules_cleanup(void);
 
 #include <ofono/plugin.h>
 
