@@ -239,30 +239,6 @@ fi
 AM_CONDITIONAL(BLUEZ4, test "${enable_bluetooth}" != "no" && test "${enable_bluez4}" = "yes")
 AM_CONDITIONAL(BLUETOOTH, test "${enable_bluetooth}" != "no")
 
-AC_ARG_WITH([provisiondb], AS_HELP_STRING([--with-provisiondb=FILE],
-	[location of provision database]), [path_provisiondb=${withval}])
-
-AC_ARG_ENABLE(provision, AS_HELP_STRING([--disable-provision],
-				[disable provisioning support]),
-					[enable_provision=${enableval}])
-if (test "${enable_provision}" != "no"); then
-	if (test -n "${path_provisiondb}"); then
-		AC_DEFINE_UNQUOTED(PROVIDER_DATABASE, "${path_provisiondb}",
-						[Mobile provider database])
-	else
-		AC_MSG_CHECKING([for mobile-broadband-provider-info])
-		PKG_CHECK_EXISTS(mobile-broadband-provider-info,
-			_PKG_CONFIG(PROVIDER_DATABASE, [variable=database],
-					[mobile-broadband-provider-info])
-			AC_DEFINE_UNQUOTED(PROVIDER_DATABASE,
-						"$pkg_cv_PROVIDER_DATABASE",
-						[Mobile provider database])
-			AC_MSG_RESULT([yes]),
-			AC_MSG_ERROR(Mobile broadband provider database is required))
-	fi
-fi
-AM_CONDITIONAL(PROVISION, test "${enable_provision}" != "no")
-
 AC_ARG_ENABLE(upower, AS_HELP_STRING([--disable-upower],
 			[disable UPower plugin]),
 					[enable_upower=${enableval}])

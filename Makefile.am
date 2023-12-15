@@ -653,13 +653,6 @@ builtin_sources += plugins/upower.c
 endif
 endif
 
-if PROVISION
-builtin_sources += plugins/mbpi.h plugins/mbpi.c
-
-builtin_modules += provision
-builtin_sources += plugins/provision.c
-endif
-
 if MAINTAINER_MODE
 builtin_modules += example_history
 builtin_sources += examples/history.c
