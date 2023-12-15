@@ -702,7 +702,7 @@ src_ofonod_SOURCES = $(builtin_sources) $(gatchat_sources) src/ofono.ver \
 			src/simfs.c src/simfs.h src/audio-settings.c \
 			src/smsagent.c src/smsagent.h src/ctm.c \
 			src/sim-auth.c \
-			src/message.h src/message.c src/gprs-provision.c \
+			src/message.h src/message.c \
 			src/emulator.c src/location-reporting.c \
 			src/gnss.c \
 			src/gnssagent.c src/gnssagent.h \

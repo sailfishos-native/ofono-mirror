@@ -42,19 +42,6 @@ struct ofono_gprs_provision_data {
 	char *message_center;
 };
 
-struct ofono_gprs_provision_driver {
-	const char *name;
-	int priority;
-	int (*get_settings)(const char *mcc, const char *mnc, const char *spn,
-				struct ofono_gprs_provision_data **settings,
-				int *count);
-};
-
-int ofono_gprs_provision_driver_register(
-			const struct ofono_gprs_provision_driver *driver);
-void ofono_gprs_provision_driver_unregister(
-			const struct ofono_gprs_provision_driver *driver);
-
 #ifdef __cplusplus
 }
 #endif
