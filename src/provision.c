@@ -25,6 +25,7 @@ bool __ofono_provision_get_settings(const char *mcc,
 	struct ofono_gprs_provision_data *contexts;
 	int r;
 	size_t i;
+	uint32_t type;
 
 	if (mcc == NULL || strlen(mcc) == 0 || mnc == NULL || strlen(mnc) == 0)
 		return false;
@@ -45,6 +46,20 @@ bool __ofono_provision_get_settings(const char *mcc,
 		if (ap->type & OFONO_GPRS_CONTEXT_TYPE_MMS)
 			DBG("MMS Proxy: %s, MMSC: %s", ap->message_proxy,
 					ap->message_center);
+	}
+
+	/* Make sure there are no duplicates */
+	for (i = 0, type = 0; i < n_contexts; i++) {
+		struct ofono_gprs_provision_data *ap = contexts + i;
+
+		if (type & ap->type) {
+			ofono_warn("Duplicate detected for %s%s, spn: %s",
+					mcc, mnc, spn);
+			l_free(contexts);
+			return false;
+		}
+
+		type |= ap->type;
 	}
 
 	*count = n_contexts;
