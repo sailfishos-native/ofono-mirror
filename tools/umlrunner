@@ -1,0 +1,308 @@
+#!/usr/bin/python3
+#
+# oFono - Open Source Telephony
+# Copyright (C) 2020-2022  Intel Corporation
+# Copyright (C) 2023  Cruise, LLC
+#
+# SPDX-License-Identifier: LGPL-2.1-or-later
+
+from argparse import ArgumentParser
+from collections import namedtuple
+from shutil import copy, copytree, which, rmtree
+import time
+
+import subprocess
+import os
+import ctypes
+import fcntl
+import sys
+
+libc = ctypes.cdll['libc.so.6']
+libc.mount.argtypes = (ctypes.c_char_p, ctypes.c_char_p, ctypes.c_char_p,
+                       ctypes.c_ulong, ctypes.c_char_p)
+
+# Using ctypes to load the libc library is somewhat low level. Because of this
+# we need to define our own flags/options for use with mounting.
+MS_NOSUID = 2
+MS_NODEV = 4
+MS_NOEXEC = 8
+MS_STRICTATIME = 1 << 24
+STDIN_FILENO = 0
+TIOCSTTY = 0x540E
+
+MountInfo = namedtuple('MountInfo', 'fstype source target options flags')
+DevInfo = namedtuple('DevInfo', 'target linkpath')
+
+mounts_common = [
+    MountInfo('sysfs', 'sysfs', '/sys', '', MS_NOSUID|MS_NOEXEC|MS_NODEV),
+    MountInfo('proc', 'proc', '/proc', '', MS_NOSUID|MS_NOEXEC|MS_NODEV),
+    MountInfo('devpts', 'devpts', '/dev/pts', 'mode=0620', MS_NOSUID|MS_NOEXEC),
+    MountInfo('tmpfs', 'tmpfs', '/dev/shm', 'mode=1777',
+              MS_NOSUID|MS_NODEV|MS_STRICTATIME),
+    MountInfo('tmpfs', 'tmpfs', '/run', 'mode=0755',
+              MS_NOSUID|MS_NODEV|MS_STRICTATIME),
+    MountInfo('tmpfs', 'tmpfs', '/tmp', '', 0),
+    MountInfo('tmpfs', 'tmpfs', '/etc', '', 0),
+    MountInfo('tmpfs', 'tmpfs', '/usr/share/dbus-1', 'mode=0755',
+              MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME),
+]
+
+dev_table = [
+    DevInfo('/proc/self/fd', '/dev/fd'),
+    DevInfo('/proc/self/fd/0', '/dev/stdin'),
+    DevInfo('/proc/self/fd/1', '/dev/stdout'),
+    DevInfo('/proc/self/fd/2', '/dev/stderr')
+]
+
+def mount(source, target, fs, flags, options=''):
+    '''
+        Python wrapper for libc mount()
+    '''
+    ret = libc.mount(source.encode(), target.encode(), fs.encode(), flags,
+                     options.encode())
+    if ret < 0:
+        errno = ctypes.get_errno()
+        raise Exception("Could not mount %s (%d)" % (target, errno))
+
+DBUS_CONFIG_TEMPLATE = '''
+<!DOCTYPE busconfig PUBLIC \
+"-//freedesktop//DTD D-Bus Bus Configuration 1.0//EN" \
+"http://www.freedesktop.org/standards/dbus/1.0/\
+busconfig.dtd\">
+<busconfig>
+<type>system</type>
+<limit name=\"reply_timeout\">2147483647</limit>
+<auth>ANONYMOUS</auth>
+<allow_anonymous/>
+<policy context=\"default\">
+<allow user=\"*\"/>
+<allow own=\"*\"/>
+<allow send_type=\"method_call\"/>
+<allow send_type=\"signal\"/>
+<allow send_type=\"method_return\"/>
+<allow send_type=\"error\"/>
+<allow receive_type=\"method_call\"/>
+<allow receive_type=\"signal\"/>
+<allow receive_type=\"method_return\"/>
+<allow receive_type=\"error\"/>
+<allow send_destination=\"*\" eavesdrop=\"true\"/>
+<allow eavesdrop=\"true\"/>
+</policy>
+'''
+
+# Class that handles running as the init process inside UML
+class Init:
+    @staticmethod
+    def wait_for_socket(cls, socket, timeout):
+        slept_so_far = 0.0
+        while slept_so_far < timeout:
+            time.sleep(0.2)
+            if os.path.exists(socket):
+                return
+            slept_so_far += 0.2
+
+        raise Exception("Timed out waiting for %s" % socket)
+
+    def __init__(self):
+        self.log = os.environ.get('log', None)
+        self.result = os.environ.get('result', None)
+        self.debug = os.environ.get('debug', None)
+
+    def _prepare_mounts(self, extra=[]):
+        mounted = []
+
+        for entry in mounts_common + extra:
+            if entry.target in mounted:
+                print("%s already mounted, skipping" % entry.target)
+                continue
+
+            try:
+                os.lstat(entry.target)
+            except:
+                os.mkdir(entry.target, 755)
+
+            mount(entry.source, entry.target, entry.fstype, entry.flags,
+                  entry.options)
+
+            mounted.append(entry.target)
+
+        for entry in dev_table:
+            os.symlink(entry.target, entry.linkpath)
+
+        os.setsid()
+
+    def prepare_environment(self):
+        mounts = []
+
+        if self.log:
+            mounts.append(MountInfo('hostfs', 'hostfs', self.log, self.log, 0))
+
+        if self.result:
+           result_parent = os.path.abspath(os.path.join(self.result, os.pardir))
+           mounts.append(MountInfo('hostfs', 'hostfs',
+                                   result_parent, result_parent, 0))
+
+        self._prepare_mounts(extra=mounts)
+
+        # This prevents any print() calls in this script from printing unless
+        # --debug is passed
+        if not self.debug:
+            sys.stdout = open(os.devnull, 'w')
+
+        fcntl.ioctl(STDIN_FILENO, TIOCSTTY, 1)
+
+        os.system('ip link set dev lo up')
+
+    def stop_dbus(self):
+        self.dbus.terminate()
+        try:
+            self.dbus.wait(timeout=2)
+        except:
+            self.dbus.kill()
+            self.dbus.wait()
+
+        try:
+           os.remove(self.socket_file)
+        except:
+            pass
+
+        os.remove(self.dbus_config)
+
+    def start_dbus(self):
+        self.dbus_address = 'unix:path=/tmp/dbus'
+        self.dbus_config = '/tmp/dbus.conf'
+        self.socket_file = self.dbus_address.split('=')[1]
+
+        with open(self.dbus_config, 'w+') as f:
+            f.write(DBUS_CONFIG_TEMPLATE)
+            f.write('<listen>%s</listen>\n' % self.dbus_address)
+            f.write('</busconfig>\n')
+
+        self.dbus = subprocess.Popen(['dbus-daemon',
+                                      '--config-file=%s' % self.dbus_config])
+        self.wait_for_socket(self, self.socket_file, 5.0)
+
+    def run(self):
+        os.chdir(os.environ['HOME'])
+        os.environ['DBUS_SYSTEM_BUS_ADDRESS'] = self.dbus_address
+
+        completed = subprocess.run(os.environ['command'])
+
+        if self.result:
+            with open(self.result, 'w') as f:
+                if completed.returncode == 0:
+                    f.write('PASS\n')
+                else:
+                    f.write('FAIL\n')
+
+    def stop(self):
+        # Killing init() results in a kernel panic. For UML a graceful
+        # exit is achieved with RB_POWER_OFF
+        RB_POWER_OFF = 0x4321fedc
+        libc.reboot(RB_POWER_OFF)
+
+    def cleanup_environment(self):
+        os.sync()
+
+def run_init():
+    init = Init()
+    init.prepare_environment()
+    init.start_dbus()
+    init.run()
+    init.stop_dbus()
+    init.cleanup_environment()
+    os.sync()
+    init.stop()
+
+def to_kernel_args(args):
+    ret = ''
+    for k, v in args.__dict__.items():
+        if v in [None, False, [], '']:
+            continue
+
+        if callable(v):
+            continue
+
+        if k == 'kernel':
+            continue
+
+        if type(v) is list:
+            ret += '%s=%s ' % (k, ','.join(v))
+        else:
+            ret += '%s=%s ' % (k, str(v))
+
+    return ret.strip()
+
+def run_uml(args):
+    args.PATH = os.environ['PATH']
+    args.HOME = os.getcwd()
+
+    if args.log:
+        if args.log == '/tmp':
+            raise Exception('Log directly cannot be /tmp')
+
+        args.log = os.path.abspath(os.path.expanduser(args.log))
+
+    if args.result:
+        result_parent = os.path.abspath(os.path.join(args.result, os.pardir))
+        if result_parent == '/tmp':
+            raise Exception('--result cannot be directly under /tmp')
+
+        args.result = os.path.abspath(os.path.expanduser(args.result))
+
+    kern_log = "quiet"
+    ram = 256
+    # Use ourselves as the init script inside UML
+    init = os.path.abspath(sys.argv[0])
+
+    cmd = [args.kernel, 'rootfstype=hostfs', 'ro',
+           f'mem={ram}M', 'mac80211_hwsim.radios=0',
+            'time-travel=inf-cpu', 'eth0=mcast', 'eth1=mcast',
+            '%s' % kern_log, 'init=%s' % init]
+    cmd.extend(to_kernel_args(args).split(' '))
+    cmdline = cmd
+    print(cmdline)
+    os.execlpe(cmdline[0], *cmdline, None)
+
+def existing_path(value):
+    path = os.path.abspath(os.path.expanduser(value))
+    if not os.path.exists(path):
+        raise argparse.ArgumentTypeError(f"{value} does not exist.")
+    return path
+
+def existing_dir(value):
+    path = os.path.abspath(os.path.expanduser(value))
+    if not os.path.isdir(path):
+        raise argparse.ArgumentTypeError(f"{vale} is not a directory.")
+    return path
+
+def expanded_path(value):
+    return os.path.abspath(os.path.expanduser(value))
+
+if __name__ == "__main__":
+    parser = ArgumentParser(description='UML Runner')
+    subparsers = parser.add_subparsers(title='subcommands', dest='command')
+
+    run_parser = subparsers.add_parser('run',
+                                       help='Run UML kernel with command')
+    run_parser.add_argument('kernel',
+                            help='Path to uml kernel image',
+                            type=existing_path)
+    run_parser.add_argument('command',
+                            help='Script/shell to run in virtual environment',
+                            type=existing_path)
+    run_parser.add_argument('--debug', '-d', dest='debug',
+                            action='store_true',
+                            help='Enable debugging')
+    run_parser.add_argument('--result', '-e',
+                            help='Writes PASS/FAIL to results file',
+                            type=expanded_path)
+    run_parser.add_argument('--log', '-l',
+                            type=existing_dir, help='Directory for log files')
+    run_parser.set_defaults(func=run_uml)
+
+    args = parser.parse_args()
+    if (hasattr(args, 'func')):
+        args.func(args)
+    else:
+        run_init()
