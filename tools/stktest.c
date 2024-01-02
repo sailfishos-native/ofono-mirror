@@ -4393,7 +4393,7 @@ static void test_destroy(gpointer user_data)
 	g_free(test);
 }
 
-static void __stktest_test_summarize(void)
+static int __stktest_test_summarize(void)
 {
 	GList *l;
 	unsigned int not_run = 0;
@@ -4428,6 +4428,8 @@ static void __stktest_test_summarize(void)
 			not_run + passed + failed, passed,
 			(float) passed * 100 / (not_run + passed + failed),
 			failed, not_run);
+
+	return !failed;
 }
 
 static void __stktest_test_cleanup(void)
@@ -4452,6 +4454,7 @@ int main(int argc, char **argv)
 	DBusError err;
 	guint watch;
 	struct sigaction sa;
+	int ret;
 
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
@@ -4513,8 +4516,8 @@ int main(int argc, char **argv)
 
 	g_main_loop_unref(main_loop);
 
-	__stktest_test_summarize();
+	ret = __stktest_test_summarize();
 	__stktest_test_cleanup();
 
-	return 0;
+	return ret;
 }
