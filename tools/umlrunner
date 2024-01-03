@@ -6,7 +6,7 @@
 #
 # SPDX-License-Identifier: LGPL-2.1-or-later
 
-from argparse import ArgumentParser
+from argparse import ArgumentParser, ArgumentTypeError
 from collections import namedtuple
 from shutil import copy, copytree, which, rmtree
 import time
@@ -267,13 +267,13 @@ def run_uml(args):
 def existing_path(value):
     path = os.path.abspath(os.path.expanduser(value))
     if not os.path.exists(path):
-        raise argparse.ArgumentTypeError(f"{value} does not exist.")
+        raise ArgumentTypeError(f"{value} does not exist.")
     return path
 
 def existing_dir(value):
     path = os.path.abspath(os.path.expanduser(value))
     if not os.path.isdir(path):
-        raise argparse.ArgumentTypeError(f"{vale} is not a directory.")
+        raise ArgumentTypeError(f"{vale} is not a directory.")
     return path
 
 def expanded_path(value):
