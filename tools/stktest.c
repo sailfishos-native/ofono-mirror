@@ -4429,7 +4429,7 @@ static int __stktest_test_summarize(void)
 			(float) passed * 100 / (not_run + passed + failed),
 			failed, not_run);
 
-	return !failed;
+	return failed;
 }
 
 static void __stktest_test_cleanup(void)
