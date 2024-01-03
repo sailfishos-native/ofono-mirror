@@ -106,14 +106,13 @@ class Init:
     def __init__(self):
         self.log = os.environ.get('log', None)
         self.result = os.environ.get('result', None)
-        self.debug = os.environ.get('debug', None)
+        self.debug = os.environ.get('umldebug', None)
 
     def _prepare_mounts(self, extra=[]):
         mounted = []
 
         for entry in mounts_common + extra:
             if entry.target in mounted:
-                print("%s already mounted, skipping" % entry.target)
                 continue
 
             try:
@@ -226,6 +225,9 @@ def to_kernel_args(args):
         if k == 'kernel':
             continue
 
+        if k == 'debug':
+            k = 'umldebug' # Kernel eats the 'debug' argument
+
         if type(v) is list:
             ret += '%s=%s ' % (k, ','.join(v))
         else:
@@ -250,7 +252,11 @@ def run_uml(args):
 
         args.result = os.path.abspath(os.path.expanduser(args.result))
 
-    kern_log = "quiet"
+    if args.debug:
+        kern_log = "ignore_loglevel"
+    else:
+        kern_log = "quiet"
+
     ram = 256
     # Use ourselves as the init script inside UML
     init = os.path.abspath(sys.argv[0])
@@ -259,9 +265,9 @@ def run_uml(args):
            f'mem={ram}M', 'mac80211_hwsim.radios=0',
             'time-travel=inf-cpu', 'eth0=mcast', 'eth1=mcast',
             '%s' % kern_log, 'init=%s' % init]
+
     cmd.extend(to_kernel_args(args).split(' '))
     cmdline = cmd
-    print(cmdline)
     os.execlpe(cmdline[0], *cmdline, None)
 
 def existing_path(value):
