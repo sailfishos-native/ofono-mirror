@@ -1,3 +1,7 @@
+ver 2.3:
+	Fix issue with handling SMS submit report sizes.
+	Fix issue with handling operator name and ISI modems.
+
 ver 2.2:
 	Fix issue with udev tracking of devices.
 	Fix issue with QMI WDA initialization.
