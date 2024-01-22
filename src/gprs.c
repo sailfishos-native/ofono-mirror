@@ -177,6 +177,10 @@ static const char *gprs_context_default_name(enum ofono_gprs_context_type type)
 		return "WAP";
 	case OFONO_GPRS_CONTEXT_TYPE_IMS:
 		return "IMS";
+	case OFONO_GPRS_CONTEXT_TYPE_SUPL:
+		return "SUPL";
+	case OFONO_GPRS_CONTEXT_TYPE_IA:
+		return "Initial Attach";
 	}
 
 	return NULL;
@@ -196,6 +200,10 @@ static const char *gprs_context_type_to_string(
 		return "wap";
 	case OFONO_GPRS_CONTEXT_TYPE_IMS:
 		return "ims";
+	case OFONO_GPRS_CONTEXT_TYPE_SUPL:
+		return "supl";
+	case OFONO_GPRS_CONTEXT_TYPE_IA:
+		return "ia";
 	}
 
 	return NULL;
@@ -215,6 +223,9 @@ static gboolean gprs_context_string_to_type(const char *str,
 		return TRUE;
 	} else if (g_str_equal(str, "ims")) {
 		*out = OFONO_GPRS_CONTEXT_TYPE_IMS;
+		return TRUE;
+	} else if (g_str_equal(str, "supl")) {
+		*out = OFONO_GPRS_CONTEXT_TYPE_SUPL;
 		return TRUE;
 	}
 

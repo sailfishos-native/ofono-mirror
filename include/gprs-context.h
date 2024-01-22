@@ -37,6 +37,8 @@ enum ofono_gprs_context_type {
 	OFONO_GPRS_CONTEXT_TYPE_MMS		= 0x0002,
 	OFONO_GPRS_CONTEXT_TYPE_WAP		= 0x0004,
 	OFONO_GPRS_CONTEXT_TYPE_IMS		= 0x0008,
+	OFONO_GPRS_CONTEXT_TYPE_SUPL		= 0x0010,
+	OFONO_GPRS_CONTEXT_TYPE_IA		= 0x0020,
 };
 
 struct ofono_gprs_primary_context {
