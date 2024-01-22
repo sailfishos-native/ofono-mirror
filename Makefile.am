@@ -8,10 +8,12 @@ noinst_LTLIBRARIES =
 if EXTERNAL_ELL
 ell_cflags = @ELL_CFLAGS@
 ell_ldadd = @ELL_LIBS@
+ell_dependencies =
 ell_built_sources = ell/shared
 else
 ell_cflags =
 ell_ldadd = ell/libell-internal.la
+ell_dependencies = $(ell_ldadd)
 ell_built_sources = ell/shared ell/internal ell/ell.h
 
 noinst_LTLIBRARIES += ell/libell-internal.la
@@ -736,7 +738,8 @@ endif
 
 AM_CFLAGS = @DBUS_CFLAGS@ @GLIB_CFLAGS@ $(ell_cflags) $(builtin_cflags) \
 					-DOFONO_PLUGIN_BUILTIN \
-					-DPLUGINDIR=\""$(build_plugindir)"\"
+					-DPLUGINDIR=\""$(build_plugindir)"\" \
+					-DUNITDIR=\""$(top_builddir)/unit/"\"
 
 AM_CPPFLAGS = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/src \
 			-I$(srcdir)/gdbus -I$(srcdir)/gisi -I$(srcdir)/gatchat \
@@ -876,7 +879,9 @@ test_SCRIPTS = $(test_scripts)
 endif
 
 EXTRA_DIST = src/genbuiltin plugins/ofono.rules plugins/ofono-speedup.rules \
-				$(doc_files) $(test_scripts)
+		tools/provisiontool \
+		unit/test-provision.json \
+		$(doc_files) $(test_scripts)
 
 dist_man_MANS = doc/ofonod.8
 
@@ -890,7 +895,8 @@ unit_tests = unit/test-common unit/test-util \
 				unit/test-rilmodem-cs \
 				unit/test-rilmodem-sms \
 				unit/test-rilmodem-cb \
-				unit/test-rilmodem-gprs
+				unit/test-rilmodem-gprs \
+				unit/test-provision
 
 noinst_PROGRAMS = $(unit_tests) \
 			unit/test-sms-root unit/test-mux unit/test-caif
@@ -980,6 +986,17 @@ unit_test_mbim_SOURCES = unit/test-mbim.c \
 			 drivers/mbimmodem/mbim.c
 unit_test_mbim_LDADD = $(ell_ldadd)
 unit_objects += $(unit_test_mbim_OBJECTS)
+
+unit/test-provision.db: unit/test-provision.json
+	$(AM_V_GEN)$(srcdir)/tools/provisiontool generate \
+		--infile $< --outfile $@
+
+unit_test_provision_SOURCES = unit/test-provision.c \
+				src/provisiondb.h src/provisiondb.c
+unit_test_provision_LDADD = $(ell_ldadd)
+unit_test_provision_DEPENDENCIES = $(ell_dependencies) \
+					unit/test-provision.db
+unit_objects += $(unit_test_provision_OBJECTS)
 
 TESTS = $(unit_tests)
 
@@ -1103,4 +1120,4 @@ maintainer-clean-local:
 	-rm -rf build-aux ell
 
 clean-local:
-	@$(RM) -rf include/ofono
+	@$(RM) -rf include/ofono unit/test-provision.db

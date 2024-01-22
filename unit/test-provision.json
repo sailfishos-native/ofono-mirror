@@ -1,0 +1,92 @@
+[
+  {
+    "name": "Operator Alpha",
+    "ids": [
+      "99955", "99956", "99901", "99902", "999001", "999002", "999056", "999055"
+    ],
+    "apns": [
+      {
+        "name": "Internet",
+        "apn": "internet",
+        "type": [
+          "internet"
+        ],
+        "authentication": "none",
+        "protocol": "ipv4"
+      },
+      {
+        "name": "IMS+MMS",
+        "apn": "imsmms",
+        "type": [
+          "ims", "mms", "ia"
+        ],
+        "mmsc": "foobar.mmsc:80",
+        "mmsproxy": "mms.proxy.net",
+        "authentication": "pap",
+        "protocol": "ipv6"
+      }
+    ]
+  },
+  {
+    "name": "ZYX (MVNO on Alpha)",
+    "ids": [
+      "999001", "999002", "99901", "99902"
+    ],
+    "spn": "ZYX",
+    "apns": [
+      {
+        "name": "ZYX",
+        "apn": "zyx",
+        "type": [
+          "internet", "ia"
+        ],
+        "authentication": "none",
+        "protocol": "ipv4"
+      }
+    ]
+  },
+  {
+    "name": "Operator Beta",
+    "ids": [
+      "999005", "999006"
+    ],
+    "apns": [
+      {
+        "apn": "beta.internet",
+        "type": [
+          "internet", "ia"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "Operator Charlie",
+    "ids": [
+      "99910", "99911"
+    ],
+    "spn": "Charlie",
+    "apns": [
+      {
+        "apn": "charlie.internet",
+        "type": [
+          "internet", "ia"
+        ]
+      }
+    ]
+  },
+  {
+    "name": "XYZ (MVNO on Charlie)",
+    "ids": [
+      "99911"
+    ],
+    "spn": "XYZ",
+    "apns": [
+      {
+        "apn": "xyz",
+        "type": [
+          "internet", "ia"
+        ]
+      }
+    ]
+  }
+]

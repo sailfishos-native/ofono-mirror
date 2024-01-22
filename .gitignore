@@ -47,6 +47,8 @@ unit/test-rilmodem-cs
 unit/test-rilmodem-gprs
 unit/test-rilmodem-sms
 unit/test-mbim
+unit/test-provision
+unit/test-provision.db
 unit/test-*.log
 unit/test-*.trs
 test-driver
