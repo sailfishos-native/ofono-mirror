@@ -319,19 +319,25 @@ static void chat_cleanup(struct at_chat *chat)
 	struct at_command *c;
 
 	/* Cleanup pending commands */
-	while ((c = g_queue_pop_head(chat->command_queue)))
-		at_command_destroy(c);
+	if (chat->command_queue) {
+		while ((c = g_queue_pop_head(chat->command_queue)))
+			at_command_destroy(c);
 
-	g_queue_free(chat->command_queue);
-	chat->command_queue = NULL;
+		g_queue_free(chat->command_queue);
+		chat->command_queue = NULL;
+	}
 
 	/* Cleanup any response lines we have pending */
-	g_slist_free_full(chat->response_lines, g_free);
-	chat->response_lines = NULL;
+	if (chat->response_lines) {
+		g_slist_free_full(chat->response_lines, g_free);
+		chat->response_lines = NULL;
+	}
 
 	/* Cleanup registered notifications */
-	g_hash_table_destroy(chat->notify_list);
-	chat->notify_list = NULL;
+	if (chat->notify_list) {
+		g_hash_table_destroy(chat->notify_list);
+		chat->notify_list = NULL;
+	}
 
 	if (chat->pdu_notify) {
 		g_free(chat->pdu_notify);
@@ -780,8 +786,10 @@ static void new_bytes(struct ring_buffer *rbuf, gpointer user_data)
 
 	p->in_read_handler = FALSE;
 
-	if (p->destroyed)
+	if (p->destroyed) {
+		chat_cleanup(p);
 		g_free(p);
+	}
 }
 
 static void wakeup_cb(gboolean ok, GAtResult *result, gpointer user_data)
@@ -958,6 +966,16 @@ static void at_chat_resume(struct at_chat *chat)
 		chat_wakeup_writer(chat);
 }
 
+static struct at_chat *at_chat_ref(struct at_chat *chat)
+{
+	if (chat == NULL)
+		return NULL;
+
+	g_atomic_int_inc(&chat->ref_count);
+
+	return chat;
+}
+
 static void at_chat_unref(struct at_chat *chat)
 {
 	gboolean is_zero;
@@ -971,13 +989,14 @@ static void at_chat_unref(struct at_chat *chat)
 		at_chat_suspend(chat);
 		g_at_io_unref(chat->io);
 		chat->io = NULL;
-		chat_cleanup(chat);
 	}
 
 	if (chat->in_read_handler)
 		chat->destroyed = TRUE;
-	else
+	else {
+		chat_cleanup(chat);
 		g_free(chat);
+	}
 }
 
 static gboolean at_chat_set_disconnect_function(struct at_chat *chat,
@@ -1372,10 +1391,9 @@ GAtChat *g_at_chat_clone(GAtChat *clone)
 	if (chat == NULL)
 		return NULL;
 
-	chat->parent = clone->parent;
+	chat->parent = at_chat_ref(clone->parent);
 	chat->group = chat->parent->next_gid++;
 	chat->ref_count = 1;
-	g_atomic_int_inc(&chat->parent->ref_count);
 
 	if (clone->slave != NULL)
 		chat->slave = g_at_chat_clone(clone->slave);
