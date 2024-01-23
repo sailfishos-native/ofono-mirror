@@ -11,6 +11,8 @@
 
 #include <stddef.h>
 
+#include <ofono/gprs-context.h>
+
 #include "provisiondb.h"
 #include "ofono.h"
 
@@ -18,11 +20,11 @@ static struct provision_db *pdb;
 
 bool __ofono_provision_get_settings(const char *mcc,
 				const char *mnc, const char *spn,
-				struct ofono_gprs_provision_data **settings,
+				struct provision_db_entry **settings,
 				size_t *count)
 {
 	size_t n_contexts;
-	struct ofono_gprs_provision_data *contexts;
+	struct provision_db_entry *contexts;
 	int r;
 	size_t i;
 	uint32_t type;
@@ -38,7 +40,7 @@ bool __ofono_provision_get_settings(const char *mcc,
 			n_contexts, mcc, mnc, spn);
 
 	for (i = 0; i < n_contexts; i++) {
-		struct ofono_gprs_provision_data *ap = contexts + i;
+		struct provision_db_entry *ap = contexts + i;
 
 		DBG("APN: %s, Type: %x, Proto: %x",
 				ap->apn, ap->type, ap->proto);
@@ -50,7 +52,7 @@ bool __ofono_provision_get_settings(const char *mcc,
 
 	/* Make sure there are no duplicates */
 	for (i = 0, type = 0; i < n_contexts; i++) {
-		struct ofono_gprs_provision_data *ap = contexts + i;
+		struct provision_db_entry *ap = contexts + i;
 
 		if (type & ap->type) {
 			ofono_warn("Duplicate detected for %s%s, spn: %s",

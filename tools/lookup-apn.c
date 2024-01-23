@@ -18,8 +18,8 @@
 #include <ell/ell.h>
 
 #define OFONO_API_SUBJECT_TO_CHANGE
-#include <ofono/modem.h>
-#include <ofono/gprs-provision.h>
+#include <ofono/types.h>
+#include <ofono/gprs-context.h>
 
 #include "provisiondb.h"
 
@@ -29,7 +29,7 @@ static int lookup_apn(const char *match_mcc, const char *match_mnc,
 							const char *match_spn)
 {
 	struct provision_db *pdb;
-	struct ofono_gprs_provision_data *contexts;
+	struct provision_db_entry *contexts;
 	size_t n_contexts;
 	int r;
 	size_t i;
@@ -58,7 +58,7 @@ static int lookup_apn(const char *match_mcc, const char *match_mnc,
 	}
 
 	for (i = 0; i < n_contexts; i++) {
-		struct ofono_gprs_provision_data *ap = contexts + i;
+		struct provision_db_entry *ap = contexts + i;
 
 		fprintf(stdout, "\nName: %s\n", ap->name);
 		fprintf(stdout, "APN: %s\n", ap->apn);

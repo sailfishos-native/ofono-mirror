@@ -581,10 +581,10 @@ void __ofono_nettime_info_received(struct ofono_modem *modem,
 
 #include <ofono/sim-auth.h>
 
-#include <ofono/gprs-provision.h>
+struct provision_db_entry;
 bool __ofono_provision_get_settings(const char *mcc,
 				const char *mnc, const char *spn,
-				struct ofono_gprs_provision_data **settings,
+				struct provision_db_entry **settings,
 				size_t *count);
 
 #include <ofono/emulator.h>

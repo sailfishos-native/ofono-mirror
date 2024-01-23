@@ -21,8 +21,7 @@
 #include <ell/ell.h>
 
 #define OFONO_API_SUBJECT_TO_CHANGE
-#include <ofono/modem.h>
-#include <ofono/gprs-provision.h>
+#include <ofono/gprs-context.h>
 
 #include "provisiondb.h"
 
@@ -205,7 +204,7 @@ static struct provision_data *__get_provision_data(struct node *node)
 }
 
 static int __get_string(struct provision_db *pdb, uint64_t offset,
-				char **out_str)
+				const char **out_str)
 {
 	if (!offset) {
 		*out_str = NULL;
@@ -220,13 +219,13 @@ static int __get_string(struct provision_db *pdb, uint64_t offset,
 }
 
 static int __get_contexts(struct provision_db *pdb, uint64_t offset,
-				struct ofono_gprs_provision_data **contexts,
+				struct provision_db_entry **contexts,
 				size_t *n_contexts)
 {
 	void *start = pdb->addr + pdb->contexts_offset;
 	uint64_t num;
 	uint64_t i;
-	struct ofono_gprs_provision_data *ret;
+	struct provision_db_entry *ret;
 	int r;
 
 	if (offset + sizeof(__le64) >= pdb->contexts_size)
@@ -238,7 +237,7 @@ static int __get_contexts(struct provision_db *pdb, uint64_t offset,
 	if (offset + num * sizeof(struct context) > pdb->contexts_size)
 		return -EPROTO;
 
-	ret = l_new(struct ofono_gprs_provision_data, num);
+	ret = l_new(struct provision_db_entry, num);
 
 	for (i = 0; i < num; i++, offset += sizeof(struct context)) {
 		struct context *context = start + offset;
@@ -375,8 +374,7 @@ static int key_from_mcc_mnc(const char *mcc, const char *mnc, uint32_t *key)
 
 int provision_db_lookup(struct provision_db *pdb,
 			const char *mcc, const char *mnc, const char *match_spn,
-			struct ofono_gprs_provision_data **items,
-			size_t *n_items)
+			struct provision_db_entry **items, size_t *n_items)
 {
 	int r;
 	uint32_t key;
@@ -422,7 +420,7 @@ int provision_db_lookup(struct provision_db *pdb,
 	}
 
 	for (i = 0; i < count; i++) {
-		char *spn;
+		const char *spn;
 
 		r = __get_string(pdb, L_LE64_TO_CPU(data[i].spn_offset), &spn);
 		if (r < 0)

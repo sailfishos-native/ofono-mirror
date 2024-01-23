@@ -144,7 +144,7 @@ pkginclude_HEADERS = include/log.h include/plugin.h include/history.h \
 			include/audio-settings.h include/nettime.h \
 			include/ctm.h \
 			include/sim-auth.h \
-			include/gprs-provision.h include/emulator.h \
+			include/emulator.h \
 			include/location-reporting.h \
 			include/gnss.h \
 			include/private-network.h \

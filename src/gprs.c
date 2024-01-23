@@ -43,6 +43,7 @@
 #include "ofono.h"
 
 #include "common.h"
+#include "provisiondb.h"
 #include "storage.h"
 #include "simutil.h"
 #include "util.h"
@@ -2371,7 +2372,7 @@ static DBusMessage *gprs_get_contexts(DBusConnection *conn,
 	return reply;
 }
 
-static void provision_context(const struct ofono_gprs_provision_data *ap,
+static void provision_context(const struct provision_db_entry *ap,
 				struct ofono_gprs *gprs)
 {
 	unsigned int id;
@@ -2463,7 +2464,7 @@ static void provision_context(const struct ofono_gprs_provision_data *ap,
 static void provision_contexts(struct ofono_gprs *gprs, const char *mcc,
 				const char *mnc, const char *spn)
 {
-	struct ofono_gprs_provision_data *settings;
+	struct provision_db_entry *settings;
 	size_t count;
 	size_t i;
 
