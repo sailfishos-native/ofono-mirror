@@ -587,14 +587,6 @@ bool __ofono_provision_get_settings(const char *mcc,
 				struct ofono_gprs_provision_data **settings,
 				size_t *count);
 
-ofono_bool_t __ofono_gprs_provision_get_settings(const char *mcc,
-				const char *mnc, const char *spn,
-				struct ofono_gprs_provision_data **settings,
-				int *count);
-void __ofono_gprs_provision_free_settings(
-				struct ofono_gprs_provision_data *settings,
-				int count);
-
 #include <ofono/emulator.h>
 
 enum ofono_emulator_slc_condition {
