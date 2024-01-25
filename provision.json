@@ -14147,6 +14147,7 @@
       "310090",
       "310090",
       "310150",
+      "310170",
       "310280",
       "310380",
       "310410",
@@ -14192,6 +14193,14 @@
         ],
         "mmsc": "http://mmsc.mobile.att.net",
         "mmsproxy": "proxy.mobile.att.net:80"
+      },
+      {
+        "name": "AT&T M2M",
+        "apn": "m2m005246.attz",
+        "type": [
+          "internet",
+          "ia"
+        ]
       }
     ]
   },
@@ -14212,7 +14221,8 @@
       "310490",
       "310580",
       "310660",
-      "310800"
+      "310800",
+      "311882"
     ],
     "apns": [
       {
@@ -14255,6 +14265,14 @@
         "apn": "mobilenet",
         "type": [
           "internet"
+        ]
+      },
+      {
+        "name": "IoT",
+        "apn": "iot.t-mobile.com",
+        "type": [
+          "internet",
+          "ia"
         ]
       }
     ]
@@ -14307,7 +14325,8 @@
         "name": "4G LTE Contract",
         "apn": "vzwims",
         "type": [
-          "internet"
+          "ims",
+          "ia"
         ]
       },
       {
