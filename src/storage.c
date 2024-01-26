@@ -93,12 +93,12 @@ ssize_t read_file(unsigned char *buffer, size_t len,
 	int fd;
 
 	va_start(ap, path_fmt);
-	path = g_strdup_vprintf(path_fmt, ap);
+	path = l_strdup_vprintf(path_fmt, ap);
 	va_end(ap);
 
 	fd = L_TFR(open(path, O_RDONLY));
 
-	g_free(path);
+	l_free(path);
 
 	if (fd == -1)
 		return -1;
@@ -129,10 +129,10 @@ ssize_t write_file(const unsigned char *buffer, size_t len, mode_t mode,
 	int fd;
 
 	va_start(ap, path_fmt);
-	path = g_strdup_vprintf(path_fmt, ap);
+	path = l_strdup_vprintf(path_fmt, ap);
 	va_end(ap);
 
-	tmp_path = g_strdup_printf("%s.XXXXXX.tmp", path);
+	tmp_path = l_strdup_printf("%s.XXXXXX.tmp", path);
 
 	r = -1;
 	if (create_dirs(path, mode | S_IXUSR) != 0)
@@ -166,8 +166,8 @@ error_write:
 	unlink(tmp_path);
 error_mkstemp_full:
 error_create_dirs:
-	g_free(tmp_path);
-	g_free(path);
+	l_free(tmp_path);
+	l_free(path);
 	return r;
 }
 
