@@ -32,6 +32,7 @@ ssize_t write_file(const unsigned char *buffer, size_t len, mode_t mode,
 			const char *path_fmt, ...)
 	__attribute__((format(printf, 4, 5)));
 
+char *storage_get_file_path(const char *imsi, const char *store);
 GKeyFile *storage_open(const char *imsi, const char *store);
 void storage_sync(const char *imsi, const char *store, GKeyFile *keyfile);
 void storage_close(const char *imsi, const char *store, GKeyFile *keyfile,
