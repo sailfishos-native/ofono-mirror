@@ -45,6 +45,8 @@ mounts_common = [
     MountInfo('tmpfs', 'tmpfs', '/etc', '', 0),
     MountInfo('tmpfs', 'tmpfs', '/usr/share/dbus-1', 'mode=0755',
               MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME),
+    MountInfo('tmpfs', 'tmpfs', '/var/lib', 'mode=0755',
+              MS_NOSUID|MS_NOEXEC|MS_NODEV|MS_STRICTATIME),
 ]
 
 dev_table = [
