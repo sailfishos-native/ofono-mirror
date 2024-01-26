@@ -28,6 +28,7 @@
 #include <errno.h>
 
 #include <glib.h>
+#include <ell/ell.h>
 
 #include <ofono/types.h>
 #include <ofono/gprs-context.h>
@@ -747,20 +748,20 @@ const char *gprs_proto_to_string(enum ofono_gprs_proto proto)
 	return NULL;
 }
 
-gboolean gprs_proto_from_string(const char *str, enum ofono_gprs_proto *proto)
+bool gprs_proto_from_string(const char *str, enum ofono_gprs_proto *proto)
 {
-	if (g_str_equal(str, "ip")) {
+	if (l_streq0(str, "ip")) {
 		*proto = OFONO_GPRS_PROTO_IP;
-		return TRUE;
-	} else if (g_str_equal(str, "ipv6")) {
+		return true;
+	} else if (l_streq0(str, "ipv6")) {
 		*proto = OFONO_GPRS_PROTO_IPV6;
-		return TRUE;
+		return true;
 	} else if (g_str_equal(str, "dual")) {
 		*proto = OFONO_GPRS_PROTO_IPV4V6;
-		return TRUE;
+		return true;
 	}
 
-	return FALSE;
+	return false;
 }
 
 const char *gprs_auth_method_to_string(enum ofono_gprs_auth_method auth)

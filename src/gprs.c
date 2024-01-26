@@ -1087,7 +1087,7 @@ static DBusMessage *pri_set_proto(struct pri_context *ctx,
 	GKeyFile *settings = ctx->gprs->settings;
 	enum ofono_gprs_proto proto;
 
-	if (gprs_proto_from_string(str, &proto) == FALSE)
+	if (!gprs_proto_from_string(str, &proto))
 		return __ofono_error_invalid_format(msg);
 
 	if (ctx->context.proto == proto)
@@ -3162,7 +3162,7 @@ static gboolean load_context(struct ofono_gprs *gprs, const char *group)
 	if (protostr == NULL)
 		protostr = g_strdup("ip");
 
-	if (gprs_proto_from_string(protostr, &proto) == FALSE)
+	if (!gprs_proto_from_string(protostr, &proto))
 		goto error;
 
 	username = g_key_file_get_string(gprs->settings, group,
