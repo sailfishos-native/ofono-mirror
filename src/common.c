@@ -778,19 +778,19 @@ const char *gprs_auth_method_to_string(enum ofono_gprs_auth_method auth)
 	return NULL;
 }
 
-gboolean gprs_auth_method_from_string(const char *str,
+bool gprs_auth_method_from_string(const char *str,
 					enum ofono_gprs_auth_method *auth)
 {
-	if (g_str_equal(str, "chap")) {
+	if (l_streq0(str, "chap")) {
 		*auth = OFONO_GPRS_AUTH_METHOD_CHAP;
-		return TRUE;
-	} else if (g_str_equal(str, "pap")) {
+		return true;
+	} else if (l_streq0(str, "pap")) {
 		*auth = OFONO_GPRS_AUTH_METHOD_PAP;
-		return TRUE;
-	} else if (g_str_equal(str, "none")) {
+		return true;
+	} else if (l_streq0(str, "none")) {
 		*auth = OFONO_GPRS_AUTH_METHOD_NONE;
-		return TRUE;
+		return true;
 	}
 
-	return FALSE;
+	return false;
 }

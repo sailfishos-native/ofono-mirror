@@ -1201,7 +1201,7 @@ static DBusMessage *pri_set_auth_method(struct pri_context *ctx,
 	GKeyFile *settings = ctx->gprs->settings;
 	enum ofono_gprs_auth_method auth;
 
-	if (gprs_auth_method_from_string(str, &auth) == FALSE)
+	if (!gprs_auth_method_from_string(str, &auth))
 		return __ofono_error_invalid_format(msg);
 
 	if (ctx->context.auth_method == auth)
@@ -3183,7 +3183,7 @@ static gboolean load_context(struct ofono_gprs *gprs, const char *group)
 	if (authstr == NULL)
 		authstr = g_strdup("chap");
 
-	if (gprs_auth_method_from_string(authstr, &auth) == FALSE)
+	if (!gprs_auth_method_from_string(authstr, &auth))
 		goto error;
 
 	if (strlen(password) > OFONO_GPRS_MAX_PASSWORD_LENGTH)

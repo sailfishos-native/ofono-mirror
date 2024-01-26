@@ -189,5 +189,5 @@ const char *gprs_proto_to_string(enum ofono_gprs_proto proto);
 bool gprs_proto_from_string(const char *str, enum ofono_gprs_proto *proto);
 
 const char *gprs_auth_method_to_string(enum ofono_gprs_auth_method auth);
-gboolean gprs_auth_method_from_string(const char *str,
+bool gprs_auth_method_from_string(const char *str,
 					enum ofono_gprs_auth_method *auth);
