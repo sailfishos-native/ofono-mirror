@@ -3,6 +3,7 @@
  *  oFono - Open Source Telephony
  *
  *  Copyright (C) 2008-2011  Intel Corporation. All rights reserved.
+ *  Copyright (C) 2024  Cruise, LLC
  *
  *  This program is free software; you can redistribute it and/or modify
  *  it under the terms of the GNU General Public License version 2 as
@@ -120,50 +121,20 @@ ssize_t read_file(void *buffer, size_t len, const char *path_fmt, ...)
 ssize_t write_file(const void *buffer, size_t len, const char *path_fmt, ...)
 {
 	va_list ap;
-	char *tmp_path, *path;
-	ssize_t r;
-	int fd;
-	static const mode_t mode = 0600;
+	char *path;
+	int r;
 
 	va_start(ap, path_fmt);
 	path = l_strdup_vprintf(path_fmt, ap);
 	va_end(ap);
 
-	tmp_path = l_strdup_printf("%s.XXXXXX.tmp", path);
-
-	r = -1;
-	if (create_dirs(path) != 0)
+	r = create_dirs(path);
+	if (r < 0)
 		goto error_create_dirs;
 
-	fd = L_TFR(g_mkstemp_full(tmp_path, O_WRONLY | O_CREAT | O_TRUNC, mode));
-	if (fd == -1)
-		goto error_mkstemp_full;
+	r = l_file_set_contents(path, buffer, len);
 
-	r = L_TFR(write(fd, buffer, len));
-
-	L_TFR(close(fd));
-
-	if (r != (ssize_t) len) {
-		r = -1;
-		goto error_write;
-	}
-
-	/*
-	 * Now that the file contents are written, rename to the real
-	 * file name; this way we are uniquely sure that the whole
-	 * thing is there.
-	 */
-	unlink(path);
-
-	/* conserve @r's value from 'write' */
-	if (link(tmp_path, path) == -1)
-		r = -1;
-
-error_write:
-	unlink(tmp_path);
-error_mkstemp_full:
 error_create_dirs:
-	l_free(tmp_path);
 	l_free(path);
 	return r;
 }
