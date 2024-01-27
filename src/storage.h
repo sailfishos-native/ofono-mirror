@@ -24,12 +24,10 @@
 
 int create_dirs(const char *filename);
 
-ssize_t read_file(unsigned char *buffer, size_t len,
-			const char *path_fmt, ...)
+ssize_t read_file(void *buffer, size_t len, const char *path_fmt, ...)
 	__attribute__((format(printf, 3, 4)));
 
-ssize_t write_file(const unsigned char *buffer, size_t len,
-			const char *path_fmt, ...)
+ssize_t write_file(const void *buffer, size_t len, const char *path_fmt, ...)
 	__attribute__((format(printf, 3, 4)));
 
 char *storage_get_file_path(const char *imsi, const char *store);

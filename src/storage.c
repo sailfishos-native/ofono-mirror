@@ -82,8 +82,7 @@ int create_dirs(const char *filename)
 	return 0;
 }
 
-ssize_t read_file(unsigned char *buffer, size_t len,
-			const char *path_fmt, ...)
+ssize_t read_file(void *buffer, size_t len, const char *path_fmt, ...)
 {
 	va_list ap;
 	char *path;
@@ -118,8 +117,7 @@ ssize_t read_file(unsigned char *buffer, size_t len,
  * file with a temporary name and when closed, it is renamed to the
  * specified name (@path_fmt+args).
  */
-ssize_t write_file(const unsigned char *buffer, size_t len,
-			const char *path_fmt, ...)
+ssize_t write_file(const void *buffer, size_t len, const char *path_fmt, ...)
 {
 	va_list ap;
 	char *tmp_path, *path;
