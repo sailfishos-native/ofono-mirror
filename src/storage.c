@@ -61,10 +61,7 @@ int create_dirs(const char *filename, const mode_t mode)
 	if (!err && S_ISREG(st.st_mode))
 		return 0;
 
-	dir = g_try_malloc(strlen(filename) + 1);
-	if (dir == NULL)
-		return -1;
-
+	dir = l_malloc(strlen(filename) + 1);
 	strcpy(dir, "/");
 
 	for (prev = filename; (next = strchr(prev + 1, '/')); prev = next) {
@@ -75,12 +72,12 @@ int create_dirs(const char *filename, const mode_t mode)
 		strncat(dir, prev + 1, next - prev);
 
 		if (mkdir(dir, mode) == -1 && errno != EEXIST) {
-			g_free(dir);
+			l_free(dir);
 			return -1;
 		}
 	}
 
-	g_free(dir);
+	l_free(dir);
 	return 0;
 }
 
