@@ -42,7 +42,6 @@
 
 #define uninitialized_var(x) x = x
 
-#define SMS_BACKUP_MODE 0600
 #define SMS_BACKUP_PATH STORAGEDIR "/%s/sms_assembly"
 #define SMS_BACKUP_PATH_DIR SMS_BACKUP_PATH "/%s-%i-%i"
 #define SMS_BACKUP_PATH_FILE SMS_BACKUP_PATH_DIR "/%03i"
@@ -2505,8 +2504,7 @@ static gboolean sms_assembly_store(struct sms_assembly *assembly,
 
 	len = sms_serialize(buf, sms);
 
-	if (write_file(buf, len, SMS_BACKUP_MODE,
-				SMS_BACKUP_PATH_FILE, assembly->imsi, straddr,
+	if (write_file(buf, len, SMS_BACKUP_PATH_FILE, assembly->imsi, straddr,
 				node->ref, node->max_fragments, seq) != len)
 		return FALSE;
 
@@ -2889,7 +2887,7 @@ static gboolean sr_assembly_add_fragment_backup(const char *imsi,
 		return FALSE;
 
 	/* storagedir/%s/sms_sr/%s-%s */
-	if (write_file((unsigned char *) node, len, SMS_BACKUP_MODE,
+	if (write_file((unsigned char *) node, len,
 			SMS_SR_BACKUP_PATH_FILE, imsi,
 			straddr, msgid_str) != len)
 		return FALSE;
@@ -3370,7 +3368,7 @@ gboolean sms_tx_backup_store(const char *imsi, unsigned long id,
 	/*
 	 * file name is: imsi/tx_queue/order-flags-uuid/pdu
 	 */
-	if (write_file(buf, len, SMS_BACKUP_MODE, SMS_TX_BACKUP_PATH_FILE,
+	if (write_file(buf, len, SMS_TX_BACKUP_PATH_FILE,
 					imsi, id, flags, uuid, seq) != len)
 		return FALSE;
 

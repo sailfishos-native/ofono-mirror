@@ -28,9 +28,9 @@ ssize_t read_file(unsigned char *buffer, size_t len,
 			const char *path_fmt, ...)
 	__attribute__((format(printf, 3, 4)));
 
-ssize_t write_file(const unsigned char *buffer, size_t len, mode_t mode,
+ssize_t write_file(const unsigned char *buffer, size_t len,
 			const char *path_fmt, ...)
-	__attribute__((format(printf, 4, 5)));
+	__attribute__((format(printf, 3, 4)));
 
 char *storage_get_file_path(const char *imsi, const char *store);
 GKeyFile *storage_open(const char *imsi, const char *store);

@@ -120,13 +120,14 @@ ssize_t read_file(unsigned char *buffer, size_t len,
  * file with a temporary name and when closed, it is renamed to the
  * specified name (@path_fmt+args).
  */
-ssize_t write_file(const unsigned char *buffer, size_t len, mode_t mode,
+ssize_t write_file(const unsigned char *buffer, size_t len,
 			const char *path_fmt, ...)
 {
 	va_list ap;
 	char *tmp_path, *path;
 	ssize_t r;
 	int fd;
+	static const mode_t mode = 0600;
 
 	va_start(ap, path_fmt);
 	path = l_strdup_vprintf(path_fmt, ap);

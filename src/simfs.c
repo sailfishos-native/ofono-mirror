@@ -1158,8 +1158,7 @@ void sim_fs_cache_image(struct sim_fs *fs, const char *image, int id)
 		return;
 
 	write_file((const unsigned char *) image, strlen(image),
-			SIM_CACHE_MODE, SIM_IMAGE_CACHE_PATH, imsi,
-			phase, id);
+			SIM_IMAGE_CACHE_PATH, imsi, phase, id);
 }
 
 char *sim_fs_get_cached_image(struct sim_fs *fs, int id)
@@ -1262,7 +1261,7 @@ void sim_fs_check_version(struct sim_fs *fs)
 	sim_fs_cache_flush(fs);
 
 	version = SIM_FS_VERSION;
-	write_file(&version, 1, SIM_CACHE_MODE, SIM_CACHE_VERSION, imsi, phase);
+	write_file(&version, 1, SIM_CACHE_VERSION, imsi, phase);
 }
 
 void sim_fs_cache_flush(struct sim_fs *fs)
