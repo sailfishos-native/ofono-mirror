@@ -36,8 +36,8 @@ ell_headers = ell/util.h \
 			ell/checksum.h \
 			ell/netlink.h \
 			ell/genl.h \
-			ell/dbus.h \
 			ell/rtnl.h \
+			ell/dbus.h \
 			ell/dbus-service.h \
 			ell/dbus-client.h \
 			ell/hwdb.h \
@@ -52,14 +52,20 @@ ell_headers = ell/util.h \
 			ell/file.h \
 			ell/dir.h \
 			ell/net.h \
+			ell/dhcp.h \
+			ell/dhcp6.h \
 			ell/cert.h \
 			ell/ecc.h \
 			ell/ecdh.h \
 			ell/time.h \
+			ell/gpio.h \
 			ell/path.h \
+			ell/icmp6.h \
+			ell/acd.h \
 			ell/cleanup.h \
+			ell/netconfig.h \
 			ell/sysctl.h \
-			ell/gpio.h
+			ell/minheap.h
 
 ell_sources = ell/private.h \
 			ell/missing.h \
@@ -103,30 +109,46 @@ ell_sources = ell/private.h \
 			ell/uintset.c \
 			ell/base64.c \
 			ell/asn1-private.h \
-			ell/pem.c \
 			ell/pem-private.h \
+			ell/pem.c \
 			ell/tls-private.h \
 			ell/tls.c \
 			ell/tls-record.c \
-			ell/tls-suites.c \
 			ell/tls-extensions.c \
+			ell/tls-suites.c \
 			ell/uuid.c \
 			ell/key.c \
 			ell/file.c \
 			ell/dir.c \
 			ell/net-private.h \
 			ell/net.c \
+			ell/dhcp-private.h \
+			ell/dhcp.c \
+			ell/dhcp-transport.c \
+			ell/dhcp-lease.c \
+			ell/dhcp6-private.h \
+			ell/dhcp6.c \
+			ell/dhcp6-transport.c \
+			ell/dhcp6-lease.c \
+			ell/dhcp-util.c \
+			ell/dhcp-server.c \
 			ell/cert-private.h \
 			ell/cert.c \
-			ell/ecc-external.c \
+			ell/cert-crypto.c \
 			ell/ecc-private.h \
+			ell/ecc-external.c \
 			ell/ecc.c \
 			ell/ecdh.c \
 			ell/time.c \
 			ell/time-private.h \
+			ell/gpio.c \
 			ell/path.c \
+			ell/icmp6.c \
+			ell/icmp6-private.h \
+			ell/acd.c \
+			ell/netconfig.c \
 			ell/sysctl.c \
-			ell/gpio.c
+			ell/minheap.c
 
 ell_shared = ell/useful.h ell/asn1-private.h
 
