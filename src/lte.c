@@ -32,6 +32,7 @@
 
 #include <glib.h>
 #include <gdbus.h>
+#include <ell/ell.h>
 
 #include "ofono.h"
 
@@ -50,59 +51,50 @@ struct ofono_lte {
 	const struct ofono_lte_driver *driver;
 	void *driver_data;
 	struct ofono_atom *atom;
-	char *imsi;
-	GKeyFile *settings;
+	struct l_settings *settings;
 	DBusMessage *pending;
 	struct ofono_lte_default_attach_info pending_info;
 	struct ofono_lte_default_attach_info info;
 };
 
-static void lte_load_settings(struct ofono_lte *lte)
+static int lte_load_settings(struct ofono_lte *lte)
 {
-	char *apn;
-	char *proto_str;
-	char *auth_method_str;
-	char *username;
-	char *password;
+	struct ofono_modem *modem = __ofono_atom_get_modem(lte->atom);
+	struct ofono_sim *sim = __ofono_atom_find(OFONO_ATOM_TYPE_SIM, modem);
+	const char *imsi = ofono_sim_get_imsi(sim);
+	_auto_(l_free) char *path = NULL;
+	_auto_(l_free) char *apn = NULL;
+	const char *proto_str;
+	const char *auth_method_str;
+	_auto_(l_free) char *username = NULL;
+	_auto_(l_free) char *password = NULL;
 
-	if (lte->imsi == NULL)
-		return;
+	if (L_WARN_ON(!sim || !imsi))
+		return -ENOKEY;
 
-	lte->settings = storage_open(lte->imsi, SETTINGS_STORE);
+	path = storage_get_file_path(imsi, SETTINGS_STORE);
+	if (!l_settings_load_from_file(lte->settings, path))
+		return -ENOENT;
 
-	if (lte->settings == NULL) {
-		ofono_error("LTE: Can't open settings file, "
-				"changes won't be persistent");
-		return;
-	}
+	apn = l_settings_get_string(lte->settings, SETTINGS_GROUP, LTE_APN);
+	proto_str = l_settings_get_value(lte->settings, SETTINGS_GROUP,
+						LTE_PROTO);
+	auth_method_str = l_settings_get_value(lte->settings, SETTINGS_GROUP,
+						LTE_AUTH_METHOD);
+	username = l_settings_get_string(lte->settings, SETTINGS_GROUP,
+						LTE_USERNAME);
+	password = l_settings_get_string(lte->settings, SETTINGS_GROUP,
+						LTE_PASSWORD);
 
-	apn = g_key_file_get_string(lte->settings, SETTINGS_GROUP,
-				LTE_APN, NULL);
-	proto_str = g_key_file_get_string(lte->settings, SETTINGS_GROUP,
-				LTE_PROTO, NULL);
-	auth_method_str = g_key_file_get_string(lte->settings, SETTINGS_GROUP,
-				LTE_AUTH_METHOD, NULL);
-	username = g_key_file_get_string(lte->settings, SETTINGS_GROUP,
-				LTE_USERNAME, NULL);
-	password = g_key_file_get_string(lte->settings, SETTINGS_GROUP,
-				LTE_PASSWORD, NULL);
-	if (apn && is_valid_apn(apn))
-		strcpy(lte->info.apn, apn);
-
-	if (proto_str == NULL)
-		proto_str = g_strdup("ip");
-
-	/* this must have a valid default */
-	if (!gprs_proto_from_string(proto_str, &lte->info.proto))
-		lte->info.proto = OFONO_GPRS_PROTO_IP;
-
-	if (auth_method_str == NULL)
-		auth_method_str = g_strdup("none");
-
-	/* this must have a valid default */
 	if (!gprs_auth_method_from_string(auth_method_str,
 							&lte->info.auth_method))
 		lte->info.auth_method = OFONO_GPRS_AUTH_METHOD_NONE;
+
+	if (!gprs_proto_from_string(proto_str, &lte->info.proto))
+		lte->info.proto = OFONO_GPRS_PROTO_IP;
+
+	if (apn && is_valid_apn(apn))
+		strcpy(lte->info.apn, apn);
 
 	if (username && strlen(username) <= OFONO_GPRS_MAX_USERNAME_LENGTH)
 		strcpy(lte->info.username, username);
@@ -110,11 +102,28 @@ static void lte_load_settings(struct ofono_lte *lte)
 	if (password && strlen(password) <= OFONO_GPRS_MAX_PASSWORD_LENGTH)
 		strcpy(lte->info.password, password);
 
-	g_free(apn);
-	g_free(proto_str);
-	g_free(auth_method_str);
-	g_free(username);
-	g_free(password);
+	return 0;
+}
+
+static void lte_save_settings(struct ofono_lte *lte)
+{
+	struct ofono_modem *modem = __ofono_atom_get_modem(lte->atom);
+	struct ofono_sim *sim = __ofono_atom_find(OFONO_ATOM_TYPE_SIM, modem);
+	const char *imsi = ofono_sim_get_imsi(sim);
+	_auto_(l_free) char *path = NULL;
+	_auto_(l_free) char *data = NULL;
+	size_t len;
+
+	if (!imsi)
+		return;
+
+	data = l_settings_to_data(lte->settings, &len);
+	if (!data)
+		return;
+
+	path = storage_get_file_path(imsi, SETTINGS_STORE);
+
+	L_WARN_ON(write_file(data, len, "%s", path) < 0);
 }
 
 static DBusMessage *lte_get_properties(DBusConnection *conn,
@@ -180,12 +189,12 @@ static void lte_set_default_attach_info_cb(const struct ofono_error *error,
 	 */
 	dbus_message_iter_init(lte->pending, &iter);
 	dbus_message_iter_get_basic(&iter, &str);
-	key = strdup(str);
+	key = l_strdup(str);
 
 	dbus_message_iter_next(&iter);
 	dbus_message_iter_recurse(&iter, &var);
 	dbus_message_iter_get_basic(&var, &str);
-	value = strdup(str);
+	value = l_strdup(str);
 
 	memcpy(&lte->info, &lte->pending_info, sizeof(lte->info));
 
@@ -200,13 +209,13 @@ static void lte_set_default_attach_info_cb(const struct ofono_error *error,
 		 */
 		if (!*value)
 			/* Clear entry on empty string. */
-			g_key_file_remove_key(lte->settings,
-				SETTINGS_GROUP, key, NULL);
+			l_settings_remove_key(lte->settings,
+						SETTINGS_GROUP, key);
 		else
-			g_key_file_set_string(lte->settings,
-				SETTINGS_GROUP, key, value);
+			l_settings_set_string(lte->settings,
+						SETTINGS_GROUP, key, value);
 
-		storage_sync(lte->imsi, SETTINGS_STORE, lte->settings);
+		lte_save_settings(lte);
 	}
 
 	ofono_dbus_signal_property_changed(conn, path,
@@ -214,8 +223,8 @@ static void lte_set_default_attach_info_cb(const struct ofono_error *error,
 					key,
 					DBUS_TYPE_STRING, &value);
 
-	g_free(value);
-	g_free(key);
+	l_free(value);
+	l_free(key);
 }
 
 static DBusMessage *lte_set_property(DBusConnection *conn,
@@ -257,14 +266,14 @@ static DBusMessage *lte_set_property(DBusConnection *conn,
 	memcpy(&lte->pending_info, &lte->info, sizeof(lte->info));
 
 	if ((strcmp(property, LTE_APN) == 0)) {
-		if (g_str_equal(str, lte->info.apn))
+		if (l_streq0(str, lte->info.apn))
 			return dbus_message_new_method_return(msg);
 
 		/* We do care about empty value: it can be used for reset. */
 		if (is_valid_apn(str) == FALSE && str[0] != '\0')
 			return __ofono_error_invalid_format(msg);
 
-		g_strlcpy(lte->pending_info.apn, str,
+		l_strlcpy(lte->pending_info.apn, str,
 					OFONO_GPRS_MAX_APN_LENGTH + 1);
 	} else if ((strcmp(property, LTE_PROTO) == 0)) {
 		if (!gprs_proto_from_string(str, &proto))
@@ -286,19 +295,19 @@ static DBusMessage *lte_set_property(DBusConnection *conn,
 		if (strlen(str) > OFONO_GPRS_MAX_USERNAME_LENGTH)
 			return __ofono_error_invalid_format(msg);
 
-		if (g_str_equal(str, lte->info.username))
+		if (l_streq0(str, lte->info.username))
 			return dbus_message_new_method_return(msg);
 
-		g_strlcpy(lte->pending_info.username, str,
+		l_strlcpy(lte->pending_info.username, str,
 					OFONO_GPRS_MAX_USERNAME_LENGTH + 1);
 	} else if (strcmp(property, LTE_PASSWORD) == 0) {
 		if (strlen(str) > OFONO_GPRS_MAX_PASSWORD_LENGTH)
 			return __ofono_error_invalid_format(msg);
 
-		if (g_str_equal(str, lte->info.password))
+		if (l_streq0(str, lte->info.password))
 			return dbus_message_new_method_return(msg);
 
-		g_strlcpy(lte->pending_info.password, str,
+		l_strlcpy(lte->pending_info.password, str,
 					OFONO_GPRS_MAX_PASSWORD_LENGTH + 1);
 	} else
 		return __ofono_error_invalid_args(msg);
@@ -332,24 +341,19 @@ static void lte_remove(struct ofono_atom *atom)
 
 	DBG("atom: %p", atom);
 
-	if (lte == NULL)
-		return;
-
-	if (lte->settings) {
-		storage_close(lte->imsi, SETTINGS_STORE, lte->settings, TRUE);
-		lte->settings = NULL;
-	}
+	l_settings_free(lte->settings);
 
 	if (lte->driver && lte->driver->remove)
 		lte->driver->remove(lte);
 
-	g_free(lte->imsi);
-	lte->imsi = NULL;
-
 	g_free(lte);
 }
 
-OFONO_DEFINE_ATOM_CREATE(lte, OFONO_ATOM_TYPE_LTE)
+OFONO_DEFINE_ATOM_CREATE(lte, OFONO_ATOM_TYPE_LTE, {
+	atom->settings = l_settings_new();
+	atom->info.proto = OFONO_GPRS_PROTO_IP;
+	atom->info.auth_method = OFONO_GPRS_AUTH_METHOD_NONE;
+})
 
 static void lte_atom_unregister(struct ofono_atom *atom)
 {
@@ -391,29 +395,25 @@ static void lte_init_default_attach_info_cb(const struct ofono_error *error,
 
 void ofono_lte_register(struct ofono_lte *lte)
 {
-	struct ofono_modem *modem = __ofono_atom_get_modem(lte->atom);
-	struct ofono_sim *sim = __ofono_atom_find(OFONO_ATOM_TYPE_SIM, modem);
-	const char *imsi = ofono_sim_get_imsi(sim);
+	/* No settings, go straight to registering the interface on D-Bus */
+	if (lte_load_settings(lte) < 0)
+		goto finish_register;
 
-	if (imsi == NULL) {
-		ofono_error("No sim atom found. It is required for registering LTE atom.");
-		return;
-	}
-
-	lte->imsi = g_strdup(imsi);
-
-	lte_load_settings(lte);
 	if (lte->driver->set_default_attach_info) {
 		lte->driver->set_default_attach_info(lte, &lte->info,
 					lte_init_default_attach_info_cb, lte);
 		return;
 	}
 
+finish_register:
 	ofono_lte_finish_register(lte);
 }
 
 void ofono_lte_remove(struct ofono_lte *lte)
 {
+	if (!lte)
+		return;
+
 	__ofono_atom_free(lte->atom);
 }
 
