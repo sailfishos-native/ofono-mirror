@@ -36,6 +36,7 @@
 
 #include "ofono.h"
 
+#include "provisiondb.h"
 #include "common.h"
 #include "storage.h"
 
@@ -55,7 +56,53 @@ struct ofono_lte {
 	DBusMessage *pending;
 	struct ofono_lte_default_attach_info pending_info;
 	struct ofono_lte_default_attach_info info;
+	unsigned int spn_watch;
 };
+
+static bool provision_default_attach_info(struct ofono_lte *lte,
+						const char *mcc, const char *mnc,
+						const char *spn)
+{
+	struct provision_db_entry *settings;
+	_auto_(l_free) const struct provision_db_entry *ap = NULL;
+	size_t count;
+	size_t i;
+
+	DBG("Provisioning default bearer info with mcc:'%s', mnc:'%s', spn:'%s'",
+			mcc, mnc, spn);
+
+	if (!__ofono_provision_get_settings(mcc, mnc, spn, &settings, &count))
+		return false;
+
+	DBG("Obtained %zu candidates", count);
+
+	for (i = 0; i < count; i++) {
+		if (settings[i].type & OFONO_GPRS_CONTEXT_TYPE_IA) {
+			ap = &settings[i];
+			break;
+		}
+	}
+
+	if (!is_valid_apn(ap->apn))
+		return false;
+
+	if (ap->username && strlen(ap->username) >
+			OFONO_GPRS_MAX_USERNAME_LENGTH)
+		return false;
+
+	if (ap->password && strlen(ap->password) >
+			OFONO_GPRS_MAX_PASSWORD_LENGTH)
+		return false;
+
+	l_strlcpy(lte->info.apn, ap->apn, sizeof(lte->info.apn));
+	l_strlcpy(lte->info.username, ap->username, sizeof(lte->info.username));
+	l_strlcpy(lte->info.password, ap->password, sizeof(lte->info.password));
+	lte->info.proto = ap->proto;
+	lte->info.auth_method = ap->auth_method;
+
+	DBG("Provisioned successfully");
+	return true;
+}
 
 static int lte_load_settings(struct ofono_lte *lte)
 {
@@ -360,6 +407,11 @@ static void lte_atom_unregister(struct ofono_atom *atom)
 	DBusConnection *conn = ofono_dbus_get_connection();
 	struct ofono_modem *modem = __ofono_atom_get_modem(atom);
 	const char *path = __ofono_atom_get_path(atom);
+	struct ofono_lte *lte = __ofono_atom_get_data(atom);
+	struct ofono_sim *sim = __ofono_atom_find(OFONO_ATOM_TYPE_SIM, modem);
+
+	if (lte->spn_watch)
+		ofono_sim_remove_spn_watch(sim, &lte->spn_watch);
 
 	ofono_modem_remove_interface(modem, OFONO_LTE_INTERFACE);
 	g_dbus_unregister_interface(conn, path, OFONO_LTE_INTERFACE);
@@ -393,11 +445,16 @@ static void lte_init_default_attach_info_cb(const struct ofono_error *error,
 	ofono_lte_finish_register(lte);
 }
 
-void ofono_lte_register(struct ofono_lte *lte)
+static void spn_read_cb(const char *spn, const char *dc, void *data)
 {
-	/* No settings, go straight to registering the interface on D-Bus */
-	if (lte_load_settings(lte) < 0)
-		goto finish_register;
+	struct ofono_lte *lte = data;
+	struct ofono_modem *modem = __ofono_atom_get_modem(lte->atom);
+	struct ofono_sim *sim = __ofono_atom_find(OFONO_ATOM_TYPE_SIM, modem);
+
+	ofono_sim_remove_spn_watch(sim, &lte->spn_watch);
+
+	provision_default_attach_info(lte, ofono_sim_get_mcc(sim),
+					ofono_sim_get_mnc(sim), spn);
 
 	if (lte->driver->set_default_attach_info) {
 		lte->driver->set_default_attach_info(lte, &lte->info,
@@ -405,7 +462,28 @@ void ofono_lte_register(struct ofono_lte *lte)
 		return;
 	}
 
-finish_register:
+	ofono_lte_finish_register(lte);
+}
+
+void ofono_lte_register(struct ofono_lte *lte)
+{
+	/* Wait for SPN to be read in order to try provisioning */
+	if (lte_load_settings(lte) < 0) {
+		struct ofono_modem *modem = __ofono_atom_get_modem(lte->atom);
+		struct ofono_sim *sim = __ofono_atom_find(OFONO_ATOM_TYPE_SIM,
+								modem);
+
+		ofono_sim_add_spn_watch(sim, &lte->spn_watch,
+						spn_read_cb, lte, NULL);
+		return;
+	}
+
+	if (lte->driver->set_default_attach_info) {
+		lte->driver->set_default_attach_info(lte, &lte->info,
+					lte_init_default_attach_info_cb, lte);
+		return;
+	}
+
 	ofono_lte_finish_register(lte);
 }
 
