@@ -864,6 +864,7 @@ static void phonesim_post_sim(struct ofono_modem *modem)
 
 	ofono_radio_settings_create(modem, 0, "phonesim", data->chat);
 	ofono_sim_auth_create(modem);
+	ofono_lte_create(modem, 0, "atmodem", data->chat);
 }
 
 static void phonesim_post_online(struct ofono_modem *modem)
