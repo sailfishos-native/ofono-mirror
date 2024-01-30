@@ -110,6 +110,17 @@ AC_ARG_ENABLE(ubsan, AS_HELP_STRING([--enable-ubsan],
 AC_CHECK_FUNCS(explicit_bzero)
 AC_CHECK_FUNCS(rawmemchr)
 
+# In maintainer mode: try to build with application backtrace and disable PIE.
+if (test "${USE_MAINTAINER_MODE}" = yes); then
+	AC_SEARCH_LIBS([backtrace], [execinfo],
+		[
+			AC_DEFINE([HAVE_BACKTRACE], [1],
+				[Define to 1 if you have backtrace(3).])
+			CFLAGS="$CFLAGS -fno-PIE"
+			LDFLAGS="$LDFLAGS -no-pie"
+		])
+fi
+
 AC_CHECK_FUNC(signalfd, dummy=yes,
 			AC_MSG_ERROR(signalfd support is required))
 

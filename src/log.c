@@ -30,7 +30,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <syslog.h>
-#ifdef __GLIBC__
+#ifdef HAVE_BACKTRACE
 #include <execinfo.h>
 #endif
 #include <dlfcn.h>
@@ -115,7 +115,7 @@ void ofono_debug(const char *format, ...)
 	va_end(ap);
 }
 
-#ifdef __GLIBC__
+#ifdef HAVE_BACKTRACE
 static void print_backtrace(unsigned int offset)
 {
 	void *frames[99];
@@ -303,7 +303,7 @@ int __ofono_log_init(const char *program, const char *debug,
 	if (detach == FALSE)
 		option |= LOG_PERROR;
 
-#ifdef __GLIBC__
+#ifdef HAVE_BACKTRACE
 	signal_setup(signal_handler);
 #endif
 
@@ -320,7 +320,7 @@ void __ofono_log_cleanup(void)
 
 	closelog();
 
-#ifdef __GLIBC__
+#ifdef HAVE_BACKTRACE
 	signal_setup(SIG_DFL);
 #endif
 
