@@ -450,11 +450,37 @@ static void spn_read_cb(const char *spn, const char *dc, void *data)
 	struct ofono_lte *lte = data;
 	struct ofono_modem *modem = __ofono_atom_get_modem(lte->atom);
 	struct ofono_sim *sim = __ofono_atom_find(OFONO_ATOM_TYPE_SIM, modem);
+	bool r;
 
 	ofono_sim_remove_spn_watch(sim, &lte->spn_watch);
 
-	provision_default_attach_info(lte, ofono_sim_get_mcc(sim),
-					ofono_sim_get_mnc(sim), spn);
+	r = provision_default_attach_info(lte, ofono_sim_get_mcc(sim),
+						ofono_sim_get_mnc(sim), spn);
+	if (r) {
+		const char *str;
+
+		if (lte->info.apn[0])
+			l_settings_set_string(lte->settings, SETTINGS_GROUP,
+						LTE_APN, lte->info.apn);
+
+		if (lte->info.username[0])
+			l_settings_set_string(lte->settings, SETTINGS_GROUP,
+					LTE_USERNAME, lte->info.username);
+
+		if (lte->info.password[0])
+			l_settings_set_string(lte->settings, SETTINGS_GROUP,
+					LTE_PASSWORD, lte->info.password);
+
+		str = gprs_proto_to_string(lte->info.proto);
+		l_settings_set_string(lte->settings, SETTINGS_GROUP,
+					LTE_PROTO, str);
+
+		str = gprs_auth_method_to_string(lte->info.auth_method);
+		l_settings_set_string(lte->settings, SETTINGS_GROUP,
+					LTE_AUTH_METHOD, str);
+
+		lte_save_settings(lte);
+	}
 
 	if (lte->driver->set_default_attach_info) {
 		lte->driver->set_default_attach_info(lte, &lte->info,
