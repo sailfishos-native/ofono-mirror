@@ -299,4 +299,5 @@ AC_DEFINE_UNQUOTED(CONFIGDIR, "${configdir}",
 AC_CONFIG_FILES(Makefile include/version.h src/ofono.service ofono.pc \
 		dundee/dundee.service)
 
+AC_DEFINE([_auto_], [__L_AUTODESTRUCT], [autodestruct syntax])
 AC_OUTPUT
