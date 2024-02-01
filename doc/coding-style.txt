@@ -241,28 +241,6 @@ However if the enum comes from an external header file outside ofono
 we cannot make any assumption of how the enum is defined and this
 rule might not apply.
 
-M13: Check for pointer being NULL
-=================================
-
-When checking if a pointer or a return value is NULL, explicitly compare to
-NULL rather than use the shorter check with "!" operator.
-
-Example:
-1)
-array = g_try_new0(int, 20);
-if (!array)	// Wrong
-	return;
-
-2)
-if (!g_at_chat_get_slave(chat))	// Wrong
-	return -EINVAL;
-
-3)
-array = g_try_new0(int, 20);
-if (array == NULL)	// Correct
-	return;
-
-
 M14: Always use parenthesis with sizeof
 =======================================
 The expression argument to the sizeof operator should always be in
@@ -347,3 +325,19 @@ v = voicecall_create(vc, call);
 v->detect_time = time(NULL);
 DBG("Registering new call: %d", call->id);
 voicecall_dbus_register(v);
+
+O3: Prefer !foo when checking pointers for NULL or boolean values
+=================================================================
+
+When checking if a pointer or a return value is NULL, prefer the negation
+operator form.
+
+Example:
+1)
+array = g_try_new0(int, 2000000);
+if (!array)
+	return -ENOMEM;
+
+2)
+if (!g_at_chat_get_slave(chat))
+	return -EINVAL;
