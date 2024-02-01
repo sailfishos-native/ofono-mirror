@@ -24,6 +24,7 @@ stamp-h1
 build-aux
 autom4te.cache
 ell
+provision.db
 
 ofono.pc
 include/ofono
