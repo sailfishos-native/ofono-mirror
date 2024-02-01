@@ -155,15 +155,12 @@ for (i = 0; i < 3; i++) {
 }
 
 
-M8: Use g_try_malloc instead of g_malloc
-========================================
-When g_malloc fails, the whole program would exit. Most of time, this is not
-the expected behavior, and you may want to use g_try_malloc instead.
-
-Example:
-additional = g_try_malloc(len - 1);  // correct
-if (additional == NULL)
-	return FALSE;
+M8: Prefer l_new when allocating small structures
+=================================================
+Small allocations (less than a page) in userspace Linux applications typically
+do not fail, and often there's nothing meaningful a program can do to recover.
+For small allocations, prefer using l_new (or the GLib equivalent g_new0)
+instead of g_try* functions.
 
 
 M9: Follow the order of include header elements
