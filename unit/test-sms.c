@@ -1249,7 +1249,7 @@ static void test_prepare_concat(gconstpointer data)
 	sms_assembly_free(assembly);
 }
 
-static void test_limit(gunichar uni, int target_size, gboolean use_16bit)
+static void test_limit(gunichar uni, size_t target_size, gboolean use_16bit)
 {
 	char *utf8;
 	char *decoded;
@@ -1273,7 +1273,7 @@ static void test_limit(gunichar uni, int target_size, gboolean use_16bit)
 	g_assert(g_slist_length(l) == 255);
 
 	decoded = sms_decode_text(l);
-	g_assert(g_utf8_strlen(decoded, -1) == target_size);
+	g_assert(l_utf8_strlen(decoded) == target_size);
 
 	g_free(decoded);
 	g_slist_free_full(l, g_free);
