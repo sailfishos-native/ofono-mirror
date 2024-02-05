@@ -97,14 +97,14 @@ static void test_validate_tlv(void)
 	unsigned char impi_invalid1[] = { 0x80, 0x4, 'F', '\0', 'O', '\0' };
 	unsigned char impi_invalid2[] = { 0x80, 0x4, 0xff, 0xff, 0xff, 0xff };
 
-	g_assert(validate_utf8_tlv(impi_none) == FALSE);
-	g_assert(validate_utf8_tlv(impi_empty) == TRUE);
-	g_assert(validate_utf8_tlv(impi_term1) == TRUE);
-	g_assert(validate_utf8_tlv(impi_term2) == TRUE);
-	g_assert(validate_utf8_tlv(impi_term3) == TRUE);
-	g_assert(validate_utf8_tlv(impi_term4) == TRUE);
-	g_assert(validate_utf8_tlv(impi_invalid1) == FALSE);
-	g_assert(validate_utf8_tlv(impi_invalid2) == FALSE);
+	g_assert(!validate_utf8_tlv(impi_none));
+	g_assert(validate_utf8_tlv(impi_empty));
+	g_assert(validate_utf8_tlv(impi_term1));
+	g_assert(validate_utf8_tlv(impi_term2));
+	g_assert(validate_utf8_tlv(impi_term3));
+	g_assert(validate_utf8_tlv(impi_term4));
+	g_assert(!validate_utf8_tlv(impi_invalid1));
+	g_assert(!validate_utf8_tlv(impi_invalid2));
 }
 
 static void test_ber_tlv_builder_mms(void)
