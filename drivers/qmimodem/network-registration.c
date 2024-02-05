@@ -32,6 +32,8 @@
 #include <ofono/modem.h>
 #include <ofono/netreg.h>
 
+#include <ell/ell.h>
+
 #include "qmi.h"
 #include "nas.h"
 #include "util.h"
@@ -153,7 +155,7 @@ static bool extract_ss_info(struct qmi_result *result, int *status,
 		 * plmn-desc. When that happens, libdbus will abort ofono.
 		 * If non-utf-8 characters are detected, use mccmnc string.
 		 */
-		if (g_utf8_validate(plmn->desc, opname_len, NULL)) {
+		if (l_utf8_validate(plmn->desc, opname_len, NULL)) {
 			strncpy(operator->name, plmn->desc, opname_len);
 			operator->name[opname_len] = '\0';
 		} else
