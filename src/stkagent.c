@@ -639,6 +639,8 @@ static void get_key_cb(DBusPendingCall *call, void *data)
 	enum stk_agent_result result;
 	bool remove_agent;
 	char *key;
+	int len;
+	wchar_t cp;
 
 	if (check_error(agent, reply,
 			ALLOWED_ERROR_GO_BACK | ALLOWED_ERROR_TERMINATE,
@@ -654,9 +656,15 @@ static void get_key_cb(DBusPendingCall *call, void *data)
 
 	if (dbus_message_get_args(reply, NULL,
 					DBUS_TYPE_STRING, &key,
-					DBUS_TYPE_INVALID) == FALSE ||
-			g_utf8_strlen(key, 10) != 1) {
+					DBUS_TYPE_INVALID) == FALSE) {
 		ofono_error("Can't parse the reply to GetKey()");
+		remove_agent = true;
+		goto error;
+	}
+
+	len = strlen(key);
+	if (l_utf8_get_codepoint(key, len, &cp) != len) {
+		ofono_error("GetKey() return expected a single character");
 		remove_agent = true;
 		goto error;
 	}
