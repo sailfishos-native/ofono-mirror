@@ -766,7 +766,7 @@ unsigned char *comprehension_tlv_builder_get_data(
 	return tlv + tag_size + len_size;
 }
 
-gboolean validate_utf8_tlv(const unsigned char *tlv)
+bool validate_utf8_tlv(const unsigned char *tlv)
 {
 	int len = tlv[1];
 
@@ -777,7 +777,7 @@ gboolean validate_utf8_tlv(const unsigned char *tlv)
 	if (tlv[len + 1] == '\0')
 		len -= 1;
 
-	return g_utf8_validate_len((const char *)tlv + 2, len, NULL);
+	return l_utf8_validate((const char *)tlv + 2, len, NULL);
 }
 
 static char *sim_network_name_parse(const unsigned char *buffer, int length,

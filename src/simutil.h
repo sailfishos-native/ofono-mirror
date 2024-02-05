@@ -19,6 +19,8 @@
  *
  */
 
+#include <stdbool.h>
+
 #define SIM_EFSPN_DC_HOME_PLMN_BIT 0x1
 #define SIM_EFSPN_DC_ROAMING_SPN_BIT 0x2
 
@@ -408,7 +410,7 @@ gboolean comprehension_tlv_builder_set_length(
 				unsigned int len);
 unsigned char *comprehension_tlv_builder_get_data(
 				struct comprehension_tlv_builder *builder);
-gboolean validate_utf8_tlv(const unsigned char *data);
+bool validate_utf8_tlv(const unsigned char *data);
 
 void ber_tlv_iter_init(struct ber_tlv_iter *iter, const unsigned char *pdu,
 			unsigned int len);
