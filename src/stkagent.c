@@ -838,7 +838,7 @@ static void get_input_cb(DBusPendingCall *call, void *data)
 		goto error;
 	}
 
-	len = g_utf8_strlen(string, -1);
+	len = l_utf8_strlen(string);
 
 	if (len < agent->min_length || len > agent->max_length) {
 		ofono_error("Length not acceptable");

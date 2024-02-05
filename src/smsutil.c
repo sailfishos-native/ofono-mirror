@@ -549,7 +549,7 @@ gboolean sms_encode_address_field(const struct sms_address *in, gboolean sc,
 		unsigned char *r;
 
 		/* TP-OA's 10 octets transport 11 8-bit chars */
-		if (g_utf8_strlen(addr, strlen(addr)) > 11)
+		if (l_utf8_strlen(addr) > 11)
 			return FALSE;
 
 		gsm = convert_utf8_to_gsm(in->address, len, NULL, &written, 0);
