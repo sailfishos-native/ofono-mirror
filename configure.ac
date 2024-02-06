@@ -131,8 +131,8 @@ PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.68, [
 	AC_DEFINE_UNQUOTED(HAVE_G_MEMDUP2, 1,
 			[Define to 1 if you have the `g_memdup2' function.])
 ], [
-	PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.60, dummy=yes,
-				AC_MSG_ERROR(GLib >= 2.60 is required))
+	PKG_CHECK_MODULES(GLIB, glib-2.0 >= 2.32, dummy=yes,
+				AC_MSG_ERROR(GLib >= 2.32 is required))
 ])
 AC_SUBST(GLIB_CFLAGS)
 AC_SUBST(GLIB_LIBS)
