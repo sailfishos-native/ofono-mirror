@@ -1,3 +1,7 @@
+ver 2.4:
+	Add support for new provision database format.
+	Add support for Quectel EG96 modem.
+
 ver 2.3:
 	Fix issue with handling SMS submit report sizes.
 	Fix issue with handling operator name and ISI modems.
