@@ -207,10 +207,11 @@ statedir = $(localstatedir)/lib/ofono
 state_DATA =
 endif
 
-provision.db: provision.json
+data/provision.db: data/provision.json
+	$(AM_V_at)$(MKDIR_P) data
 	$(AM_V_GEN)$(srcdir)/tools/provisiontool generate \
 		--infile $< --outfile $@
-pkgdata_DATA = provision.db
+pkgdata_DATA = data/provision.db
 
 builtin_modules =
 builtin_sources =
@@ -753,7 +754,7 @@ src_ofonod_LDFLAGS = -Wl,--export-dynamic \
 
 BUILT_SOURCES = $(local_headers) $(ell_built_sources) src/builtin.h
 
-CLEANFILES = $(BUILT_SOURCES) $(rules_DATA) provision.db
+CLEANFILES = $(BUILT_SOURCES) $(rules_DATA) data/provision.db
 
 plugindir = $(pkglibdir)/plugins
 
@@ -906,8 +907,8 @@ test_SCRIPTS = $(test_scripts)
 endif
 
 EXTRA_DIST = src/genbuiltin plugins/ofono.rules plugins/ofono-speedup.rules \
-		tools/provisiontool provision.json \
-		unit/test-provision.json \
+		tools/provisiontool \
+		data/provision.json unit/test-provision.json \
 		$(doc_files) $(test_scripts)
 
 dist_man_MANS = doc/ofonod.8
