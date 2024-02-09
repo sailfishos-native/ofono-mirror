@@ -212,7 +212,7 @@ class MobileBroadbandProviderInfo:
                     providers.append(info)
 
         except ET.ParseError as e:
-            print(f"Error parsing XML: {e}")
+            print("Error parsing XML: " + e)
 
         return providers
 
