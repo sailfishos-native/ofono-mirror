@@ -756,7 +756,7 @@ bool gprs_proto_from_string(const char *str, enum ofono_gprs_proto *proto)
 	} else if (l_streq0(str, "ipv6")) {
 		*proto = OFONO_GPRS_PROTO_IPV6;
 		return true;
-	} else if (g_str_equal(str, "dual")) {
+	} else if (l_streq0(str, "dual")) {
 		*proto = OFONO_GPRS_PROTO_IPV4V6;
 		return true;
 	}
