@@ -695,6 +695,59 @@ static void test_auth_build_parse(void)
 	g_assert(!memcmp(kc_b.data, kc, sizeof(kc)));
 }
 
+static void test_parse_language_list(void)
+{
+	static const unsigned char empty[] = {
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+	};
+	static const unsigned char efpl[] = {
+		'e', 'n', 0xff, 0xff, 'd', 'e', 'f', 'r', 0xff, 0xff, 'n', 'l'
+	};
+
+	char **parsed;
+	char *joined;
+
+	parsed = sim_parse_language_list(empty, sizeof(empty));
+	assert(!parsed);
+
+	parsed = sim_parse_language_list(efpl, sizeof(efpl));
+	assert(parsed);
+	joined = l_strjoinv(parsed, ':');
+	assert(!strcmp(joined, "en:de:fr:nl"));
+	l_strfreev(parsed);
+	l_free(joined);
+
+	parsed = sim_parse_language_list(efpl, sizeof(efpl) - 1);
+	assert(parsed);
+	joined = l_strjoinv(parsed, ':');
+	assert(!strcmp(joined, "en:de:fr"));
+	l_strfreev(parsed);
+	l_free(joined);
+}
+
+static void test_parse_eflp(void)
+{
+	static const unsigned char empty[] = {
+		0xff, 0xff, 0xff, 0xff, 0xff, 0xff
+	};
+	static const unsigned char eflp[] = {
+		0x00, 0x01, 0x02, 0x03, 0x04, 0x05
+	};
+
+	char **parsed;
+	char *joined;
+
+	parsed = sim_parse_eflp(empty, sizeof(empty));
+	assert(!parsed);
+
+	parsed = sim_parse_eflp(eflp, sizeof(eflp));
+	assert(parsed);
+	joined = l_strjoinv(parsed, ':');
+	assert(!strcmp(joined, "de:en:it:fr:es:nl"));
+	l_strfreev(parsed);
+	l_free(joined);
+}
+
 int main(int argc, char **argv)
 {
 	g_test_init(&argc, &argv, NULL);
@@ -715,6 +768,10 @@ int main(int argc, char **argv)
 	g_test_add_func("/testsimutil/3G path", test_get_3g_path);
 	g_test_add_func("/testsimutil/2G path", test_get_2g_path);
 	g_test_add_func("/testsimutil/auth build parse", test_auth_build_parse);
+
+	g_test_add_func("/testsimutil/parse_language_list",
+						test_parse_language_list);
+	g_test_add_func("/testsimutil/parse_efpl", test_parse_eflp);
 
 	return g_test_run();
 }
