@@ -340,7 +340,7 @@ static int tone_queue(struct ofono_voicecall *vc, const char *tone_str,
 	 * and p for Pause.
 	 */
 	for (i = 0; tone_str[i]; i++)
-		if (!g_ascii_isdigit(tone_str[i]) && tone_str[i] != 'p' &&
+		if (!l_ascii_isdigit(tone_str[i]) && tone_str[i] != 'p' &&
 				tone_str[i] != 'P' && tone_str[i] != '*' &&
 				tone_str[i] != '#' && (tone_str[i] < 'A' ||
 				tone_str[i] > 'D'))
@@ -2196,11 +2196,9 @@ static DBusMessage *manager_tone(DBusConnection *conn,
 	if (len == 0)
 		return __ofono_error_invalid_format(msg);
 
-	tones = g_ascii_strup(in_tones, len);
-
+	tones = l_ascii_strup(in_tones, len);
 	err = tone_queue(vc, tones, tone_callback, vc, NULL);
-
-	g_free(tones);
+	l_free(tones);
 
 	if (err < 0)
 		return __ofono_error_invalid_format(msg);
@@ -3440,7 +3438,7 @@ static void emulator_vts_cb(struct ofono_emulator *em,
 		if (str == NULL)
 			break;
 
-		if (!g_ascii_isdigit(str[0]) && str[0] != '*' &&
+		if (!l_ascii_isdigit(str[0]) && str[0] != '*' &&
 				str[0] != '#' && (str[0] < 'A' || str[0] > 'D'))
 			break;
 
