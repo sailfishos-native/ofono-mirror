@@ -1827,3 +1827,65 @@ gboolean sim_parse_gsm_authenticate(const unsigned char *buffer, int len,
 gsm_end:
 	return FALSE;
 }
+
+char **sim_parse_language_list(const unsigned char *ef, int length)
+{
+	int i;
+	size_t n_languages = 0;
+	char **ret;
+
+	for (i = 0; i + 1 < length; i += 2) {
+		if (ef[i] > 0x7f || ef[i + 1] > 0x7f)
+			continue;
+
+		n_languages += 1;
+	}
+
+	if (!n_languages)
+		return NULL;
+
+	ret = l_new(char *, n_languages + 1);
+
+	for (i = 0, n_languages = 0; i + 1 < length; i += 2) {
+		if (ef[i] > 0x7f || ef[i + 1] > 0x7f)
+			continue;
+
+		/*
+		 * ISO 639 codes contain only characters that are coded
+		 * identically in SMS 7 bit charset, ASCII or UTF8 so
+		 * no conversion.
+		 */
+		ret[n_languages++] = l_ascii_strdown((const char *)ef + i, 2);
+	}
+
+	return ret;
+}
+
+char **sim_parse_eflp(const unsigned char *eflp, int length)
+{
+	int i;
+	char code[3];
+	char **ret;
+	size_t n_languages = 0;
+
+	for (i = 0; i < length; i++) {
+		if (!iso639_2_from_language(eflp[i], code))
+			continue;
+
+		n_languages += 1;
+	}
+
+	if (!n_languages)
+		return NULL;
+
+	ret = l_new(char *, n_languages + 1);
+
+	for (i = 0, n_languages = 0; i < length; i++) {
+		if (!iso639_2_from_language(eflp[i], code))
+			continue;
+
+		ret[n_languages++] = l_strdup(code);
+	}
+
+	return ret;
+}

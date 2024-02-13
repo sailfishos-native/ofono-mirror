@@ -2181,75 +2181,32 @@ static bool sim_efli_format(const unsigned char *ef, int length)
 	return true;
 }
 
-static GSList *parse_language_list(const unsigned char *ef, int length)
+static char **concat_lang_prefs(char **a, char **b)
 {
-	int i;
-	GSList *ret = NULL;
-
-	for (i = 0; i < length; i += 2) {
-		if (ef[i] > 0x7f || ef[i+1] > 0x7f)
-			continue;
-
-		/*
-		 * ISO 639 codes contain only characters that are coded
-		 * identically in SMS 7 bit charset, ASCII or UTF8 so
-		 * no conversion.
-		 */
-		ret = g_slist_prepend(ret, g_ascii_strdown((char *)ef + i, 2));
-	}
-
-	if (ret)
-		ret = g_slist_reverse(ret);
-
-	return ret;
-}
-
-static GSList *parse_eflp(const unsigned char *eflp, int length)
-{
-	int i;
-	char code[3];
-	GSList *ret = NULL;
-
-	for (i = 0; i < length; i++) {
-		if (!iso639_2_from_language(eflp[i], code))
-			continue;
-
-		ret = g_slist_prepend(ret, g_strdup(code));
-	}
-
-	if (ret)
-		ret = g_slist_reverse(ret);
-
-	return ret;
-}
-
-static char **concat_lang_prefs(GSList *a, GSList *b)
-{
-	GSList *l, *k;
 	char **ret;
-	int i = 0;
-	int total = g_slist_length(a) + g_slist_length(b);
+	int i;
+	int j;
+	int total = l_strv_length(a) + l_strv_length(b);
 
 	if (total == 0)
 		return NULL;
 
-	ret = g_new0(char *, total + 1);
+	ret = l_new(char *, total + 1);
 
-	for (l = a; l; l = l->next)
-		ret[i++] = g_strdup(l->data);
+	for (i = 0; a && a[i]; i++)
+		ret[i] = a[i];
 
-	for (l = b; l; l = l->next) {
-		gboolean duplicate = FALSE;
-
-		for (k = a; k; k = k->next)
-			if (!strcmp(k->data, l->data))
-				duplicate = TRUE;
-
-		if (duplicate)
+	for (j = 0; b && b[j]; j++) {
+		if (l_strv_contains(a, b[j])) {
+			l_free(b[j]);
 			continue;
+		}
 
-		ret[i++] = g_strdup(l->data);
+		ret[i++] = b[j];
 	}
+
+	l_free(a);
+	l_free(b);
 
 	return ret;
 }
@@ -2262,22 +2219,23 @@ static void sim_efpl_read_cb(int ok, int length, int record,
 	const char *path = __ofono_atom_get_path(sim->atom);
 	DBusConnection *conn = ofono_dbus_get_connection();
 	bool efli_format = true;
-	GSList *efli = NULL;
-	GSList *efpl = NULL;
+	char **efli = NULL;
+	char **efpl = NULL;
 
 	if (!ok || length < 2)
 		goto skip_efpl;
 
-	efpl = parse_language_list(data, length);
+	efpl = sim_parse_language_list(data, length);
 
 skip_efpl:
 	if (sim->efli && sim->efli_length > 0) {
 		efli_format = sim_efli_format(sim->efli, sim->efli_length);
 
 		if (efli_format)
-			efli = parse_language_list(sim->efli, sim->efli_length);
+			efli = sim_parse_language_list(sim->efli,
+							sim->efli_length);
 		else
-			efli = parse_eflp(sim->efli, sim->efli_length);
+			efli = sim_parse_eflp(sim->efli, sim->efli_length);
 	}
 
 	/*
@@ -2293,26 +2251,19 @@ skip_efpl:
 	 */
 	if (efli_format) {
 		if (sim->efli_length >= 2 && sim->efli[0] == 0xff &&
-				sim->efli[1] == 0xff)
-			sim->language_prefs = concat_lang_prefs(NULL, efpl);
-		else
-			sim->language_prefs = concat_lang_prefs(efli, efpl);
-	} else {
+				sim->efli[1] == 0xff) {
+			l_strfreev(efli);
+			efli = NULL;
+		}
+
+		sim->language_prefs = concat_lang_prefs(efli, efpl);
+	} else
 		sim->language_prefs = concat_lang_prefs(efpl, efli);
-	}
 
 	if (sim->efli) {
 		g_free(sim->efli);
 		sim->efli = NULL;
 		sim->efli_length = 0;
-	}
-
-	if (efli) {
-		g_slist_free_full(efli, g_free);
-	}
-
-	if (efpl) {
-		g_slist_free_full(efpl, g_free);
 	}
 
 	if (sim->language_prefs != NULL)

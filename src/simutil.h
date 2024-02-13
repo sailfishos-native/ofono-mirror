@@ -541,3 +541,6 @@ gboolean sim_parse_umts_authenticate(const unsigned char *buffer, int len,
 
 gboolean sim_parse_gsm_authenticate(const unsigned char *buffer, int len,
 		const unsigned char **sres, const unsigned char **kc);
+
+char **sim_parse_language_list(const unsigned char *ef, int length);
+char **sim_parse_eflp(const unsigned char *eflp, int length);
