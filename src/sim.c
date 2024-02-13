@@ -2155,15 +2155,15 @@ static void sim_efli_read_cb(int ok, int length, int record,
 }
 
 /* Detect whether the file is in EFli format, as opposed to 51.011 EFlp */
-static gboolean sim_efli_format(const unsigned char *ef, int length)
+static bool sim_efli_format(const unsigned char *ef, int length)
 {
 	int i;
 
 	if (length & 1)
-		return FALSE;
+		return false;
 
 	for (i = 0; i < length; i += 2) {
-		if (ef[i] == 0xff && ef[i+1] == 0xff)
+		if (ef[i] == 0xff && ef[i + 1] == 0xff)
 			continue;
 
 		/*
@@ -2171,14 +2171,14 @@ static gboolean sim_efli_format(const unsigned char *ef, int length)
 		 * characters while CB DCS language codes are in ranges
 		 * (0 - 15) or (32 - 47), so the ranges don't overlap
 		 */
-		if (g_ascii_isalpha(ef[i]) == 0)
-			return FALSE;
+		if (l_ascii_isalpha(ef[i]) == 0)
+			return false;
 
-		if (g_ascii_isalpha(ef[i+1]) == 0)
-			return FALSE;
+		if (l_ascii_isalpha(ef[i + 1]) == 0)
+			return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 static GSList *parse_language_list(const unsigned char *ef, int length)
@@ -2261,7 +2261,7 @@ static void sim_efpl_read_cb(int ok, int length, int record,
 	struct ofono_sim *sim = userdata;
 	const char *path = __ofono_atom_get_path(sim->atom);
 	DBusConnection *conn = ofono_dbus_get_connection();
-	gboolean efli_format = TRUE;
+	bool efli_format = true;
 	GSList *efli = NULL;
 	GSList *efpl = NULL;
 
