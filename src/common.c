@@ -27,7 +27,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include <glib.h>
 #include <ell/ell.h>
 
 #include <ofono/types.h>
@@ -561,7 +560,7 @@ gboolean parse_ss_control_string(char *str, int *ss_type,
 		goto out;
 
 	for (i = 0; i < strlen(*sc); i++)
-		if (!g_ascii_isdigit((*sc)[i]))
+		if (!l_ascii_isdigit((*sc)[i]))
 			goto out;
 
 	NEXT_FIELD(c, *sia);
@@ -681,7 +680,7 @@ gboolean is_valid_apn(const char *apn)
 		return FALSE;
 
 	for (i = 0; apn[i] != '\0'; i++) {
-		if (g_ascii_isalnum(apn[i]))
+		if (l_ascii_isalnum(apn[i]))
 			continue;
 
 		if (apn[i] == '-')
