@@ -3753,3 +3753,114 @@ unsigned char *convert_ucs2_to_gsm(const unsigned char *text, long len,
 						GSM_DIALECT_DEFAULT,
 						GSM_DIALECT_DEFAULT);
 }
+
+bool iso639_2_from_language(enum cbs_language lang, char *iso639)
+{
+	switch (lang) {
+	case CBS_LANGUAGE_GERMAN:
+		iso639[0] = 'd';
+		iso639[1] = 'e';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_ENGLISH:
+		iso639[0] = 'e';
+		iso639[1] = 'n';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_ITALIAN:
+		iso639[0] = 'i';
+		iso639[1] = 't';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_FRENCH:
+		iso639[0] = 'f';
+		iso639[1] = 'r';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_SPANISH:
+		iso639[0] = 'e';
+		iso639[1] = 's';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_DUTCH:
+		iso639[0] = 'n';
+		iso639[1] = 'l';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_SWEDISH:
+		iso639[0] = 's';
+		iso639[1] = 'v';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_DANISH:
+		iso639[0] = 'd';
+		iso639[1] = 'a';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_PORTUGESE:
+		iso639[0] = 'p';
+		iso639[1] = 't';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_FINNISH:
+		iso639[0] = 'f';
+		iso639[1] = 'i';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_NORWEGIAN:
+		iso639[0] = 'n';
+		iso639[1] = 'o';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_GREEK:
+		iso639[0] = 'e';
+		iso639[1] = 'l';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_TURKISH:
+		iso639[0] = 't';
+		iso639[1] = 'r';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_HUNGARIAN:
+		iso639[0] = 'h';
+		iso639[1] = 'u';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_POLISH:
+		iso639[0] = 'p';
+		iso639[1] = 'l';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_CZECH:
+		iso639[0] = 'c';
+		iso639[1] = 's';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_HEBREW:
+		iso639[0] = 'h';
+		iso639[1] = 'e';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_ARABIC:
+		iso639[0] = 'a';
+		iso639[1] = 'r';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_RUSSIAN:
+		iso639[0] = 'r';
+		iso639[1] = 'u';
+		iso639[2] = '\0';
+		return true;
+	case CBS_LANGUAGE_ICELANDIC:
+		iso639[0] = 'i';
+		iso639[1] = 's';
+		iso639[2] = '\0';
+		return true;
+	default:
+		iso639[0] = '\0';
+		break;
+	}
+
+	return false;
+}

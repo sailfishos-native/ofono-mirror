@@ -19,6 +19,8 @@
  *
  */
 
+enum cbs_language;
+
 #define CBS_MAX_GSM_CHARS 93
 #define SMS_MSGID_LEN 20
 
@@ -194,30 +196,6 @@ enum sms_pid_type {
 	SMS_PID_TYPE_ME_DOWNLOAD = 0x7d,
 	SMS_PID_TYPE_ME_DEPERSONALIZATION = 0x7e,
 	SMS_PID_TYPE_USIM_DOWNLOAD = 0x7f,
-};
-
-enum cbs_language {
-	CBS_LANGUAGE_GERMAN = 0x0,
-	CBS_LANGUAGE_ENGLISH = 0x1,
-	CBS_LANGUAGE_ITALIAN = 0x2,
-	CBS_LANGUAGE_FRENCH = 0x3,
-	CBS_LANGUAGE_SPANISH = 0x4,
-	CBS_LANGUAGE_DUTCH = 0x5,
-	CBS_LANGUAGE_SWEDISH = 0x6,
-	CBS_LANGUAGE_DANISH = 0x7,
-	CBS_LANGUAGE_PORTUGESE = 0x8,
-	CBS_LANGUAGE_FINNISH = 0x9,
-	CBS_LANGUAGE_NORWEGIAN = 0xA,
-	CBS_LANGUAGE_GREEK = 0xB,
-	CBS_LANGUAGE_TURKISH = 0xC,
-	CBS_LANGUAGE_HUNGARIAN = 0xD,
-	CBS_LANGUAGE_POLISH = 0xE,
-	CBS_LANGUAGE_UNSPECIFIED = 0xF,
-	CBS_LANGUAGE_CZECH = 0x20,
-	CBS_LANGUAGE_HEBREW = 0x21,
-	CBS_LANGUAGE_ARABIC = 0x22,
-	CBS_LANGUAGE_RUSSIAN = 0x23,
-	CBS_LANGUAGE_ICELANDIC = 0x24
 };
 
 enum cbs_geo_scope {
@@ -576,7 +554,6 @@ gboolean cbs_dcs_decode(guint8 dcs, gboolean *udhi, enum sms_class *cls,
 			enum sms_charset *charset, gboolean *compressed,
 			enum cbs_language *language, gboolean *iso639);
 
-gboolean iso639_2_from_language(enum cbs_language lang, char *iso639);
 gboolean cbs_decode(const unsigned char *pdu, int len, struct cbs *out);
 gboolean cbs_encode(const struct cbs *cbs, int *len, unsigned char *pdu);
 gboolean cbs_extract_app_port(const struct cbs *cbs, int *dst, int *src,

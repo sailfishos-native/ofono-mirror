@@ -38,6 +38,30 @@ enum gsm_dialect {
 	GSM_DIALECT_URDU,
 };
 
+enum cbs_language {
+	CBS_LANGUAGE_GERMAN = 0x0,
+	CBS_LANGUAGE_ENGLISH = 0x1,
+	CBS_LANGUAGE_ITALIAN = 0x2,
+	CBS_LANGUAGE_FRENCH = 0x3,
+	CBS_LANGUAGE_SPANISH = 0x4,
+	CBS_LANGUAGE_DUTCH = 0x5,
+	CBS_LANGUAGE_SWEDISH = 0x6,
+	CBS_LANGUAGE_DANISH = 0x7,
+	CBS_LANGUAGE_PORTUGESE = 0x8,
+	CBS_LANGUAGE_FINNISH = 0x9,
+	CBS_LANGUAGE_NORWEGIAN = 0xA,
+	CBS_LANGUAGE_GREEK = 0xB,
+	CBS_LANGUAGE_TURKISH = 0xC,
+	CBS_LANGUAGE_HUNGARIAN = 0xD,
+	CBS_LANGUAGE_POLISH = 0xE,
+	CBS_LANGUAGE_UNSPECIFIED = 0xF,
+	CBS_LANGUAGE_CZECH = 0x20,
+	CBS_LANGUAGE_HEBREW = 0x21,
+	CBS_LANGUAGE_ARABIC = 0x22,
+	CBS_LANGUAGE_RUSSIAN = 0x23,
+	CBS_LANGUAGE_ICELANDIC = 0x24
+};
+
 char *convert_gsm_to_utf8(const unsigned char *text, long len, long *items_read,
 				long *items_written, unsigned char terminator);
 
@@ -105,3 +129,5 @@ unsigned char *convert_ucs2_to_gsm_with_lang(const unsigned char *text,
 unsigned char *convert_ucs2_to_gsm(const unsigned char *text, long len,
 					long *items_read, long *items_written,
 					unsigned char terminator);
+
+bool iso639_2_from_language(enum cbs_language lang, char *iso639);

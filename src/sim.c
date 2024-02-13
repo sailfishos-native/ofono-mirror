@@ -2211,7 +2211,7 @@ static GSList *parse_eflp(const unsigned char *eflp, int length)
 	GSList *ret = NULL;
 
 	for (i = 0; i < length; i++) {
-		if (iso639_2_from_language(eflp[i], code) == FALSE)
+		if (!iso639_2_from_language(eflp[i], code))
 			continue;
 
 		ret = g_slist_prepend(ret, g_strdup(code));
