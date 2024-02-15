@@ -211,7 +211,6 @@ static void palmpre_post_sim(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver palmpre_driver = {
-	.name		= "palmpre",
 	.probe		= palmpre_probe,
 	.remove		= palmpre_remove,
 	.enable		= palmpre_enable,
@@ -220,15 +219,4 @@ static struct ofono_modem_driver palmpre_driver = {
 	.post_sim	= palmpre_post_sim
 };
 
-static int palmpre_init(void)
-{
-	return ofono_modem_driver_register(&palmpre_driver);
-}
-
-static void palmpre_exit(void)
-{
-	ofono_modem_driver_unregister(&palmpre_driver);
-}
-
-OFONO_PLUGIN_DEFINE(palmpre, "Palm Pre driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, palmpre_init, palmpre_exit)
+OFONO_MODEM_DRIVER_BUILTIN(palmpre, &palmpre_driver)

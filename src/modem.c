@@ -36,7 +36,6 @@
 
 #define DEFAULT_POWERED_TIMEOUT (20)
 
-static GSList *g_driver_list;
 static GSList *g_modem_list;
 
 static int next_modem_id;
@@ -456,11 +455,11 @@ static void flush_atoms(struct ofono_modem *modem, enum modem_state new_state)
 	}
 }
 
-const void *__ofono_atom_driver_builtin_find(const char *name,
-				const struct ofono_atom_driver_desc *start,
-				const struct ofono_atom_driver_desc *stop)
+const void *__ofono_driver_builtin_find(const char *name,
+				const struct ofono_driver_desc *start,
+				const struct ofono_driver_desc *stop)
 {
-	const struct ofono_atom_driver_desc *desc;
+	const struct ofono_driver_desc *desc;
 
 	if (!name)
 		return NULL;
@@ -2007,10 +2006,14 @@ ofono_bool_t ofono_modem_is_registered(struct ofono_modem *modem)
 	return TRUE;
 }
 
+extern struct ofono_driver_desc __start___modem[];
+extern struct ofono_driver_desc __stop___modem[];
+
 int ofono_modem_register(struct ofono_modem *modem)
 {
+	const struct ofono_modem_driver *drv;
 	DBusConnection *conn = ofono_dbus_get_connection();
-	GSList *l;
+	int r;
 
 	DBG("%p", modem);
 
@@ -2023,21 +2026,17 @@ int ofono_modem_register(struct ofono_modem *modem)
 	if (modem->driver != NULL)
 		return -EALREADY;
 
-	for (l = g_driver_list; l; l = l->next) {
-		const struct ofono_modem_driver *drv = l->data;
-
-		if (g_strcmp0(drv->name, modem->driver_type))
-			continue;
-
-		if (drv->probe(modem) < 0)
-			continue;
-
-		modem->driver = drv;
-		break;
-	}
-
-	if (modem->driver == NULL)
+	drv = __ofono_driver_builtin_find(modem->driver_type,
+						__start___modem,
+						__stop___modem);
+	if (!drv || !drv->probe)
 		return -ENODEV;
+
+	r = drv->probe(modem);
+	if (r < 0)
+		return r;
+
+	modem->driver = drv;
 
 	if (!g_dbus_register_interface(conn, modem->path,
 					OFONO_MODEM_INTERFACE,
@@ -2196,37 +2195,6 @@ void __ofono_modem_sim_reset(struct ofono_modem *modem)
 	DBG("%p", modem);
 
 	modem_change_state(modem, MODEM_STATE_PRE_SIM);
-}
-
-int ofono_modem_driver_register(const struct ofono_modem_driver *d)
-{
-	DBG("driver: %p, name: %s", d, d->name);
-
-	if (d->probe == NULL)
-		return -EINVAL;
-
-	g_driver_list = g_slist_prepend(g_driver_list, (void *) d);
-
-	return 0;
-}
-
-void ofono_modem_driver_unregister(const struct ofono_modem_driver *d)
-{
-	GSList *l;
-	struct ofono_modem *modem;
-
-	DBG("driver: %p, name: %s", d, d->name);
-
-	g_driver_list = g_slist_remove(g_driver_list, (void *) d);
-
-	for (l = g_modem_list; l; l = l->next) {
-		modem = l->data;
-
-		if (modem->driver != d)
-			continue;
-
-		modem_unregister(modem);
-	}
 }
 
 void __ofono_modem_shutdown(void)

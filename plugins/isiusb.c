@@ -449,7 +449,6 @@ static int isiusb_disable(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver driver = {
-	.name = "isiusb",
 	.probe = isiusb_probe,
 	.remove = isiusb_remove,
 	.set_online = isiusb_online,
@@ -460,16 +459,4 @@ static struct ofono_modem_driver driver = {
 	.disable = isiusb_disable,
 };
 
-static int isiusb_init(void)
-{
-	return ofono_modem_driver_register(&driver);
-}
-
-static void isiusb_exit(void)
-{
-	ofono_modem_driver_unregister(&driver);
-}
-
-OFONO_PLUGIN_DEFINE(isiusb, "Generic modem driver for isi",
-			VERSION, OFONO_PLUGIN_PRIORITY_DEFAULT,
-			isiusb_init, isiusb_exit)
+OFONO_MODEM_DRIVER_BUILTIN(isiusb, &driver)

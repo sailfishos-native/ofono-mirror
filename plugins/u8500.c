@@ -659,7 +659,6 @@ static void u8500_devinfo_remove(struct ofono_devinfo *info)
 }
 
 static struct ofono_modem_driver driver = {
-	.name = "u8500",
 	.probe = u8500_probe,
 	.remove = u8500_remove,
 	.set_online = u8500_online,
@@ -680,17 +679,4 @@ static struct ofono_devinfo_driver devinfo_driver = {
 };
 
 OFONO_ATOM_DRIVER_BUILTIN(devinfo, u8500, &devinfo_driver)
-
-static int u8500_init(void)
-{
-	return ofono_modem_driver_register(&driver);
-}
-
-static void u8500_exit(void)
-{
-	ofono_modem_driver_unregister(&driver);
-}
-
-OFONO_PLUGIN_DEFINE(u8500, "ST-Ericsson U8500 modem driver",
-			VERSION, OFONO_PLUGIN_PRIORITY_DEFAULT,
-			u8500_init, u8500_exit)
+OFONO_MODEM_DRIVER_BUILTIN(u8500, &driver)

@@ -372,7 +372,6 @@ static void speedup_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver speedup_driver = {
-	.name		= "speedup",
 	.probe		= speedup_probe,
 	.remove		= speedup_remove,
 	.enable		= speedup_enable,
@@ -383,15 +382,4 @@ static struct ofono_modem_driver speedup_driver = {
 	.post_online	= speedup_post_online,
 };
 
-static int speedup_init(void)
-{
-	return ofono_modem_driver_register(&speedup_driver);
-}
-
-static void speedup_exit(void)
-{
-	ofono_modem_driver_unregister(&speedup_driver);
-}
-
-OFONO_PLUGIN_DEFINE(speedup, "Speed Up modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, speedup_init, speedup_exit)
+OFONO_MODEM_DRIVER_BUILTIN(speedup, &speedup_driver)

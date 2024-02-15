@@ -236,7 +236,6 @@ static void nokia_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver nokia_driver = {
-	.name		= "nokia",
 	.probe		= nokia_probe,
 	.remove		= nokia_remove,
 	.enable		= nokia_enable,
@@ -246,15 +245,4 @@ static struct ofono_modem_driver nokia_driver = {
 	.post_online	= nokia_post_online,
 };
 
-static int nokia_init(void)
-{
-	return ofono_modem_driver_register(&nokia_driver);
-}
-
-static void nokia_exit(void)
-{
-	ofono_modem_driver_unregister(&nokia_driver);
-}
-
-OFONO_PLUGIN_DEFINE(nokia, "Nokia Datacard modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, nokia_init, nokia_exit)
+OFONO_MODEM_DRIVER_BUILTIN(nokia, &nokia_driver)

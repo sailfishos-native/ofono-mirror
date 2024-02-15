@@ -408,7 +408,6 @@ static void mbim_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver mbim_driver = {
-	.name		= "mbim",
 	.probe		= mbim_probe,
 	.remove		= mbim_remove,
 	.enable		= mbim_enable,
@@ -419,15 +418,4 @@ static struct ofono_modem_driver mbim_driver = {
 	.post_online	= mbim_post_online,
 };
 
-static int mbim_init(void)
-{
-	return ofono_modem_driver_register(&mbim_driver);
-}
-
-static void mbim_exit(void)
-{
-	ofono_modem_driver_unregister(&mbim_driver);
-}
-
-OFONO_PLUGIN_DEFINE(mbim, "MBIM modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, mbim_init, mbim_exit)
+OFONO_MODEM_DRIVER_BUILTIN(mbim, &mbim_driver)

@@ -377,7 +377,6 @@ static void icera_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver icera_driver = {
-	.name		= "icera",
 	.probe		= icera_probe,
 	.remove		= icera_remove,
 	.enable		= icera_enable,
@@ -388,15 +387,4 @@ static struct ofono_modem_driver icera_driver = {
 	.post_online	= icera_post_online,
 };
 
-static int icera_init(void)
-{
-	return ofono_modem_driver_register(&icera_driver);
-}
-
-static void icera_exit(void)
-{
-	ofono_modem_driver_unregister(&icera_driver);
-}
-
-OFONO_PLUGIN_DEFINE(icera, "Icera modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, icera_init, icera_exit)
+OFONO_MODEM_DRIVER_BUILTIN(icera, &icera_driver)

@@ -911,7 +911,6 @@ static void phonesim_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver phonesim_driver = {
-	.name		= "phonesim",
 	.probe		= phonesim_probe,
 	.remove		= phonesim_remove,
 	.enable		= phonesim_enable,
@@ -921,6 +920,8 @@ static struct ofono_modem_driver phonesim_driver = {
 	.post_sim	= phonesim_post_sim,
 	.post_online	= phonesim_post_online,
 };
+
+OFONO_MODEM_DRIVER_BUILTIN(phonesim, &phonesim_driver)
 
 static int localhfp_probe(struct ofono_modem *modem)
 {
@@ -1036,13 +1037,14 @@ static void localhfp_pre_sim(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver localhfp_driver = {
-	.name		= "localhfp",
 	.probe		= localhfp_probe,
 	.remove		= localhfp_remove,
 	.enable		= localhfp_enable,
 	.disable	= localhfp_disable,
 	.pre_sim	= localhfp_pre_sim,
 };
+
+OFONO_MODEM_DRIVER_BUILTIN(localhfp, &localhfp_driver)
 
 static struct ofono_modem *create_modem(GKeyFile *keyfile, const char *group)
 {
@@ -1144,14 +1146,7 @@ done:
 
 static int phonesim_init(void)
 {
-	int err;
 	char *conf_override = getenv("OFONO_PHONESIM_CONFIG");
-
-	err = ofono_modem_driver_register(&phonesim_driver);
-	if (err < 0)
-		return err;
-
-	ofono_modem_driver_register(&localhfp_driver);
 
 	if (conf_override)
 		parse_config(conf_override);
@@ -1173,8 +1168,6 @@ static void phonesim_exit(void)
 
 	g_slist_free(modem_list);
 	modem_list = NULL;
-
-	ofono_modem_driver_unregister(&phonesim_driver);
 }
 
 OFONO_PLUGIN_DEFINE(phonesim, "Phone Simulator driver", VERSION,

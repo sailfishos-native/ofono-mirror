@@ -541,7 +541,6 @@ static void calypso_post_sim(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver calypso_driver = {
-	.name		= "calypso",
 	.probe		= calypso_probe,
 	.remove		= calypso_remove,
 	.enable		= calypso_enable,
@@ -550,16 +549,4 @@ static struct ofono_modem_driver calypso_driver = {
 	.post_sim	= calypso_post_sim,
 };
 
-static int calypso_init(void)
-{
-	return ofono_modem_driver_register(&calypso_driver);
-}
-
-static void calypso_exit(void)
-{
-	ofono_modem_driver_unregister(&calypso_driver);
-}
-
-OFONO_PLUGIN_DEFINE(calypso, "TI Calypso modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT,
-			calypso_init, calypso_exit)
+OFONO_MODEM_DRIVER_BUILTIN(calypso, &calypso_driver)

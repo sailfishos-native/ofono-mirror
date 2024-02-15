@@ -732,7 +732,6 @@ static void ifx_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver ifx_driver = {
-	.name		= "ifx",
 	.probe		= ifx_probe,
 	.remove		= ifx_remove,
 	.enable		= ifx_enable,
@@ -743,15 +742,4 @@ static struct ofono_modem_driver ifx_driver = {
 	.post_online	= ifx_post_online,
 };
 
-static int ifx_init(void)
-{
-	return ofono_modem_driver_register(&ifx_driver);
-}
-
-static void ifx_exit(void)
-{
-	ofono_modem_driver_unregister(&ifx_driver);
-}
-
-OFONO_PLUGIN_DEFINE(ifx, "Infineon modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, ifx_init, ifx_exit)
+OFONO_MODEM_DRIVER_BUILTIN(ifx, &ifx_driver)

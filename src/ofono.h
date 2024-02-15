@@ -233,13 +233,13 @@ gboolean __ofono_modem_remove_atom_watch(struct ofono_modem *modem,
 
 void __ofono_atom_free(struct ofono_atom *atom);
 
-const void *__ofono_atom_driver_builtin_find(const char *name,
-				const struct ofono_atom_driver_desc *start,
-				const struct ofono_atom_driver_desc *stop);
+const void *__ofono_driver_builtin_find(const char *name,
+				const struct ofono_driver_desc *start,
+				const struct ofono_driver_desc *stop);
 
 #define OFONO_DEFINE_ATOM_CREATE(type, atom_type, ...)			\
-extern struct ofono_atom_driver_desc __start___ ## type[];		\
-extern struct ofono_atom_driver_desc __stop___ ## type[];		\
+extern struct ofono_driver_desc __start___ ## type[];			\
+extern struct ofono_driver_desc __stop___ ## type[];			\
 									\
 struct ofono_ ## type *ofono_ ## type ##_create(			\
 				struct ofono_modem *modem,		\
@@ -247,7 +247,7 @@ struct ofono_ ## type *ofono_ ## type ##_create(			\
 				void *data)				\
 {									\
 	const struct ofono_ ## type ## _driver *drv =			\
-		__ofono_atom_driver_builtin_find(driver,		\
+		__ofono_driver_builtin_find(driver,			\
 				__start___ ## type,			\
 				__stop___ ## type);			\
 	struct ofono_ ## type *atom;					\

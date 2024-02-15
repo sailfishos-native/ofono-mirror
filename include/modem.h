@@ -46,7 +46,7 @@ typedef void (*ofono_modem_online_cb_t)(const struct ofono_error *error,
 typedef ofono_bool_t (*ofono_modem_compare_cb_t)(struct ofono_modem *modem,
 							void *user_data);
 
-struct ofono_atom_driver_desc {
+struct ofono_driver_desc {
 	const char *name;
 	const void *driver;
 } __attribute__((aligned(8)));
@@ -54,7 +54,7 @@ struct ofono_atom_driver_desc {
 #define OFONO_ATOM_DRIVER_BUILTIN(type, name, driver)			\
 	_Pragma("GCC diagnostic push")					\
 	_Pragma("GCC diagnostic ignored \"-Wattributes\"")		\
-	static struct ofono_atom_driver_desc				\
+	static struct ofono_driver_desc					\
 		__ofono_builtin_ ## type ## _ ##name			\
 		__attribute__((used, retain, section("__" #type),	\
 				aligned(8))) = {			\
@@ -63,7 +63,6 @@ struct ofono_atom_driver_desc {
 	_Pragma("GCC diagnostic pop")
 
 struct ofono_modem_driver {
-	const char *name;
 	enum ofono_modem_type modem_type;
 
 	/* Detect existence of device and initialize any device-specific data
@@ -92,6 +91,17 @@ struct ofono_modem_driver {
 	/* Populate the atoms available online */
 	void (*post_online)(struct ofono_modem *modem);
 };
+
+#define OFONO_MODEM_DRIVER_BUILTIN(name, driver)				\
+	_Pragma("GCC diagnostic push")					\
+	_Pragma("GCC diagnostic ignored \"-Wattributes\"")		\
+	static struct ofono_driver_desc					\
+		__ofono_builtin_modem_driver_ ##name			\
+		__attribute__((used, retain, section("__modem"),	\
+				aligned(8))) = {			\
+			#name, driver					\
+		};							\
+	_Pragma("GCC diagnostic pop")
 
 void ofono_modem_add_interface(struct ofono_modem *modem,
 				const char *interface);
@@ -136,9 +146,6 @@ int ofono_modem_set_boolean(struct ofono_modem *modem,
 				const char *key, ofono_bool_t value);
 ofono_bool_t ofono_modem_get_boolean(struct ofono_modem *modem,
 					const char *key);
-
-int ofono_modem_driver_register(const struct ofono_modem_driver *);
-void ofono_modem_driver_unregister(const struct ofono_modem_driver *);
 
 struct ofono_modem *ofono_modem_find(ofono_modem_compare_cb_t func,
 					void *user_data);

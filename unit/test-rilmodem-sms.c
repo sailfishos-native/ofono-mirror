@@ -423,7 +423,7 @@ struct ofono_sms {
 	const struct sms_data *sd;
 };
 
-extern struct ofono_atom_driver_desc __start___sms[];
+extern struct ofono_driver_desc __start___sms[];
 
 struct ofono_sms *ofono_sms_create(struct ofono_modem *modem,
 					unsigned int vendor,

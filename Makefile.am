@@ -278,13 +278,10 @@ builtin_sources += $(gril_sources)
 builtin_modules += rildev
 builtin_sources += plugins/rildev.c
 
-builtin_modules += ril
 builtin_sources += plugins/ril.c plugins/ril.h
 
-builtin_modules += infineon
 builtin_sources += plugins/infineon.c
 
-builtin_modules += ril_intel
 builtin_sources += plugins/ril_intel.c
 
 builtin_sources += drivers/rilmodem/vendor.h \
@@ -348,13 +345,10 @@ builtin_sources += $(gisi_sources) \
 			drivers/isimodem/uicc-util.h \
 			drivers/isimodem/uicc-util.c
 
-builtin_modules += isiusb
 builtin_sources += plugins/isiusb.c
 
-builtin_modules += n900
 builtin_sources += plugins/n900.c plugins/nokia-gpio.h plugins/nokia-gpio.c
 
-builtin_modules += u8500
 builtin_sources += plugins/u8500.c
 endif
 
@@ -391,7 +385,6 @@ builtin_sources += $(qmi_sources) \
 			drivers/qmimodem/call-barring.c \
 			drivers/qmimodem/call-forwarding.c
 
-builtin_modules += gobi
 builtin_sources += plugins/gobi.c
 endif
 
@@ -415,7 +408,6 @@ builtin_sources += $(mbim_sources) \
 			drivers/mbimmodem/gprs.c \
 			drivers/mbimmodem/gprs-context.c
 
-builtin_modules += mbim
 builtin_sources += plugins/mbim.c
 endif
 
@@ -489,7 +481,6 @@ builtin_sources += drivers/atmodem/atutil.h \
 			drivers/ifxmodem/stk.c \
 			drivers/ifxmodem/ctm.c
 
-builtin_modules += stemodem
 builtin_sources += drivers/atmodem/atutil.h \
 			drivers/stemodem/stemodem.c \
 			drivers/stemodem/voicecall.c \
@@ -551,41 +542,33 @@ dist_conf_DATA += plugins/phonesim.conf
 endif
 endif
 
-builtin_modules += g1
 builtin_sources += plugins/g1.c
-
-builtin_modules += wavecom
 builtin_sources += plugins/wavecom.c
-
-builtin_modules += calypso
 builtin_sources += plugins/calypso.c
-
-builtin_modules += mbm
 builtin_sources += plugins/mbm.c
-
-builtin_modules += hso
 builtin_sources += plugins/hso.c
-
-builtin_modules += zte
 builtin_sources += plugins/zte.c
-
-builtin_modules += huawei
 builtin_sources += plugins/huawei.c
-
-builtin_modules += sierra
 builtin_sources += plugins/sierra.c
-
-builtin_modules += novatel
 builtin_sources += plugins/novatel.c
-
-builtin_modules += palmpre
 builtin_sources += plugins/palmpre.c
-
-builtin_modules += ifx
 builtin_sources += plugins/ifx.c
-
-builtin_modules += ste
 builtin_sources += plugins/ste.c
+builtin_sources += plugins/cinterion.c
+builtin_sources += plugins/gemalto.c
+builtin_sources += plugins/nokia.c
+builtin_sources += plugins/linktop.c
+builtin_sources += plugins/icera.c
+builtin_sources += plugins/alcatel.c
+builtin_sources += plugins/speedup.c
+builtin_sources += plugins/samsung.c
+builtin_sources += plugins/sim900.c
+builtin_sources += plugins/sim7100.c
+builtin_sources += plugins/telit.c
+builtin_sources += plugins/quectel.c
+builtin_sources += plugins/ublox.c
+builtin_sources += plugins/xmm7xxx.c
+builtin_sources += plugins/droid.c
 
 builtin_modules += stemgr
 builtin_sources += plugins/stemgr.c
@@ -593,53 +576,8 @@ builtin_sources += plugins/stemgr.c
 builtin_modules += caif
 builtin_sources += plugins/caif.c
 
-builtin_modules += cinterion
-builtin_sources += plugins/cinterion.c
-
-builtin_modules += gemalto
-builtin_sources += plugins/gemalto.c
-
-builtin_modules += nokia
-builtin_sources += plugins/nokia.c
-
-builtin_modules += linktop
-builtin_sources += plugins/linktop.c
-
-builtin_modules += icera
-builtin_sources += plugins/icera.c
-
-builtin_modules += alcatel
-builtin_sources += plugins/alcatel.c
-
-builtin_modules += speedup
-builtin_sources += plugins/speedup.c
-
-builtin_modules += samsung
-builtin_sources += plugins/samsung.c
-
-builtin_modules += sim900
-builtin_sources += plugins/sim900.c
-
-builtin_modules += sim7100
-builtin_sources += plugins/sim7100.c
-
 builtin_modules += connman
 builtin_sources += plugins/connman.c
-
-builtin_modules += telit
-builtin_sources += plugins/telit.c
-
-builtin_modules += quectel
-builtin_sources += plugins/quectel.c
-
-builtin_modules += ublox
-builtin_sources += plugins/ublox.c
-
-builtin_modules += xmm7xxx
-builtin_sources += plugins/xmm7xxx.c
-
-builtin_modules += droid
-builtin_sources += plugins/droid.c
 
 if BLUETOOTH
 if BLUEZ4

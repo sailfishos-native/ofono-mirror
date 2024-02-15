@@ -225,7 +225,6 @@ static void cinterion_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver cinterion_driver = {
-	.name		= "cinterion",
 	.probe		= cinterion_probe,
 	.remove		= cinterion_remove,
 	.enable		= cinterion_enable,
@@ -236,15 +235,4 @@ static struct ofono_modem_driver cinterion_driver = {
 	.post_online	= cinterion_post_online,
 };
 
-static int cinterion_init(void)
-{
-	return ofono_modem_driver_register(&cinterion_driver);
-}
-
-static void cinterion_exit(void)
-{
-	ofono_modem_driver_unregister(&cinterion_driver);
-}
-
-OFONO_PLUGIN_DEFINE(cinterion, "Cinterion driver plugin", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, cinterion_init, cinterion_exit)
+OFONO_MODEM_DRIVER_BUILTIN(cinterion, &cinterion_driver)

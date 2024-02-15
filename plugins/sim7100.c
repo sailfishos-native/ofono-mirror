@@ -250,7 +250,6 @@ static void sim7100_post_sim(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver sim7100_driver = {
-	.name		= "sim7100",
 	.probe		= sim7100_probe,
 	.remove		= sim7100_remove,
 	.enable		= sim7100_enable,
@@ -259,15 +258,4 @@ static struct ofono_modem_driver sim7100_driver = {
 	.post_sim	= sim7100_post_sim,
 };
 
-static int sim7100_init(void)
-{
-	return ofono_modem_driver_register(&sim7100_driver);
-}
-
-static void sim7100_exit(void)
-{
-	ofono_modem_driver_unregister(&sim7100_driver);
-}
-
-OFONO_PLUGIN_DEFINE(sim7100, "SIMCom SIM7100E modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, sim7100_init, sim7100_exit)
+OFONO_MODEM_DRIVER_BUILTIN(sim7100, &sim7100_driver)

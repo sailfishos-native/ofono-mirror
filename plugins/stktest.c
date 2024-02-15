@@ -219,7 +219,6 @@ static void stktest_post_online(struct ofono_modem *modem)
 
 static struct ofono_modem_driver stktest_driver = {
 	.modem_type	= OFONO_MODEM_TYPE_TEST,
-	.name		= "stktest",
 	.probe		= stktest_probe,
 	.remove		= stktest_remove,
 	.enable		= stktest_enable,
@@ -230,14 +229,10 @@ static struct ofono_modem_driver stktest_driver = {
 	.post_online	= stktest_post_online,
 };
 
+OFONO_MODEM_DRIVER_BUILTIN(stktest, &stktest_driver)
+
 static int stktest_init(void)
 {
-	int err;
-
-	err = ofono_modem_driver_register(&stktest_driver);
-	if (err < 0)
-		return err;
-
 	stktest = ofono_modem_create("stktest", "stktest");
 	ofono_modem_register(stktest);
 
@@ -247,7 +242,6 @@ static int stktest_init(void)
 static void stktest_exit(void)
 {
 	ofono_modem_remove(stktest);
-	ofono_modem_driver_unregister(&stktest_driver);
 }
 
 OFONO_PLUGIN_DEFINE(stktest, "STK End-to-End tester driver", VERSION,

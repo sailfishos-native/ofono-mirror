@@ -477,7 +477,6 @@ static void mbm_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver mbm_driver = {
-	.name		= "mbm",
 	.probe		= mbm_probe,
 	.remove		= mbm_remove,
 	.enable		= mbm_enable,
@@ -488,15 +487,4 @@ static struct ofono_modem_driver mbm_driver = {
 	.post_online	= mbm_post_online,
 };
 
-static int mbm_init(void)
-{
-	return ofono_modem_driver_register(&mbm_driver);
-}
-
-static void mbm_exit(void)
-{
-	ofono_modem_driver_unregister(&mbm_driver);
-}
-
-OFONO_PLUGIN_DEFINE(mbm, "Ericsson MBM modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, mbm_init, mbm_exit)
+OFONO_MODEM_DRIVER_BUILTIN(mbm, &mbm_driver)

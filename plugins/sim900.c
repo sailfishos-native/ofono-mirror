@@ -451,7 +451,6 @@ static void sim900_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver sim900_driver = {
-	.name		= "sim900",
 	.probe		= sim900_probe,
 	.remove		= sim900_remove,
 	.enable		= sim900_enable,
@@ -461,15 +460,4 @@ static struct ofono_modem_driver sim900_driver = {
 	.post_online	= sim900_post_online,
 };
 
-static int sim900_init(void)
-{
-	return ofono_modem_driver_register(&sim900_driver);
-}
-
-static void sim900_exit(void)
-{
-	ofono_modem_driver_unregister(&sim900_driver);
-}
-
-OFONO_PLUGIN_DEFINE(sim900, "SIM900 modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, sim900_init, sim900_exit)
+OFONO_MODEM_DRIVER_BUILTIN(sim900, &sim900_driver)

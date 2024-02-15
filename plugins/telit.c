@@ -508,7 +508,6 @@ static void telit_remove(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver telit_driver = {
-	.name		= "telit",
 	.probe		= telit_probe,
 	.remove		= telit_remove,
 	.enable		= telit_enable,
@@ -517,17 +516,4 @@ static struct ofono_modem_driver telit_driver = {
 	.post_online	= telit_post_online,
 };
 
-static int telit_init(void)
-{
-	DBG("");
-
-	return ofono_modem_driver_register(&telit_driver);
-}
-
-static void telit_exit(void)
-{
-	ofono_modem_driver_unregister(&telit_driver);
-}
-
-OFONO_PLUGIN_DEFINE(telit, "Telit driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, telit_init, telit_exit)
+OFONO_MODEM_DRIVER_BUILTIN(telit, &telit_driver)

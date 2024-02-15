@@ -873,7 +873,6 @@ static void huawei_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver huawei_driver = {
-	.name		= "huawei",
 	.probe		= huawei_probe,
 	.remove		= huawei_remove,
 	.enable		= huawei_enable,
@@ -884,15 +883,4 @@ static struct ofono_modem_driver huawei_driver = {
 	.post_online	= huawei_post_online,
 };
 
-static int huawei_init(void)
-{
-	return ofono_modem_driver_register(&huawei_driver);
-}
-
-static void huawei_exit(void)
-{
-	ofono_modem_driver_unregister(&huawei_driver);
-}
-
-OFONO_PLUGIN_DEFINE(huawei, "HUAWEI Mobile modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, huawei_init, huawei_exit)
+OFONO_MODEM_DRIVER_BUILTIN(huawei, &huawei_driver)

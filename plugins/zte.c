@@ -345,7 +345,6 @@ static void zte_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver zte_driver = {
-	.name		= "zte",
 	.probe		= zte_probe,
 	.remove		= zte_remove,
 	.enable		= zte_enable,
@@ -356,15 +355,4 @@ static struct ofono_modem_driver zte_driver = {
 	.post_online	= zte_post_online,
 };
 
-static int zte_init(void)
-{
-	return ofono_modem_driver_register(&zte_driver);
-}
-
-static void zte_exit(void)
-{
-	ofono_modem_driver_unregister(&zte_driver);
-}
-
-OFONO_PLUGIN_DEFINE(zte, "ZTE modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, zte_init, zte_exit)
+OFONO_MODEM_DRIVER_BUILTIN(zte, &zte_driver)

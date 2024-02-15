@@ -342,7 +342,6 @@ static void hfp_post_sim(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver hfp_driver = {
-	.name		= "hfp",
 	.modem_type	= OFONO_MODEM_TYPE_HFP,
 	.probe		= hfp_probe,
 	.remove		= hfp_remove,
@@ -351,6 +350,8 @@ static struct ofono_modem_driver hfp_driver = {
 	.pre_sim	= hfp_pre_sim,
 	.post_sim	= hfp_post_sim,
 };
+
+OFONO_MODEM_DRIVER_BUILTIN(hfp, &hfp_driver)
 
 static void bcs_notify(GAtResult *result, gpointer user_data)
 {
@@ -849,18 +850,10 @@ static int hfp_init(void)
 		return err;
 	}
 
-	err = ofono_modem_driver_register(&hfp_driver);
-	if (err < 0) {
-		g_dbus_unregister_interface(conn, HFP_EXT_PROFILE_PATH,
-						BLUEZ_PROFILE_INTERFACE);
-		return err;
-	}
-
 	bluez = g_dbus_client_new(conn, BLUEZ_SERVICE, BLUEZ_MANAGER_PATH);
 	if (bluez == NULL) {
 		g_dbus_unregister_interface(conn, HFP_EXT_PROFILE_PATH,
 						BLUEZ_PROFILE_INTERFACE);
-		ofono_modem_driver_unregister(&hfp_driver);
 		return -ENOMEM;
 	}
 
@@ -883,7 +876,6 @@ static void hfp_exit(void)
 
 	ofono_handsfree_card_driver_unregister(&hfp16_hf_driver);
 
-	ofono_modem_driver_unregister(&hfp_driver);
 	g_dbus_client_unref(bluez);
 
 	ofono_handsfree_audio_unref();

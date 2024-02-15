@@ -599,7 +599,6 @@ static int ril_disable(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver ril_driver = {
-	.name = "ril_intel",
 	.probe = ril_probe,
 	.remove = ril_remove,
 	.enable = ril_enable,
@@ -610,15 +609,4 @@ static struct ofono_modem_driver ril_driver = {
 	.set_online = ril_set_online,
 };
 
-static int ril_init(void)
-{
-	return ofono_modem_driver_register(&ril_driver);
-}
-
-static void ril_exit(void)
-{
-	ofono_modem_driver_unregister(&ril_driver);
-}
-
-OFONO_PLUGIN_DEFINE(ril_intel, "Intel RIL-based modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, ril_init, ril_exit)
+OFONO_MODEM_DRIVER_BUILTIN(ril_intel, &ril_driver)

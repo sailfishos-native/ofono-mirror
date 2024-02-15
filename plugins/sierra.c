@@ -250,7 +250,6 @@ static void sierra_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver sierra_driver = {
-	.name		= "sierra",
 	.probe		= sierra_probe,
 	.remove		= sierra_remove,
 	.enable		= sierra_enable,
@@ -261,15 +260,4 @@ static struct ofono_modem_driver sierra_driver = {
 	.post_online	= sierra_post_online,
 };
 
-static int sierra_init(void)
-{
-	return ofono_modem_driver_register(&sierra_driver);
-}
-
-static void sierra_exit(void)
-{
-	ofono_modem_driver_unregister(&sierra_driver);
-}
-
-OFONO_PLUGIN_DEFINE(sierra, "Sierra Wireless modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, sierra_init, sierra_exit)
+OFONO_MODEM_DRIVER_BUILTIN(sierra, &sierra_driver)

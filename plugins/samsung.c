@@ -234,7 +234,6 @@ static void samsung_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver samsung_driver = {
-	.name		= "samsung",
 	.probe		= samsung_probe,
 	.remove		= samsung_remove,
 	.enable		= samsung_enable,
@@ -244,15 +243,4 @@ static struct ofono_modem_driver samsung_driver = {
 	.post_online	= samsung_post_online,
 };
 
-static int samsung_init(void)
-{
-	return ofono_modem_driver_register(&samsung_driver);
-}
-
-static void samsung_exit(void)
-{
-	ofono_modem_driver_unregister(&samsung_driver);
-}
-
-OFONO_PLUGIN_DEFINE(samsung, "Samsung modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, samsung_init, samsung_exit)
+OFONO_MODEM_DRIVER_BUILTIN(samsung, &samsung_driver)

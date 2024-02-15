@@ -151,7 +151,6 @@ static void wavecom_post_sim(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver wavecom_driver = {
-	.name		= "wavecom",
 	.probe		= wavecom_probe,
 	.remove		= wavecom_remove,
 	.enable		= wavecom_enable,
@@ -160,15 +159,4 @@ static struct ofono_modem_driver wavecom_driver = {
 	.post_sim	= wavecom_post_sim,
 };
 
-static int wavecom_init(void)
-{
-	return ofono_modem_driver_register(&wavecom_driver);
-}
-
-static void wavecom_exit(void)
-{
-	ofono_modem_driver_unregister(&wavecom_driver);
-}
-
-OFONO_PLUGIN_DEFINE(wavecom, "Wavecom driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, wavecom_init, wavecom_exit)
+OFONO_MODEM_DRIVER_BUILTIN(wavecom, &wavecom_driver)

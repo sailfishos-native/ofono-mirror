@@ -1701,7 +1701,6 @@ static void xmm7xxx_remove(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver xmm7xxx_driver = {
-	.name		= "xmm7xxx",
 	.probe		= xmm7xxx_probe,
 	.remove		= xmm7xxx_remove,
 	.enable		= xmm7xxx_enable,
@@ -1712,17 +1711,4 @@ static struct ofono_modem_driver xmm7xxx_driver = {
 	.post_online	= xmm7xxx_post_online,
 };
 
-static int xmm7xxx_init(void)
-{
-	DBG("");
-
-	return ofono_modem_driver_register(&xmm7xxx_driver);
-}
-
-static void xmm7xxx_exit(void)
-{
-	ofono_modem_driver_unregister(&xmm7xxx_driver);
-}
-
-OFONO_PLUGIN_DEFINE(xmm7xxx, "Intel XMM7xxx driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, xmm7xxx_init, xmm7xxx_exit)
+OFONO_MODEM_DRIVER_BUILTIN(xmm7xxx, &xmm7xxx_driver)

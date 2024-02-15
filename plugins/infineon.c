@@ -40,7 +40,6 @@ static int inf_probe(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver infineon_driver = {
-	.name = "infineon",
 	.probe = inf_probe,
 	.remove = ril_remove,
 	.enable = ril_enable,
@@ -51,27 +50,4 @@ static struct ofono_modem_driver infineon_driver = {
 	.set_online = ril_set_online,
 };
 
-/*
- * This plugin is a device plugin for infineon modems that use RIL interface.
- * The plugin 'rildev' is used to determine which RIL plugin should be loaded
- * based upon an environment variable.
- */
-static int inf_init(void)
-{
-	int retval = 0;
-
-	retval = ofono_modem_driver_register(&infineon_driver);
-	if (retval != 0)
-		DBG("ofono_modem_driver_register returned: %d", retval);
-
-	return retval;
-}
-
-static void inf_exit(void)
-{
-	DBG("");
-	ofono_modem_driver_unregister(&infineon_driver);
-}
-
-OFONO_PLUGIN_DEFINE(infineon, "Infineon modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, inf_init, inf_exit)
+OFONO_MODEM_DRIVER_BUILTIN(infineon, &infineon_driver)

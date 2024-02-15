@@ -490,7 +490,6 @@ static void ublox_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver ublox_driver = {
-	.name		= "ublox",
 	.probe		= ublox_probe,
 	.remove		= ublox_remove,
 	.enable		= ublox_enable,
@@ -501,15 +500,4 @@ static struct ofono_modem_driver ublox_driver = {
 	.post_online	= ublox_post_online,
 };
 
-static int ublox_init(void)
-{
-	return ofono_modem_driver_register(&ublox_driver);
-}
-
-static void ublox_exit(void)
-{
-	ofono_modem_driver_unregister(&ublox_driver);
-}
-
-OFONO_PLUGIN_DEFINE(ublox, "u-blox modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, ublox_init, ublox_exit)
+OFONO_MODEM_DRIVER_BUILTIN(ublox, &ublox_driver)

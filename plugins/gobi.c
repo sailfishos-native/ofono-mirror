@@ -766,7 +766,6 @@ static void gobi_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver gobi_driver = {
-	.name		= "gobi",
 	.probe		= gobi_probe,
 	.remove		= gobi_remove,
 	.enable		= gobi_enable,
@@ -777,15 +776,4 @@ static struct ofono_modem_driver gobi_driver = {
 	.post_online	= gobi_post_online,
 };
 
-static int gobi_init(void)
-{
-	return ofono_modem_driver_register(&gobi_driver);
-}
-
-static void gobi_exit(void)
-{
-	ofono_modem_driver_unregister(&gobi_driver);
-}
-
-OFONO_PLUGIN_DEFINE(gobi, "Qualcomm Gobi modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, gobi_init, gobi_exit)
+OFONO_MODEM_DRIVER_BUILTIN(gobi, &gobi_driver)

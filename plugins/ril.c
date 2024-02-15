@@ -439,7 +439,6 @@ int ril_disable(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver ril_driver = {
-	.name = "ril",
 	.probe = ril_probe,
 	.remove = ril_remove,
 	.enable = ril_enable,
@@ -450,26 +449,4 @@ static struct ofono_modem_driver ril_driver = {
 	.set_online = ril_set_online,
 };
 
-/*
- * This plugin is a generic ( aka default ) device plugin for RIL-based devices.
- * The plugin 'rildev' is used to determine which RIL plugin should be loaded
- * based upon an environment variable.
- */
-static int ril_init(void)
-{
-	int retval = ofono_modem_driver_register(&ril_driver);
-
-	if (retval != 0)
-		DBG("ofono_modem_driver_register returned: %d", retval);
-
-	return retval;
-}
-
-static void ril_exit(void)
-{
-	DBG("");
-	ofono_modem_driver_unregister(&ril_driver);
-}
-
-OFONO_PLUGIN_DEFINE(ril, "RIL modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, ril_init, ril_exit)
+OFONO_MODEM_DRIVER_BUILTIN(ril, &ril_driver)

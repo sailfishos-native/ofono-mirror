@@ -328,7 +328,6 @@ static void novatel_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver novatel_driver = {
-	.name		= "novatel",
 	.probe		= novatel_probe,
 	.remove		= novatel_remove,
 	.enable		= novatel_enable,
@@ -339,15 +338,4 @@ static struct ofono_modem_driver novatel_driver = {
 	.post_online	= novatel_post_online,
 };
 
-static int novatel_init(void)
-{
-	return ofono_modem_driver_register(&novatel_driver);
-}
-
-static void novatel_exit(void)
-{
-	ofono_modem_driver_unregister(&novatel_driver);
-}
-
-OFONO_PLUGIN_DEFINE(novatel, "Novatel Wireless modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, novatel_init, novatel_exit)
+OFONO_MODEM_DRIVER_BUILTIN(novatel, &novatel_driver)

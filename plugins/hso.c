@@ -455,7 +455,6 @@ static void hso_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver hso_driver = {
-	.name		= "hso",
 	.probe		= hso_probe,
 	.remove		= hso_remove,
 	.enable		= hso_enable,
@@ -466,15 +465,4 @@ static struct ofono_modem_driver hso_driver = {
 	.post_online	= hso_post_online,
 };
 
-static int hso_init(void)
-{
-	return ofono_modem_driver_register(&hso_driver);
-}
-
-static void hso_exit(void)
-{
-	ofono_modem_driver_unregister(&hso_driver);
-}
-
-OFONO_PLUGIN_DEFINE(hso, "Option HSO modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, hso_init, hso_exit)
+OFONO_MODEM_DRIVER_BUILTIN(hso, &hso_driver)

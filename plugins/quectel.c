@@ -1386,7 +1386,6 @@ static void quectel_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver quectel_driver = {
-	.name			= "quectel",
 	.probe			= quectel_probe,
 	.remove			= quectel_remove,
 	.enable			= quectel_enable,
@@ -1397,15 +1396,4 @@ static struct ofono_modem_driver quectel_driver = {
 	.post_online		= quectel_post_online,
 };
 
-static int quectel_init(void)
-{
-	return ofono_modem_driver_register(&quectel_driver);
-}
-
-static void quectel_exit(void)
-{
-	ofono_modem_driver_unregister(&quectel_driver);
-}
-
-OFONO_PLUGIN_DEFINE(quectel, "Quectel driver", VERSION,
-    OFONO_PLUGIN_PRIORITY_DEFAULT, quectel_init, quectel_exit)
+OFONO_MODEM_DRIVER_BUILTIN(quectel, &quectel_driver)

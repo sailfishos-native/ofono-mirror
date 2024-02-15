@@ -416,7 +416,7 @@ struct ofono_call_barring {
 	const struct cb_data *cbd;
 };
 
-extern struct ofono_atom_driver_desc __start___call_barring[];
+extern struct ofono_driver_desc __start___call_barring[];
 
 struct ofono_call_barring *ofono_call_barring_create(struct ofono_modem *modem,
 							unsigned int vendor,

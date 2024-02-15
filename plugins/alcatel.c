@@ -229,7 +229,6 @@ static void alcatel_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver alcatel_driver = {
-	.name		= "alcatel",
 	.probe		= alcatel_probe,
 	.remove		= alcatel_remove,
 	.enable		= alcatel_enable,
@@ -239,15 +238,4 @@ static struct ofono_modem_driver alcatel_driver = {
 	.post_online	= alcatel_post_online,
 };
 
-static int alcatel_init(void)
-{
-	return ofono_modem_driver_register(&alcatel_driver);
-}
-
-static void alcatel_exit(void)
-{
-	ofono_modem_driver_unregister(&alcatel_driver);
-}
-
-OFONO_PLUGIN_DEFINE(alcatel, "Alcatel modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, alcatel_init, alcatel_exit)
+OFONO_MODEM_DRIVER_BUILTIN(alcatel, &alcatel_driver)

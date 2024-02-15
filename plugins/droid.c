@@ -175,7 +175,6 @@ static void droid_post_sim(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver droid_driver = {
-	.name		= "droid",
 	.probe		= droid_probe,
 	.remove		= droid_remove,
 	.enable		= droid_enable,
@@ -184,23 +183,4 @@ static struct ofono_modem_driver droid_driver = {
 	.post_sim	= droid_post_sim,
 };
 
-static int droid_init(void)
-{
-	return ofono_modem_driver_register(&droid_driver);
-}
-
-static void droid_exit(void)
-{
-	ofono_modem_driver_unregister(&droid_driver);
-}
-
-/* Modem in Motorola Droid has few different interfaces:
- * -- gsmmux over serial -- using very non-standard commands
- * -- QMI -- unfortunately not usable without gsmmux
- * -- standard AT over ttyUSB4 -- unfortunately quite broken
- *
- * This driver is for the standard AT commands.
- */
-
-OFONO_PLUGIN_DEFINE(droid, "Motorola Droid modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, droid_init, droid_exit)
+OFONO_MODEM_DRIVER_BUILTIN(droid, &droid_driver)

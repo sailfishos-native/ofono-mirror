@@ -537,7 +537,6 @@ static int n900_disable(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver n900_driver = {
-	.name = "n900",
 	.probe = n900_probe,
 	.remove = n900_remove,
 	.enable = n900_enable,
@@ -548,15 +547,4 @@ static struct ofono_modem_driver n900_driver = {
 	.post_online = n900_post_online,
 };
 
-static int n900_init(void)
-{
-	return ofono_modem_driver_register(&n900_driver);
-}
-
-static void n900_exit(void)
-{
-	ofono_modem_driver_unregister(&n900_driver);
-}
-
-OFONO_PLUGIN_DEFINE(n900, "Nokia N900 modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, n900_init, n900_exit)
+OFONO_MODEM_DRIVER_BUILTIN(n900, &n900_driver)

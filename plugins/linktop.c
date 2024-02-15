@@ -254,7 +254,6 @@ static void linktop_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver linktop_driver = {
-	.name		= "linktop",
 	.probe		= linktop_probe,
 	.remove		= linktop_remove,
 	.enable		= linktop_enable,
@@ -265,15 +264,4 @@ static struct ofono_modem_driver linktop_driver = {
 	.post_online	= linktop_post_online,
 };
 
-static int linktop_init(void)
-{
-	return ofono_modem_driver_register(&linktop_driver);
-}
-
-static void linktop_exit(void)
-{
-	ofono_modem_driver_unregister(&linktop_driver);
-}
-
-OFONO_PLUGIN_DEFINE(linktop, "Linktop Datacard modem driver", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, linktop_init, linktop_exit)
+OFONO_MODEM_DRIVER_BUILTIN(linktop, &linktop_driver)

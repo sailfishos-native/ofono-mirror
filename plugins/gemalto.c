@@ -639,7 +639,6 @@ static void gemalto_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver gemalto_driver = {
-	.name		= "gemalto",
 	.probe		= gemalto_probe,
 	.remove		= gemalto_remove,
 	.enable		= gemalto_enable,
@@ -650,15 +649,4 @@ static struct ofono_modem_driver gemalto_driver = {
 	.post_online	= gemalto_post_online,
 };
 
-static int gemalto_init(void)
-{
-	return ofono_modem_driver_register(&gemalto_driver);
-}
-
-static void gemalto_exit(void)
-{
-	ofono_modem_driver_unregister(&gemalto_driver);
-}
-
-OFONO_PLUGIN_DEFINE(gemalto, "Gemalto modem plugin", VERSION,
-		OFONO_PLUGIN_PRIORITY_DEFAULT, gemalto_init, gemalto_exit)
+OFONO_MODEM_DRIVER_BUILTIN(gemalto, &gemalto_driver)

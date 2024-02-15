@@ -192,7 +192,6 @@ static void g1_post_sim(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver g1_driver = {
-	.name		= "g1",
 	.probe		= g1_probe,
 	.remove		= g1_remove,
 	.enable		= g1_enable,
@@ -201,15 +200,4 @@ static struct ofono_modem_driver g1_driver = {
 	.post_sim	= g1_post_sim,
 };
 
-static int g1_init(void)
-{
-	return ofono_modem_driver_register(&g1_driver);
-}
-
-static void g1_exit(void)
-{
-	ofono_modem_driver_unregister(&g1_driver);
-}
-
-OFONO_PLUGIN_DEFINE(g1, "HTC G1 modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, g1_init, g1_exit)
+OFONO_MODEM_DRIVER_BUILTIN(g1, &g1_driver)

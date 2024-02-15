@@ -653,7 +653,7 @@ struct rilmodem_test_data test_5 = {
 	.num_steps = G_N_ELEMENTS(steps_test_5)
 };
 
-extern struct ofono_atom_driver_desc __start___gprs[];
+extern struct ofono_driver_desc __start___gprs[];
 
 static void server_connect_cb(gpointer data)
 {

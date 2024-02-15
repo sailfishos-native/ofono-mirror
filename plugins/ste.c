@@ -507,7 +507,6 @@ static void ste_post_online(struct ofono_modem *modem)
 }
 
 static struct ofono_modem_driver ste_driver = {
-	.name		= "ste",
 	.probe		= ste_probe,
 	.remove		= ste_remove,
 	.enable		= ste_enable,
@@ -518,15 +517,4 @@ static struct ofono_modem_driver ste_driver = {
 	.post_online	= ste_post_online,
 };
 
-static int ste_init(void)
-{
-	return ofono_modem_driver_register(&ste_driver);
-}
-
-static void ste_exit(void)
-{
-	ofono_modem_driver_unregister(&ste_driver);
-}
-
-OFONO_PLUGIN_DEFINE(ste, "ST-Ericsson modem driver", VERSION,
-			OFONO_PLUGIN_PRIORITY_DEFAULT, ste_init, ste_exit)
+OFONO_MODEM_DRIVER_BUILTIN(ste, &ste_driver)

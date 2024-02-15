@@ -392,7 +392,7 @@ struct ofono_call_settings {
 	void *driver_data;
 };
 
-extern struct ofono_atom_driver_desc __start___call_settings[];
+extern struct ofono_driver_desc __start___call_settings[];
 
 struct ofono_call_settings *ofono_call_settings_create(struct ofono_modem *modem,
 							unsigned int vendor,
