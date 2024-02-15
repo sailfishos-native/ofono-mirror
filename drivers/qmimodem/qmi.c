@@ -466,6 +466,7 @@ static const struct {
 	{ 0x0053, "HARDWARE_RESTRICTED"		},
 	{ 0x0054, "ACK_NOT_SENT"		},
 	{ 0x0055, "INJECT_TIMEOUT"		},
+	{ 0x005c, "SUPS_FAILURE_CAUSE"		},
 	{ }
 };
 
