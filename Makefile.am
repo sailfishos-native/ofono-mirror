@@ -573,9 +573,6 @@ builtin_sources += plugins/droid.c
 builtin_modules += stemgr
 builtin_sources += plugins/stemgr.c
 
-builtin_modules += caif
-builtin_sources += plugins/caif.c
-
 builtin_modules += connman
 builtin_sources += plugins/connman.c
 
