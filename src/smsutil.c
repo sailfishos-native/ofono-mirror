@@ -2223,7 +2223,7 @@ static inline int sms_text_capacity_gsm(int max, int offset)
 char *sms_decode_text(GSList *sms_list)
 {
 	GSList *l;
-	GString *str;
+	struct l_string *str;
 	const struct sms *sms;
 	int guess_size = g_slist_length(sms_list);
 	char *utf8;
@@ -2235,7 +2235,7 @@ char *sms_decode_text(GSList *sms_list)
 	else
 		guess_size = (guess_size - 1) * 160;
 
-	str = g_string_sized_new(guess_size);
+	str = l_string_new(guess_size);
 
 	for (l = sms_list; l; l = l->next) {
 		guint8 taken = 0;
@@ -2301,7 +2301,7 @@ char *sms_decode_text(GSList *sms_list)
 								locking_shift,
 								single_shift);
 			if (converted) {
-				g_string_append(str, converted);
+				l_string_append(str, converted);
 				l_free(converted);
 			}
 		} else {
@@ -2344,14 +2344,14 @@ char *sms_decode_text(GSList *sms_list)
 
 		converted = l_utf8_from_utf16(utf16, utf16_size);
 		if (converted) {
-			g_string_append(str, converted);
+			l_string_append(str, converted);
 			l_free(converted);
 		}
 
 		l_free(utf16);
 	}
 
-	utf8 = g_string_free(str, FALSE);
+	utf8 = l_string_unwrap(str);
 
 	return utf8;
 }
