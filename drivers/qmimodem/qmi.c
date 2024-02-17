@@ -1115,7 +1115,7 @@ static const void *tlv_get(const void *data, uint16_t size,
 	return NULL;
 }
 
-bool qmi_device_get_service_version(struct qmi_device *device, uint8_t type,
+bool qmi_device_get_service_version(struct qmi_device *device, uint16_t type,
 					uint16_t *major, uint16_t *minor)
 {
 	struct qmi_version *info;
@@ -1134,7 +1134,7 @@ bool qmi_device_get_service_version(struct qmi_device *device, uint8_t type,
 	return false;
 }
 
-bool qmi_device_has_service(struct qmi_device *device, uint8_t type)
+bool qmi_device_has_service(struct qmi_device *device, uint16_t type)
 {
 	struct qmi_version *info;
 	int i;
@@ -2171,7 +2171,7 @@ static void service_create_shared_data_free(gpointer user_data)
 	g_free(data);
 }
 
-bool qmi_service_create_shared(struct qmi_device *device, uint8_t type,
+bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 			qmi_create_func_t func, void *user_data,
 			qmi_destroy_func_t destroy)
 {
@@ -2227,7 +2227,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint8_t type,
 }
 
 bool qmi_service_create(struct qmi_device *device,
-				uint8_t type, qmi_create_func_t func,
+				uint16_t type, qmi_create_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
 	return qmi_service_create_shared(device, type, func,
