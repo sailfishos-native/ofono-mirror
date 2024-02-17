@@ -103,7 +103,7 @@ static void query_cb(struct qmi_result *result, void *user_data)
 	 * FIXME - shall we fallback to 0x10 if there is no extended info?
 	 */
 	p = qmi_result_get(result, 0x16, &length);
-	if (p) {
+	if (p && length) {
 		struct ofono_call_forwarding_condition *list;
 		const uint8_t *end = p + length;
 		int i;
