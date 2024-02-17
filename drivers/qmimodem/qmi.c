@@ -299,6 +299,7 @@ static void __hexdump(const char dir, const unsigned char *buf, size_t len,
 
 	if (i % 16 > 0) {
 		size_t j;
+
 		for (j = (i % 16); j < 16; j++) {
 			str[(j * 3) + 1] = ' ';
 			str[(j * 3) + 2] = ' ';
@@ -720,6 +721,7 @@ static uint16_t __request_submit(struct qmi_device *device,
 		req->tid = hdr->transaction;
 	} else {
 		struct qmi_service_hdr *hdr;
+
 		hdr = req->buf + QMI_MUX_HDR_SIZE;
 		hdr->type = 0x00;
 		hdr->transaction = device->next_service_tid++;
@@ -1142,9 +1144,8 @@ bool qmi_device_has_service(struct qmi_device *device, uint16_t type)
 	for (i = 0, info = device->version_list;
 			i < device->version_count;
 			i++, info++) {
-		if (info->type == type) {
+		if (info->type == type)
 			return true;
-		}
 	}
 
 	return false;
@@ -2260,7 +2261,7 @@ void qmi_service_unref(struct qmi_service *service)
 	unsigned int hash_id;
 
 	if (!service)
-                return;
+		return;
 
 	if (__sync_sub_and_fetch(&service->ref_count, 1))
 		return;
