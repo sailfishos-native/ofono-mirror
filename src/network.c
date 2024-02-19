@@ -365,7 +365,7 @@ static char *get_operator_display_name(struct ofono_netreg *netreg)
 	 */
 
 	if (opd == NULL) {
-		g_strlcpy(name, "", len);
+		l_strlcpy(name, "", len);
 		return name;
 	}
 
@@ -386,7 +386,7 @@ static char *get_operator_display_name(struct ofono_netreg *netreg)
 	spn = ofono_sim_get_spn(netreg->sim);
 
 	if (spn == NULL || strlen(spn) == 0) {
-		g_strlcpy(name, plmn, len);
+		l_strlcpy(name, plmn, len);
 		return name;
 	}
 
