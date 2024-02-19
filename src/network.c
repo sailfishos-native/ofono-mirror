@@ -127,14 +127,14 @@ static char **network_operator_technologies(struct network_operator_data *opd)
 			ntechs += 1;
 	}
 
-	techs = g_new0(char *, ntechs + 1);
+	techs = l_new(char *, ntechs + 1);
 	ntechs = 0;
 
 	for (i = 0; i < sizeof(opd->techs) * 8; i++) {
 		if (!(opd->techs & (1 << i)))
 			continue;
 
-		techs[ntechs++] = g_strdup(registration_tech_to_string(i));
+		techs[ntechs++] = l_strdup(registration_tech_to_string(i));
 	}
 
 	return techs;
@@ -345,7 +345,7 @@ static void set_network_operator_techs(struct network_operator_data *opd,
 					OFONO_NETWORK_REGISTRATION_INTERFACE,
 					"Technologies", DBUS_TYPE_STRING,
 					&technologies);
-	g_strfreev(technologies);
+	l_strv_free(technologies);
 }
 
 static char *get_operator_display_name(struct ofono_netreg *netreg)
@@ -553,7 +553,7 @@ static void append_operator_properties(struct network_operator_data *opd,
 						DBUS_TYPE_STRING,
 						&technologies);
 
-		g_strfreev(technologies);
+		l_strv_free(technologies);
 	}
 
 	if (opd->eons_info && opd->eons_info->info) {
