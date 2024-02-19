@@ -28,6 +28,7 @@
 #include <stdio.h>
 #include <errno.h>
 
+#include <ell/ell.h>
 #include <glib.h>
 
 #include <ofono/log.h>
@@ -797,7 +798,7 @@ static void xlema_notify(GAtResult *result, gpointer user_data)
 	int index, total_cnt;
 	const char *number;
 	int len;
-	int count = (vd->en_list == NULL) ? 0 : g_strv_length(vd->en_list);
+	int count = l_strv_length(vd->en_list);
 
 	g_at_result_iter_init(&iter, result);
 
@@ -826,10 +827,10 @@ static void xlema_notify(GAtResult *result, gpointer user_data)
 		goto done;
 
 	if (vd->en_list == NULL)
-		vd->en_list = g_new0(char *, total_cnt + 1);
+		vd->en_list = l_new(char *, total_cnt + 1);
 
 	len = strspn(number, "0123456789");
-	vd->en_list[count] = g_strndup(number, len);
+	vd->en_list[count] = l_strndup(number, len);
 
 	if (number[len] != '\0')
 		ofono_warn("Malformed emergency number: %.*s", len, number);
@@ -841,7 +842,7 @@ done:
 	if (vd->en_list) {
 		ofono_voicecall_en_list_notify(vc, vd->en_list);
 
-		g_strfreev(vd->en_list);
+		l_strv_free(vd->en_list);
 		vd->en_list = NULL;
 	}
 }
@@ -866,7 +867,7 @@ static void xlema_read(gboolean ok, GAtResult *result, gpointer user_data)
 	while (g_at_result_iter_next(&iter, "+XLEMA:"))
 		num += 1;
 
-	vd->en_list = g_new0(char *, num + 1);
+	vd->en_list = l_new(char *, num + 1);
 
 	num = 0;
 	g_at_result_iter_init(&iter, result);
@@ -882,7 +883,7 @@ static void xlema_read(gboolean ok, GAtResult *result, gpointer user_data)
 			continue;
 
 		len = strspn(number, "0123456789");
-		vd->en_list[num++] = g_strndup(number, len);
+		vd->en_list[num++] = l_strndup(number, len);
 
 		if (number[len] != '\0')
 			ofono_warn("Malformed emergency number: %.*s",
@@ -891,7 +892,7 @@ static void xlema_read(gboolean ok, GAtResult *result, gpointer user_data)
 
 	ofono_voicecall_en_list_notify(vc, vd->en_list);
 
-	g_strfreev(vd->en_list);
+	l_strv_free(vd->en_list);
 	vd->en_list = NULL;
 }
 
@@ -1011,7 +1012,7 @@ static void ifx_voicecall_remove(struct ofono_voicecall *vc)
 
 	g_slist_free_full(vd->calls, g_free);
 
-	g_strfreev(vd->en_list);
+	l_strv_free(vd->en_list);
 
 	ofono_voicecall_set_data(vc, NULL);
 
