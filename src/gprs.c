@@ -1968,7 +1968,7 @@ static struct pri_context *find_usable_context(struct ofono_gprs *gprs,
 		 * web.provider.com but it apepars as
 		 * web.provider.com.mncX.mccY.gprs .
 		 */
-		if (g_str_has_prefix(apn, pri_ctx->context.apn))
+		if (l_str_has_prefix(apn, pri_ctx->context.apn))
 			return pri_ctx;
 	}
 
@@ -3304,8 +3304,8 @@ static void gprs_load_settings(struct ofono_gprs *gprs, const char *imsi)
 		if (g_str_equal(groups[i], SETTINGS_GROUP))
 			continue;
 
-		if (!g_str_has_prefix(groups[i], "context")) {
-			if (!g_str_has_prefix(groups[i], "primarycontext"))
+		if (!l_str_has_prefix(groups[i], "context")) {
+			if (!l_str_has_prefix(groups[i], "primarycontext"))
 				goto remove;
 
 			legacy = TRUE;
