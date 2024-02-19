@@ -1138,7 +1138,7 @@ static void emulator_add_indicator(struct ofono_emulator *em, const char* name,
 		return;
 	}
 
-	ind->name = g_strdup(name);
+	ind->name = l_strdup(name);
 	ind->min = min;
 	ind->max = max;
 	ind->value = dflt;
@@ -1163,7 +1163,7 @@ static void emulator_unregister(struct ofono_atom *atom)
 	for (l = em->indicators; l; l = l->next) {
 		struct indicator *ind = l->data;
 
-		g_free(ind->name);
+		l_free(ind->name);
 		g_free(ind);
 	}
 

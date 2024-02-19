@@ -465,10 +465,8 @@ void *ofono_handsfree_card_get_data(struct ofono_handsfree_card *card)
 void ofono_handsfree_card_set_remote(struct ofono_handsfree_card *card,
 					const char *remote)
 {
-	if (card->remote)
-		g_free(card->remote);
-
-	card->remote = g_strdup(remote);
+	l_free(card->remote);
+	card->remote = l_strdup(remote);
 }
 
 const char *ofono_handsfree_card_get_remote(struct ofono_handsfree_card *card)
@@ -479,10 +477,8 @@ const char *ofono_handsfree_card_get_remote(struct ofono_handsfree_card *card)
 void ofono_handsfree_card_set_local(struct ofono_handsfree_card *card,
 					const char *local)
 {
-	if (card->local)
-		g_free(card->local);
-
-	card->local = g_strdup(local);
+	l_free(card->local);
+	card->local = l_strdup(local);
 }
 
 const char *ofono_handsfree_card_get_local(struct ofono_handsfree_card *card)
@@ -581,7 +577,7 @@ int ofono_handsfree_card_register(struct ofono_handsfree_card *card)
 
 	next_card_id += 1;
 
-	card->path = g_strdup(path);
+	card->path = l_strdup(path);
 	emit_card_added(card);
 
 	return 0;
@@ -606,7 +602,7 @@ static void card_unregister(struct ofono_handsfree_card *card)
 
 	emit_card_removed(card);
 
-	g_free(card->path);
+	l_free(card->path);
 	card->path = NULL;
 }
 
@@ -622,8 +618,8 @@ void ofono_handsfree_card_remove(struct ofono_handsfree_card *card)
 
 	card_list = g_slist_remove(card_list, card);
 
-	g_free(card->remote);
-	g_free(card->local);
+	l_free(card->remote);
+	l_free(card->local);
 
 	if (card->driver && card->driver->remove)
 		card->driver->remove(card);
@@ -663,8 +659,8 @@ static void agent_free(struct agent *agent)
 	if (agent->watch > 0)
 		g_dbus_remove_watch(ofono_dbus_get_connection(), agent->watch);
 
-	g_free(agent->owner);
-	g_free(agent->path);
+	l_free(agent->owner);
+	l_free(agent->path);
 	g_free(agent);
 }
 
@@ -789,8 +785,8 @@ static DBusMessage *am_agent_register(DBusConnection *conn,
 	}
 
 	agent = g_new0(struct agent, 1);
-	agent->owner = g_strdup(sender);
-	agent->path = g_strdup(path);
+	agent->owner = l_strdup(sender);
+	agent->path = l_strdup(path);
 	agent->watch = g_dbus_add_disconnect_watch(conn, sender,
 						agent_disconnect, NULL, NULL);
 

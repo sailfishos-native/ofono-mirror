@@ -602,7 +602,7 @@ static void cbs_unregister(struct ofono_atom *atom)
 	if (cbs->settings) {
 		storage_close(cbs->imsi, SETTINGS_STORE, cbs->settings, TRUE);
 
-		g_free(cbs->imsi);
+		l_free(cbs->imsi);
 		cbs->imsi = NULL;
 		cbs->settings = NULL;
 	}
@@ -868,7 +868,7 @@ static void cbs_got_imsi(struct ofono_cbs *cbs)
 	if (cbs->settings == NULL)
 		return;
 
-	cbs->imsi = g_strdup(imsi);
+	cbs->imsi = l_strdup(imsi);
 
 	cbs->topics = NULL;
 

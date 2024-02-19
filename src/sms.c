@@ -1779,7 +1779,7 @@ static void sms_remove(struct ofono_atom *atom)
 
 		storage_close(sms->imsi, SETTINGS_STORE, sms->settings, TRUE);
 
-		g_free(sms->imsi);
+		l_free(sms->imsi);
 		sms->imsi = NULL;
 		sms->settings = NULL;
 	}
@@ -1821,7 +1821,7 @@ static void sms_load_settings(struct ofono_sms *sms, const char *imsi)
 	if (sms->settings == NULL)
 		return;
 
-	sms->imsi = g_strdup(imsi);
+	sms->imsi = l_strdup(imsi);
 
 	error = NULL;
 	sms->ref = g_key_file_get_integer(sms->settings, SETTINGS_GROUP,

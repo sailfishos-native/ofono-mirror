@@ -100,7 +100,7 @@ static void client_remove(struct ofono_location_reporting *lr)
 		lr->disconnect_watch = 0;
 	}
 
-	g_free(lr->client_owner);
+	l_free(lr->client_owner);
 }
 
 static void signal_enabled(const struct ofono_location_reporting *lr)
@@ -178,7 +178,7 @@ static void location_reporting_enable_cb(const struct ofono_error *error,
 	}
 
 	lr->enabled = TRUE;
-	lr->client_owner = g_strdup(dbus_message_get_sender(lr->pending));
+	lr->client_owner = l_strdup(dbus_message_get_sender(lr->pending));
 	lr->disconnect_watch = g_dbus_add_disconnect_watch(conn,
 				lr->client_owner, client_exited, lr, NULL);
 

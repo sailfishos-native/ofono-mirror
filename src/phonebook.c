@@ -245,7 +245,7 @@ static void print_number(gpointer pointer, gpointer user_data)
 static void destroy_number(gpointer pointer)
 {
 	struct phonebook_number *pn = pointer;
-	g_free(pn->number);
+	l_free(pn->number);
 	g_free(pn);
 }
 
@@ -268,9 +268,9 @@ static void destroy_merged_entry(gpointer pointer)
 {
 	struct phonebook_person *person = pointer;
 	l_free(person->text);
-	g_free(person->group);
-	g_free(person->email);
-	g_free(person->sip_uri);
+	l_free(person->group);
+	l_free(person->email);
+	l_free(person->sip_uri);
 
 	g_slist_free_full(person->number_list, destroy_number);
 
@@ -319,7 +319,7 @@ static gboolean need_merge(const char *text)
 static void merge_field_generic(char **str1, const char *str2)
 {
 	if ((*str1 == NULL) && (str2 != NULL) && (strlen(str2) != 0))
-		*str1 = g_strdup(str2);
+		*str1 = l_strdup(str2);
 }
 
 static void merge_field_number(GSList **l, const char *number, int type, char c)
@@ -327,7 +327,7 @@ static void merge_field_number(GSList **l, const char *number, int type, char c)
 	struct phonebook_number *pn = g_new0(struct phonebook_number, 1);
 	enum phonebook_number_type category;
 
-	pn->number = g_strdup(number);
+	pn->number = l_strdup(number);
 	pn->type = type;
 	switch (tolower(c)) {
 	case 'w':

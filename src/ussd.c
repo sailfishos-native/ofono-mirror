@@ -90,7 +90,7 @@ static struct ssc_entry *ssc_entry_create(const char *sc, void *cb, void *data,
 	if (r == NULL)
 		return r;
 
-	r->service = g_strdup(sc);
+	r->service = l_strdup(sc);
 	r->cb = cb;
 	r->user = data;
 	r->destroy = destroy;
@@ -105,7 +105,7 @@ static void ssc_entry_destroy(gpointer pointer)
 	if (ca->destroy)
 		ca->destroy(ca->user);
 
-	g_free(ca->service);
+	l_free(ca->service);
 	g_free(ca);
 }
 
@@ -232,7 +232,7 @@ static gboolean recognized_control_string(struct ofono_ussd *ussd,
 						const char *ss_str,
 						DBusMessage *msg)
 {
-	char *str = g_strdup(ss_str);
+	char *str = l_strdup(ss_str);
 	char *sc, *sia, *sib, *sic, *sid, *dn;
 	int type;
 	gboolean ret = FALSE;
@@ -286,7 +286,7 @@ static gboolean recognized_control_string(struct ofono_ussd *ussd,
 	 */
 
 out:
-	g_free(str);
+	l_free(str);
 
 	return ret;
 }

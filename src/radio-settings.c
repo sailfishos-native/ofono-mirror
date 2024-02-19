@@ -716,7 +716,7 @@ static void radio_settings_unregister(struct ofono_atom *atom)
 	if (rs->settings) {
 		storage_close(rs->imsi, SETTINGS_STORE, rs->settings, TRUE);
 
-		g_free(rs->imsi);
+		l_free(rs->imsi);
 		rs->imsi = NULL;
 		rs->settings = NULL;
 	}
@@ -805,7 +805,7 @@ static void radio_load_settings(struct ofono_radio_settings *rs,
 		return;
 	}
 
-	rs->imsi = g_strdup(imsi);
+	rs->imsi = l_strdup(imsi);
 
 	error = NULL;
 	rs->band_gsm = g_key_file_get_integer(rs->settings, SETTINGS_GROUP,

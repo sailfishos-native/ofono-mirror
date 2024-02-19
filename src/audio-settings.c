@@ -68,8 +68,8 @@ void ofono_audio_settings_mode_notify(struct ofono_audio_settings *as,
 
 	DBG("mode %s", mode);
 
-	g_free(as->mode);
-	as->mode = g_strdup(mode);
+	l_free(as->mode);
+	as->mode = l_strdup(mode);
 
 	if (as->mode == NULL)
 		return;
@@ -151,7 +151,7 @@ static void audio_settings_remove(struct ofono_atom *atom)
 	if (as->driver && as->driver->remove)
 		as->driver->remove(as);
 
-	g_free(as->mode);
+	l_free(as->mode);
 	g_free(as);
 }
 

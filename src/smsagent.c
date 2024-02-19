@@ -132,9 +132,9 @@ struct sms_agent *sms_agent_new(const char *interface,
 	if (agent == NULL)
 		return NULL;
 
-	agent->interface = g_strdup(interface);
-	agent->service = g_strdup(service);
-	agent->path = g_strdup(path);
+	agent->interface = l_strdup(interface);
+	agent->service = l_strdup(service);
+	agent->path = l_strdup(path);
 
 	agent->disconnect_watch = g_dbus_add_disconnect_watch(conn, service,
 							sms_agent_disconnect_cb,
@@ -179,9 +179,9 @@ void sms_agent_free(struct sms_agent *agent)
 	g_slist_foreach(agent->reqs, sms_agent_request_cancel, NULL);
 	g_slist_free(agent->reqs);
 
-	g_free(agent->path);
-	g_free(agent->service);
-	g_free(agent->interface);
+	l_free(agent->path);
+	l_free(agent->service);
+	l_free(agent->interface);
 	g_free(agent);
 }
 

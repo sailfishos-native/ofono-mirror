@@ -113,8 +113,8 @@ void gnss_agent_free(struct gnss_agent *agent)
 	if (agent->removed_cb)
 		agent->removed_cb(agent->removed_data);
 
-	g_free(agent->path);
-	g_free(agent->bus);
+	l_free(agent->path);
+	l_free(agent->bus);
 	g_free(agent);
 }
 
@@ -135,8 +135,8 @@ struct gnss_agent *gnss_agent_new(const char *path, const char *sender)
 	if (agent == NULL)
 		return NULL;
 
-	agent->path = g_strdup(path);
-	agent->bus = g_strdup(sender);
+	agent->path = l_strdup(path);
+	agent->bus = l_strdup(sender);
 
 	agent->disconnect_watch = g_dbus_add_disconnect_watch(conn, sender,
 						gnss_agent_disconnect_cb,
