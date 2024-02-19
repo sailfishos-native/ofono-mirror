@@ -138,7 +138,7 @@ static void sim_auth_unregister(struct ofono_atom *atom)
 	struct ofono_sim_auth *sa = __ofono_atom_get_data(atom);
 
 	free_apps(sa);
-	g_free(sa->nai);
+	l_free(sa->nai);
 
 	if (sa->pending) {
 		__ofono_dbus_pending_reply(&sa->pending->msg,
@@ -671,8 +671,8 @@ static char *build_nai(const char *imsi)
 		memcpy(mnc + 1, imsi + 3, 2);
 	}
 
-	nai = g_strdup_printf("%s@ims.mnc%.3s.mcc%.3s.3gppnetwork.org",
-			imsi, mnc, mcc);
+	nai = l_strdup_printf("%s@ims.mnc%.3s.mcc%.3s.3gppnetwork.org",
+				imsi, mnc, mcc);
 
 	return nai;
 }
@@ -751,7 +751,7 @@ loop_end:
 	if (!__ofono_sim_get_impi(sa->sim))
 		sa->nai = build_nai(ofono_sim_get_imsi(sa->sim));
 	else
-		sa->nai = g_strdup(__ofono_sim_get_impi(sa->sim));
+		sa->nai = l_strdup(__ofono_sim_get_impi(sa->sim));
 
 	g_dbus_register_interface(conn, path,
 			OFONO_SIM_AUTHENTICATION_INTERFACE,
