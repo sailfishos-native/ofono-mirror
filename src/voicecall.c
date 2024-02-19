@@ -1092,14 +1092,11 @@ static int voicecalls_path_list(struct ofono_voicecall *vc, GSList *call_list,
 	int i;
 	struct voicecall *v;
 
-	*objlist = g_new0(char *, g_slist_length(call_list) + 1);
-
-	if (*objlist == NULL)
-		return -1;
+	*objlist = l_new(char *, g_slist_length(call_list) + 1);
 
 	for (i = 0, l = call_list; l; l = l->next, i++) {
 		v = l->data;
-		(*objlist)[i] = g_strdup(voicecall_build_path(vc, v->call));
+		(*objlist)[i] = l_strdup(voicecall_build_path(vc, v->call));
 	}
 
 	return 0;
@@ -1926,7 +1923,7 @@ static void multiparty_callback_common(struct ofono_voicecall *vc,
 
 	dbus_message_iter_close_container(&iter, &array_iter);
 
-	g_strfreev(objpath_list);
+	l_strv_free(objpath_list);
 }
 
 static void private_chat_callback(const struct ofono_error *error, void *data)
@@ -2747,9 +2744,9 @@ check:
 void ofono_voicecall_en_list_notify(struct ofono_voicecall *vc,
 						char **nw_en_list)
 {
-	g_strfreev(vc->nw_en_list);
+	l_strv_free(vc->nw_en_list);
 
-	vc->nw_en_list = g_strdupv(nw_en_list);
+	vc->nw_en_list = l_strv_copy(nw_en_list);
 	set_new_ecc(vc);
 }
 
@@ -2882,7 +2879,7 @@ static void voicecall_unregister(struct ofono_atom *atom)
 	free_sim_ecc_numbers(vc, FALSE);
 
 	if (vc->nw_en_list) {
-		g_strfreev(vc->nw_en_list);
+		l_strv_free(vc->nw_en_list);
 		vc->nw_en_list = NULL;
 	}
 
