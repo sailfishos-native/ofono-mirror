@@ -2442,10 +2442,10 @@ static void sms_assembly_load(struct sms_assembly *assembly,
 	if (sms_assembly_extract_address(straddr, &addr) == FALSE)
 		return;
 
-	path = g_strdup_printf(SMS_BACKUP_PATH "/%s",
+	path = l_strdup_printf(SMS_BACKUP_PATH "/%s",
 			assembly->imsi, dir->d_name);
 	len = scandir(path, &segments, NULL, versionsort);
-	g_free(path);
+	l_free(path);
 
 	if (len < 0)
 		return;
@@ -2467,11 +2467,11 @@ static void sms_assembly_load(struct sms_assembly *assembly,
 		if (!sms_deserialize(buf, &segment, r))
 			continue;
 
-		path = g_strdup_printf(SMS_BACKUP_PATH "/%s/%s",
+		path = l_strdup_printf(SMS_BACKUP_PATH "/%s/%s",
 				assembly->imsi,
 				dir->d_name, segments[i]->d_name);
 		r = stat(path, &segment_stat);
-		g_free(path);
+		l_free(path);
 
 		if (r != 0)
 			continue;
@@ -2529,18 +2529,18 @@ static void sms_assembly_backup_free(struct sms_assembly *assembly,
 		int bit = 1 << (seq % 32);
 
 		if (node->bitmap[offset] & bit) {
-			path = g_strdup_printf(SMS_BACKUP_PATH_FILE,
+			path = l_strdup_printf(SMS_BACKUP_PATH_FILE,
 					assembly->imsi, straddr,
 					node->ref, node->max_fragments, seq);
 			unlink(path);
-			g_free(path);
+			l_free(path);
 		}
 	}
 
-	path = g_strdup_printf(SMS_BACKUP_PATH_DIR, assembly->imsi, straddr,
+	path = l_strdup_printf(SMS_BACKUP_PATH_DIR, assembly->imsi, straddr,
 				node->ref, node->max_fragments);
 	rmdir(path);
-	g_free(path);
+	l_free(path);
 }
 
 struct sms_assembly *sms_assembly_new(const char *imsi)
@@ -2555,9 +2555,9 @@ struct sms_assembly *sms_assembly_new(const char *imsi)
 
 		/* Restore state from backup */
 
-		path = g_strdup_printf(SMS_BACKUP_PATH, imsi);
+		path = l_strdup_printf(SMS_BACKUP_PATH, imsi);
 		len = scandir(path, &entries, NULL, alphasort);
-		g_free(path);
+		l_free(path);
 
 		if (len < 0)
 			return ret;
@@ -2843,10 +2843,9 @@ struct status_report_assembly *status_report_assembly_new(const char *imsi)
 		ret->imsi = imsi;
 
 		/* Restore state from backup */
-		path = g_strdup_printf(SMS_SR_BACKUP_PATH, imsi);
+		path = l_strdup_printf(SMS_SR_BACKUP_PATH, imsi);
 		len = scandir(path, &addresses, NULL, alphasort);
-
-		g_free(path);
+		l_free(path);
 
 		if (len < 0)
 			return ret;
@@ -2912,11 +2911,10 @@ static gboolean sr_assembly_remove_fragment_backup(const char *imsi,
 	if (encode_hex_own_buf(sha1, SMS_MSGID_LEN, 0, msgid_str) == FALSE)
 		return FALSE;
 
-	path = g_strdup_printf(SMS_SR_BACKUP_PATH_FILE,
+	path = l_strdup_printf(SMS_SR_BACKUP_PATH_FILE,
 					imsi, straddr, msgid_str);
-
 	unlink(path);
-	g_free(path);
+	l_free(path);
 
 	return TRUE;
 }
@@ -3232,9 +3230,9 @@ static GSList *sms_tx_load(const char *imsi, const struct dirent *dir)
 	if (dir->d_type != DT_DIR)
 		return NULL;
 
-	path = g_strdup_printf(SMS_TX_BACKUP_PATH "/%s", imsi, dir->d_name);
+	path = l_strdup_printf(SMS_TX_BACKUP_PATH "/%s", imsi, dir->d_name);
 	len = scandir(path, &pdus, sms_tx_load_filter, versionsort);
-	g_free(path);
+	l_free(path);
 
 	if (len < 0)
 		return NULL;
@@ -3287,7 +3285,7 @@ GQueue *sms_tx_queue_load(const char *imsi)
 	if (imsi == NULL)
 		return NULL;
 
-	path = g_strdup_printf(SMS_TX_BACKUP_PATH, imsi);
+	path = l_strdup_printf(SMS_TX_BACKUP_PATH, imsi);
 
 	len = scandir(path, &entries, sms_tx_queue_filter, versionsort);
 	if (len < 0)
@@ -3329,24 +3327,24 @@ GQueue *sms_tx_queue_load(const char *imsi)
 			continue;
 		}
 
-		oldpath = g_strdup_printf("%s/%s", path, dir->d_name);
-		newpath = g_strdup_printf(SMS_TX_BACKUP_PATH_DIR,
+		oldpath = l_strdup_printf("%s/%s", path, dir->d_name);
+		newpath = l_strdup_printf(SMS_TX_BACKUP_PATH_DIR,
 						imsi, id++, flags, uuid);
 
 		/* rename directory to reflect new position in queue */
 		rename(oldpath, newpath);
 
-		g_free(newpath);
-		g_free(oldpath);
+		l_free(newpath);
+		l_free(oldpath);
 	}
 
 	for (i = 0; i < len; i++)
-		g_free(entries[i]);
+		free(entries[i]);
 
-	g_free(entries);
+	free(entries);
 
 nodir_exit:
-	g_free(path);
+	l_free(path);
 	return retq;
 }
 
@@ -3382,7 +3380,7 @@ void sms_tx_backup_free(const char *imsi, unsigned long id,
 	struct dirent **entries;
 	int len;
 
-	path = g_strdup_printf(SMS_TX_BACKUP_PATH_DIR,
+	path = l_strdup_printf(SMS_TX_BACKUP_PATH_DIR,
 					imsi, id, flags, uuid);
 
 	len = scandir(path, &entries, NULL, versionsort);
@@ -3393,22 +3391,22 @@ void sms_tx_backup_free(const char *imsi, unsigned long id,
 	/* skip '..' and '.' entries */
 	while (len-- > 2) {
 		struct dirent *dir = entries[len];
-		char *file = g_strdup_printf("%s/%s", path, dir->d_name);
+		char *file = l_strdup_printf("%s/%s", path, dir->d_name);
 
 		unlink(file);
-		g_free(file);
+		l_free(file);
 
-		g_free(entries[len]);
+		free(entries[len]);
 	}
 
-	g_free(entries[1]);
-	g_free(entries[0]);
-	g_free(entries);
+	free(entries[1]);
+	free(entries[0]);
+	free(entries);
 
 	rmdir(path);
 
 nodir_exit:
-	g_free(path);
+	l_free(path);
 }
 
 void sms_tx_backup_remove(const char *imsi, unsigned long id,
@@ -3417,11 +3415,10 @@ void sms_tx_backup_remove(const char *imsi, unsigned long id,
 {
 	char *path;
 
-	path = g_strdup_printf(SMS_TX_BACKUP_PATH_FILE,
+	path = l_strdup_printf(SMS_TX_BACKUP_PATH_FILE,
 					imsi, id, flags, uuid, seq);
 	unlink(path);
-
-	g_free(path);
+	l_free(path);
 }
 
 static inline GSList *sms_list_append(GSList *l, const struct sms *in)
