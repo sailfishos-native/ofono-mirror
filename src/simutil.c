@@ -982,8 +982,8 @@ gboolean sim_spdi_lookup(struct sim_spdi *spdi,
 	if (spdi == NULL)
 		return FALSE;
 
-	g_strlcpy(spdi_op.mcc, mcc, sizeof(spdi_op.mcc));
-	g_strlcpy(spdi_op.mnc, mnc, sizeof(spdi_op.mnc));
+	l_strlcpy(spdi_op.mcc, mcc, sizeof(spdi_op.mcc));
+	l_strlcpy(spdi_op.mnc, mnc, sizeof(spdi_op.mnc));
 
 	return g_slist_find_custom(spdi->operators, &spdi_op,
 					spdi_operator_compare) != NULL;
