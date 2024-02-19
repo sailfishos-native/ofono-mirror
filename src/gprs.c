@@ -328,7 +328,7 @@ static void context_settings_free(struct context_settings *settings)
 		g_free(settings->ipv4->ip);
 		g_free(settings->ipv4->netmask);
 		g_free(settings->ipv4->gateway);
-		g_strfreev(settings->ipv4->dns);
+		l_strv_free(settings->ipv4->dns);
 		g_free(settings->ipv4->proxy);
 
 		g_free(settings->ipv4);
@@ -338,7 +338,7 @@ static void context_settings_free(struct context_settings *settings)
 	if (settings->ipv6) {
 		g_free(settings->ipv6->ip);
 		g_free(settings->ipv6->gateway);
-		g_strfreev(settings->ipv6->dns);
+		l_strv_free(settings->ipv6->dns);
 
 		g_free(settings->ipv6);
 		settings->ipv6 = NULL;
@@ -2940,8 +2940,8 @@ void ofono_gprs_context_set_ipv4_dns_servers(struct ofono_gprs_context *gc,
 	if (settings->ipv4 == NULL)
 		return;
 
-	g_strfreev(settings->ipv4->dns);
-	settings->ipv4->dns = g_strdupv((char **) dns);
+	l_strv_free(settings->ipv4->dns);
+	settings->ipv4->dns = l_strv_copy((char **) dns);
 }
 
 void ofono_gprs_context_set_ipv6_address(struct ofono_gprs_context *gc,
@@ -2987,8 +2987,8 @@ void ofono_gprs_context_set_ipv6_dns_servers(struct ofono_gprs_context *gc,
 	if (settings->ipv6 == NULL)
 		return;
 
-	g_strfreev(settings->ipv6->dns);
-	settings->ipv6->dns = g_strdupv((char **) dns);
+	l_strv_free(settings->ipv6->dns);
+	settings->ipv6->dns = l_strv_copy((char **) dns);
 }
 
 static void free_contexts(struct ofono_gprs *gprs)
