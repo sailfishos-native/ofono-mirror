@@ -116,7 +116,7 @@ static void sim_acl_read_cb(int ok, int total_length, int record,
 		if (simple_tlv_iter_get_tag(&tlv_iter) != 0xDD)
 			continue;
 
-		apn = g_strndup(
+		apn = l_strndup(
 			(char *) simple_tlv_iter_get_data(&tlv_iter),
 			simple_tlv_iter_get_length(&tlv_iter));
 
@@ -124,7 +124,7 @@ static void sim_acl_read_cb(int ok, int total_length, int record,
 					DBUS_TYPE_STRING,
 					&apn);
 
-		g_free(apn);
+		l_free(apn);
 	}
 
 done:
