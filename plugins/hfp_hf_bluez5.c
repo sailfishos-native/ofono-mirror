@@ -32,6 +32,7 @@
 #include <fcntl.h>
 #include <sys/socket.h>
 
+#include <ell/ell.h>
 #include <glib.h>
 
 #include <gdbus.h>
@@ -213,11 +214,9 @@ static struct ofono_modem *modem_register(const char *device, GDBusProxy *proxy)
 
 	dbus_message_iter_get_basic(&iter, &remote);
 
-	path = g_strconcat("hfp", device, NULL);
-
+	path = l_strdup_printf("hfp%s", device);
 	modem = ofono_modem_create(path, "hfp");
-
-	g_free(path);
+	l_free(path);
 
 	if (modem == NULL)
 		return NULL;
