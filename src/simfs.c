@@ -658,9 +658,9 @@ static void sim_fs_op_cache_fileinfo(struct sim_fs *fs,
 	fileinfo[5] = record_length & 0xff;
 	fileinfo[6] = file_status;
 
-	path = g_strdup_printf(SIM_CACHE_PATH, imsi, phase, op->id);
+	path = l_strdup_printf(SIM_CACHE_PATH, imsi, phase, op->id);
 	fs->fd = L_TFR(open(path, O_WRONLY | O_CREAT | O_TRUNC, SIM_CACHE_MODE));
-	g_free(path);
+	l_free(path);
 
 	if (fs->fd == -1)
 		return;
@@ -755,13 +755,9 @@ static gboolean sim_fs_op_check_cached(struct sim_fs *fs)
 	if (imsi == NULL || phase == OFONO_SIM_PHASE_UNKNOWN)
 		return FALSE;
 
-	path = g_strdup_printf(SIM_CACHE_PATH, imsi, phase, op->id);
-
-	if (path == NULL)
-		return FALSE;
-
+	path = l_strdup_printf(SIM_CACHE_PATH, imsi, phase, op->id);
 	fd = L_TFR(open(path, O_RDWR));
-	g_free(path);
+	l_free(path);
 
 	if (fd == -1) {
 		if (errno != ENOENT)
@@ -1183,11 +1179,11 @@ char *sim_fs_get_cached_image(struct sim_fs *fs, int id)
 	if (phase == OFONO_SIM_PHASE_UNKNOWN)
 		return NULL;
 
-	path = g_strdup_printf(SIM_IMAGE_CACHE_PATH, imsi, phase, id);
+	path = l_strdup_printf(SIM_IMAGE_CACHE_PATH, imsi, phase, id);
 
 	L_TFR(stat(path, &st_buf));
 	fd = L_TFR(open(path, O_RDONLY));
-	g_free(path);
+	l_free(path);
 
 	if (fd < 0)
 		return NULL;
@@ -1223,9 +1219,9 @@ static void remove_cachefile(const char *imsi, enum ofono_sim_phase phase,
 	if (sscanf(file->d_name, "%4x", &id) != 1)
 		return;
 
-	path = g_strdup_printf(SIM_CACHE_PATH, imsi, phase, id);
+	path = l_strdup_printf(SIM_CACHE_PATH, imsi, phase, id);
 	remove(path);
-	g_free(path);
+	l_free(path);
 }
 
 static void remove_imagefile(const char *imsi, enum ofono_sim_phase phase,
@@ -1240,9 +1236,9 @@ static void remove_imagefile(const char *imsi, enum ofono_sim_phase phase,
 	if (sscanf(file->d_name, "%d", &id) != 1)
 		return;
 
-	path = g_strdup_printf(SIM_IMAGE_CACHE_PATH, imsi, phase, id);
+	path = l_strdup_printf(SIM_IMAGE_CACHE_PATH, imsi, phase, id);
 	remove(path);
-	g_free(path);
+	l_free(path);
 }
 
 void sim_fs_check_version(struct sim_fs *fs)
@@ -1268,20 +1264,20 @@ void sim_fs_cache_flush(struct sim_fs *fs)
 {
 	const char *imsi = ofono_sim_get_imsi(fs->sim);
 	enum ofono_sim_phase phase = ofono_sim_get_phase(fs->sim);
-	char *path = g_strdup_printf(SIM_CACHE_BASEPATH, imsi, phase);
+	char *path = l_strdup_printf(SIM_CACHE_BASEPATH, imsi, phase);
 	struct dirent **entries;
 	int len = scandir(path, &entries, NULL, alphasort);
 
-	g_free(path);
+	l_free(path);
 
 	if (len > 0) {
 		/* Remove all file ids */
 		while (len--) {
 			remove_cachefile(imsi, phase, entries[len]);
-			g_free(entries[len]);
+			free(entries[len]);
 		}
 
-		g_free(entries);
+		free(entries);
 	}
 
 	sim_fs_image_cache_flush(fs);
@@ -1291,21 +1287,21 @@ void sim_fs_cache_flush_file(struct sim_fs *fs, int id)
 {
 	const char *imsi = ofono_sim_get_imsi(fs->sim);
 	enum ofono_sim_phase phase = ofono_sim_get_phase(fs->sim);
-	char *path = g_strdup_printf(SIM_CACHE_PATH, imsi, phase, id);
+	char *path = l_strdup_printf(SIM_CACHE_PATH, imsi, phase, id);
 
 	remove(path);
-	g_free(path);
+	l_free(path);
 }
 
 void sim_fs_image_cache_flush(struct sim_fs *fs)
 {
 	const char *imsi = ofono_sim_get_imsi(fs->sim);
 	enum ofono_sim_phase phase = ofono_sim_get_phase(fs->sim);
-	char *path = g_strdup_printf(SIM_IMAGE_CACHE_BASEPATH, imsi, phase);
+	char *path = l_strdup_printf(SIM_IMAGE_CACHE_BASEPATH, imsi, phase);
 	struct dirent **entries;
 	int len = scandir(path, &entries, NULL, alphasort);
 
-	g_free(path);
+	l_free(path);
 
 	if (len <= 0)
 		return;
@@ -1313,18 +1309,18 @@ void sim_fs_image_cache_flush(struct sim_fs *fs)
 	/* Remove everything */
 	while (len--) {
 		remove_imagefile(imsi, phase, entries[len]);
-		g_free(entries[len]);
+		free(entries[len]);
 	}
 
-	g_free(entries);
+	free(entries);
 }
 
 void sim_fs_image_cache_flush_file(struct sim_fs *fs, int id)
 {
 	const char *imsi = ofono_sim_get_imsi(fs->sim);
 	enum ofono_sim_phase phase = ofono_sim_get_phase(fs->sim);
-	char *path = g_strdup_printf(SIM_IMAGE_CACHE_PATH, imsi, phase, id);
+	char *path = l_strdup_printf(SIM_IMAGE_CACHE_PATH, imsi, phase, id);
 
 	remove(path);
-	g_free(path);
+	l_free(path);
 }
