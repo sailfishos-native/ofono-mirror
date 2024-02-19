@@ -515,15 +515,15 @@ static void pin_cache_update(const char *iccid, const char *pin)
 	struct cached_pin *cpins;
 
 	if (pin_cached != NULL) {
-		g_free(pin_cached->pin);
-		pin_cached->pin = g_strdup(pin);
+		l_free(pin_cached->pin);
+		pin_cached->pin = l_strdup(pin);
 		return;
 	}
 
 	cpins = g_new0(struct cached_pin, 1);
 
-	cpins->id = g_strdup(iccid);
-	cpins->pin = g_strdup(pin);
+	cpins->id = l_strdup(iccid);
+	cpins->pin = l_strdup(pin);
 	cached_pins = g_slist_prepend(cached_pins, cpins);
 }
 
@@ -536,8 +536,8 @@ static void pin_cache_remove(const char *iccid)
 
 	cached_pins = g_slist_remove(cached_pins, pin_cached);
 
-	g_free(pin_cached->pin);
-	g_free(pin_cached->id);
+	l_free(pin_cached->pin);
+	l_free(pin_cached->id);
 	g_free(pin_cached);
 }
 
@@ -1713,7 +1713,7 @@ static void sim_imsi_obtained(struct ofono_sim *sim, const char *imsi)
 	DBusConnection *conn = ofono_dbus_get_connection();
 	const char *path = __ofono_atom_get_path(sim->atom);
 
-	sim->imsi = g_strdup(imsi);
+	sim->imsi = l_strdup(imsi);
 
 	ofono_dbus_signal_property_changed(conn, path,
 						OFONO_SIM_MANAGER_INTERFACE,
@@ -2291,7 +2291,7 @@ static void sim_iccid_read_cb(int ok, int length, int record,
 
 	extract_bcd_number(data, length, iccid);
 	iccid[20] = '\0';
-	sim->iccid = g_strdup(iccid);
+	sim->iccid = l_strdup(iccid);
 
 	ofono_dbus_signal_property_changed(conn, path,
 						OFONO_SIM_MANAGER_INTERFACE,
@@ -2305,7 +2305,7 @@ static void sim_iccid_changed(int id, void *userdata)
 	struct ofono_sim *sim = userdata;
 
 	if (sim->iccid) {
-		g_free(sim->iccid);
+		l_free(sim->iccid);
 		sim->iccid = NULL;
 	}
 
@@ -2590,7 +2590,7 @@ static void sim_inserted_update(struct ofono_sim *sim)
 static void sim_free_early_state(struct ofono_sim *sim)
 {
 	if (sim->iccid) {
-		g_free(sim->iccid);
+		l_free(sim->iccid);
 		sim->iccid = NULL;
 	}
 
@@ -2654,7 +2654,7 @@ static void aid_session_free(gpointer data)
 static void sim_free_main_state(struct ofono_sim *sim)
 {
 	if (sim->imsi) {
-		g_free(sim->imsi);
+		l_free(sim->imsi);
 		sim->imsi = NULL;
 	}
 
