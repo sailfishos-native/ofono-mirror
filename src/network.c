@@ -1124,21 +1124,12 @@ void __ofono_netreg_set_base_station_name(struct ofono_netreg *netreg,
 	if (netreg->base_station == NULL && name == NULL)
 		return;
 
-	if (netreg->base_station)
-		g_free(netreg->base_station);
+	l_free(netreg->base_station);
+	netreg->base_station = l_strdup(name);
 
-	if (name == NULL) {
-		netreg->base_station = NULL;
-
-		/*
-		 * We just got unregistered, set name to NULL
-		 * but don't emit signal
-		 */
-		if (netreg->current_operator == NULL)
-			return;
-	} else {
-		netreg->base_station = g_strdup(name);
-	}
+	/* We just got unregistered, set name to NULL, but don't emit signal */
+	if (!name && !netreg->current_operator)
+		return;
 
 	ofono_dbus_signal_property_changed(conn, path,
 					OFONO_NETWORK_REGISTRATION_INTERFACE,
@@ -1790,16 +1781,14 @@ static void netreg_unregister(struct ofono_atom *atom)
 	g_slist_free(netreg->operator_list);
 	netreg->operator_list = NULL;
 
-	if (netreg->base_station) {
-		g_free(netreg->base_station);
-		netreg->base_station = NULL;
-	}
+	l_free(netreg->base_station);
+	netreg->base_station = NULL;
 
 	if (netreg->settings) {
 		storage_close(netreg->imsi, SETTINGS_STORE,
 				netreg->settings, TRUE);
 
-		g_free(netreg->imsi);
+		l_free(netreg->imsi);
 		netreg->imsi = NULL;
 		netreg->settings = NULL;
 	}
@@ -1864,7 +1853,7 @@ static void netreg_load_settings(struct ofono_netreg *netreg)
 	if (netreg->settings == NULL)
 		return;
 
-	netreg->imsi = g_strdup(imsi);
+	netreg->imsi = l_strdup(imsi);
 
 	strmode = g_key_file_get_string(netreg->settings, SETTINGS_GROUP,
 					"Mode", NULL);
