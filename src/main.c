@@ -210,19 +210,19 @@ int main(int argc, char **argv)
 
 	if (g_option_context_parse(context, &argc, &argv, &err) == FALSE) {
 		if (err != NULL) {
-			g_printerr("%s\n", err->message);
+			fprintf(stderr, "%s\n", err->message);
 			g_error_free(err);
 			return 1;
 		}
 
-		g_printerr("An unknown error occurred\n");
+		fprintf(stderr, "An unknown error occurred\n");
 		return 1;
 	}
 
 	g_option_context_free(context);
 
 	if (option_version == TRUE) {
-		printf("%s\n", VERSION);
+		fprintf(stdout, "%s\n", VERSION);
 		exit(0);
 	}
 
