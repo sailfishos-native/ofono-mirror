@@ -267,7 +267,7 @@ static void print_merged_entry(gpointer pointer, gpointer user_data)
 static void destroy_merged_entry(gpointer pointer)
 {
 	struct phonebook_person *person = pointer;
-	g_free(person->text);
+	l_free(person->text);
 	g_free(person->group);
 	g_free(person->email);
 	g_free(person->sip_uri);
@@ -386,7 +386,7 @@ void ofono_phonebook_entry(struct ofono_phonebook *phonebook, int index,
 			person = g_new0(struct phonebook_person, 1);
 			phonebook->merge_list =
 				g_slist_prepend(phonebook->merge_list, person);
-			person->text = g_strndup(text, len_text);
+			person->text = l_strndup(text, len_text);
 		}
 
 		merge_field_number(&(person->number_list), number, type,
