@@ -1661,7 +1661,7 @@ static void impi_read_cb(int ok, int total_length, int record,
 	}
 
 	if (validate_utf8_tlv(data))
-		sim->impi = g_strndup((const char *)data + 2, data[1]);
+		sim->impi = l_strndup((const char *)data + 2, data[1]);
 }
 
 static void discover_apps_cb(const struct ofono_error *error,
@@ -2721,8 +2721,7 @@ static void sim_free_main_state(struct ofono_sim *sim)
 		sim->isim_context = NULL;
 	}
 
-	if (sim->impi)
-		g_free(sim->impi);
+	l_free(sim->impi);
 
 	if (sim->aid_list) {
 		g_slist_free_full(sim->aid_list,
