@@ -325,19 +325,19 @@ static struct pri_context *gprs_context_by_path(struct ofono_gprs *gprs,
 static void context_settings_free(struct context_settings *settings)
 {
 	if (settings->ipv4) {
-		g_free(settings->ipv4->ip);
-		g_free(settings->ipv4->netmask);
-		g_free(settings->ipv4->gateway);
+		l_free(settings->ipv4->ip);
+		l_free(settings->ipv4->netmask);
+		l_free(settings->ipv4->gateway);
 		l_strv_free(settings->ipv4->dns);
-		g_free(settings->ipv4->proxy);
+		l_free(settings->ipv4->proxy);
 
 		g_free(settings->ipv4);
 		settings->ipv4 = NULL;
 	}
 
 	if (settings->ipv6) {
-		g_free(settings->ipv6->ip);
-		g_free(settings->ipv6->gateway);
+		l_free(settings->ipv6->ip);
+		l_free(settings->ipv6->gateway);
 		l_strv_free(settings->ipv6->dns);
 
 		g_free(settings->ipv6);
@@ -544,7 +544,7 @@ static void pri_parse_proxy(struct pri_context *ctx, const char *proxy)
 {
 	char *scheme, *host, *port, *path;
 
-	scheme = g_strdup(proxy);
+	scheme = l_strdup(proxy);
 	if (scheme == NULL)
 		return;
 
@@ -558,7 +558,7 @@ static void pri_parse_proxy(struct pri_context *ctx, const char *proxy)
 		else if (strcasecmp(scheme, "http") == 0)
 			ctx->proxy_port = 80;
 		else {
-			g_free(scheme);
+			l_free(scheme);
 			return;
 		}
 	} else {
@@ -581,10 +581,10 @@ static void pri_parse_proxy(struct pri_context *ctx, const char *proxy)
 		}
 	}
 
-	g_free(ctx->proxy_host);
-	ctx->proxy_host = g_strdup(host);
+	l_free(ctx->proxy_host);
+	ctx->proxy_host = l_strdup(host);
 
-	g_free(scheme);
+	l_free(scheme);
 }
 
 static void pri_ifupdown(const char *interface, ofono_bool_t active)
@@ -727,7 +727,7 @@ static void pri_reset_context_settings(struct pri_context *ctx)
 	if (ctx->type == OFONO_GPRS_CONTEXT_TYPE_MMS) {
 		pri_set_ipv4_addr(interface, NULL);
 
-		g_free(ctx->proxy_host);
+		l_free(ctx->proxy_host);
 		ctx->proxy_host = NULL;
 		ctx->proxy_port = 0;
 	}
@@ -740,7 +740,7 @@ static void pri_update_mms_context_settings(struct pri_context *ctx)
 	struct ofono_gprs_context *gc = ctx->context_driver;
 	struct context_settings *settings = gc->settings;
 
-	settings->ipv4->proxy = g_strdup(ctx->message_proxy);
+	settings->ipv4->proxy = l_strdup(ctx->message_proxy);
 	pri_parse_proxy(ctx, ctx->message_proxy);
 
 	DBG("proxy %s port %u", ctx->proxy_host, ctx->proxy_port);
@@ -1410,8 +1410,8 @@ static void pri_context_destroy(gpointer userdata)
 {
 	struct pri_context *ctx = userdata;
 
-	g_free(ctx->proxy_host);
-	g_free(ctx->path);
+	l_free(ctx->proxy_host);
+	l_free(ctx->path);
 	g_free(ctx);
 }
 
@@ -1436,7 +1436,7 @@ static gboolean context_dbus_register(struct pri_context *ctx)
 		return FALSE;
 	}
 
-	ctx->path = g_strdup(path);
+	ctx->path = l_strdup(path);
 	ctx->key = ctx->path + strlen(basepath) + 1;
 
 	return TRUE;
@@ -2193,7 +2193,7 @@ static void gprs_deactivate_for_remove(const struct ofono_error *error,
 	}
 
 	/* Make a backup copy of path for signal emission below */
-	path = g_strdup(ctx->path);
+	path = l_strdup(ctx->path);
 
 	context_dbus_unregister(ctx);
 	gprs->contexts = g_slist_remove(gprs->contexts, ctx);
@@ -2205,7 +2205,7 @@ static void gprs_deactivate_for_remove(const struct ofono_error *error,
 	g_dbus_emit_signal(conn, atompath, OFONO_CONNECTION_MANAGER_INTERFACE,
 				"ContextRemoved", DBUS_TYPE_OBJECT_PATH, &path,
 				DBUS_TYPE_INVALID);
-	g_free(path);
+	l_free(path);
 }
 
 static DBusMessage *gprs_remove_context(DBusConnection *conn,
@@ -2502,7 +2502,7 @@ static void remove_non_active_context(struct ofono_gprs *gprs,
 	}
 
 	/* Make a backup copy of path for signal emission below */
-	path = g_strdup(ctx->path);
+	path = l_strdup(ctx->path);
 
 	context_dbus_unregister(ctx);
 	gprs->contexts = g_slist_remove(gprs->contexts, ctx);
@@ -2511,7 +2511,7 @@ static void remove_non_active_context(struct ofono_gprs *gprs,
 	g_dbus_emit_signal(conn, atompath, OFONO_CONNECTION_MANAGER_INTERFACE,
 				"ContextRemoved", DBUS_TYPE_OBJECT_PATH, &path,
 				DBUS_TYPE_INVALID);
-	g_free(path);
+	l_free(path);
 }
 
 static DBusMessage *gprs_reset_contexts(DBusConnection *conn,
@@ -2816,7 +2816,7 @@ static void gprs_context_remove(struct ofono_atom *atom)
 	if (gc->driver && gc->driver->remove)
 		gc->driver->remove(gc);
 
-	g_free(gc->interface);
+	l_free(gc->interface);
 	g_free(gc);
 }
 
@@ -2869,8 +2869,8 @@ const char *ofono_gprs_context_get_interface(struct ofono_gprs_context *gc)
 void ofono_gprs_context_set_interface(struct ofono_gprs_context *gc,
 					const char *interface)
 {
-	g_free(gc->interface);
-	gc->interface = g_strdup(interface);
+	l_free(gc->interface);
+	gc->interface = l_strdup(interface);
 }
 
 void ofono_gprs_context_set_ipv4_address(struct ofono_gprs_context *gc,
@@ -2882,8 +2882,8 @@ void ofono_gprs_context_set_ipv4_address(struct ofono_gprs_context *gc,
 	if (settings->ipv4 == NULL)
 		return;
 
-	g_free(settings->ipv4->ip);
-	settings->ipv4->ip = g_strdup(address);
+	l_free(settings->ipv4->ip);
+	settings->ipv4->ip = l_strdup(address);
 	settings->ipv4->static_ip = static_ip;
 }
 
@@ -2895,8 +2895,8 @@ void ofono_gprs_context_set_ipv4_netmask(struct ofono_gprs_context *gc,
 	if (settings->ipv4 == NULL)
 		return;
 
-	g_free(settings->ipv4->netmask);
-	settings->ipv4->netmask = g_strdup(netmask);
+	l_free(settings->ipv4->netmask);
+	settings->ipv4->netmask = l_strdup(netmask);
 }
 
 void ofono_gprs_context_set_ipv4_prefix_length(struct ofono_gprs_context *gc,
@@ -2909,7 +2909,7 @@ void ofono_gprs_context_set_ipv4_prefix_length(struct ofono_gprs_context *gc,
 	if (settings->ipv4 == NULL)
 		return;
 
-	g_free(settings->ipv4->netmask);
+	l_free(settings->ipv4->netmask);
 
 	memset(&ipv4, 0, sizeof(ipv4));
 
@@ -2917,7 +2917,7 @@ void ofono_gprs_context_set_ipv4_prefix_length(struct ofono_gprs_context *gc,
 		ipv4.s_addr = htonl(~((1 << (32 - length)) - 1));
 
 	inet_ntop(AF_INET, &ipv4, buf, sizeof(buf));
-	settings->ipv4->netmask = g_strdup(buf);
+	settings->ipv4->netmask = l_strdup(buf);
 }
 
 void ofono_gprs_context_set_ipv4_gateway(struct ofono_gprs_context *gc,
@@ -2928,8 +2928,8 @@ void ofono_gprs_context_set_ipv4_gateway(struct ofono_gprs_context *gc,
 	if (settings->ipv4 == NULL)
 		return;
 
-	g_free(settings->ipv4->gateway);
-	settings->ipv4->gateway = g_strdup(gateway);
+	l_free(settings->ipv4->gateway);
+	settings->ipv4->gateway = l_strdup(gateway);
 }
 
 void ofono_gprs_context_set_ipv4_dns_servers(struct ofono_gprs_context *gc,
@@ -2952,8 +2952,8 @@ void ofono_gprs_context_set_ipv6_address(struct ofono_gprs_context *gc,
 	if (settings->ipv6 == NULL)
 		return;
 
-	g_free(settings->ipv6->ip);
-	settings->ipv6->ip = g_strdup(address);
+	l_free(settings->ipv6->ip);
+	settings->ipv6->ip = l_strdup(address);
 }
 
 void ofono_gprs_context_set_ipv6_prefix_length(struct ofono_gprs_context *gc,
@@ -2975,8 +2975,8 @@ void ofono_gprs_context_set_ipv6_gateway(struct ofono_gprs_context *gc,
 	if (settings->ipv6 == NULL)
 		return;
 
-	g_free(settings->ipv6->gateway);
-	settings->ipv6->gateway = g_strdup(gateway);
+	l_free(settings->ipv6->gateway);
+	settings->ipv6->gateway = l_strdup(gateway);
 }
 
 void ofono_gprs_context_set_ipv6_dns_servers(struct ofono_gprs_context *gc,
@@ -2999,7 +2999,7 @@ static void free_contexts(struct ofono_gprs *gprs)
 		storage_close(gprs->imsi, SETTINGS_STORE,
 				gprs->settings, TRUE);
 
-		g_free(gprs->imsi);
+		l_free(gprs->imsi);
 		gprs->imsi = NULL;
 		gprs->settings = NULL;
 	}
@@ -3266,7 +3266,7 @@ static void gprs_load_settings(struct ofono_gprs *gprs, const char *imsi)
 	if (gprs->settings == NULL)
 		return;
 
-	gprs->imsi = g_strdup(imsi);
+	gprs->imsi = l_strdup(imsi);
 
 	error = NULL;
 	gprs->powered = g_key_file_get_boolean(gprs->settings, SETTINGS_GROUP,
