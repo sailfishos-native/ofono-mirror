@@ -264,13 +264,13 @@ static char **get_own_numbers(GSList *own_numbers)
 	if (own_numbers)
 		nelem = g_slist_length(own_numbers);
 
-	ret = g_new0(char *, nelem + 1);
+	ret = l_new(char *, nelem + 1);
 
 	nelem = 0;
 	for (l = own_numbers; l; l = l->next) {
 		num = l->data;
 
-		ret[nelem++] = g_strdup(phone_number_to_string(num));
+		ret[nelem++] = l_strdup(phone_number_to_string(num));
 	}
 
 	return ret;
@@ -289,7 +289,7 @@ static char **get_locked_pins(struct ofono_sim *sim)
 		nelem += 1;
 	}
 
-	ret = g_new0(char *, nelem + 1);
+	ret = l_new(char *, nelem + 1);
 
 	nelem = 0;
 
@@ -297,7 +297,7 @@ static char **get_locked_pins(struct ofono_sim *sim)
 		if (sim->locked_pins[i] == FALSE)
 			continue;
 
-		ret[nelem] = g_strdup(sim_passwd_name(i));
+		ret[nelem] = l_strdup(sim_passwd_name(i));
 		nelem += 1;
 	}
 
@@ -345,14 +345,14 @@ static char **get_service_numbers(GSList *service_numbers)
 
 	nelem = g_slist_length(service_numbers) * 2;
 
-	ret = g_new0(char *, nelem + 1);
+	ret = l_new(char *, nelem + 1);
 
 	nelem = 0;
 	for (l = service_numbers; l; l = l->next) {
 		num = l->data;
 
-		ret[nelem++] = g_strdup(num->id);
-		ret[nelem++] = g_strdup(phone_number_to_string(&num->ph));
+		ret[nelem++] = l_strdup(num->id);
+		ret[nelem++] = l_strdup(phone_number_to_string(&num->ph));
 	}
 
 	return ret;
@@ -444,15 +444,14 @@ static DBusMessage *sim_get_properties(DBusConnection *conn,
 	}
 
 	own_numbers = get_own_numbers(sim->own_numbers);
-
 	ofono_dbus_dict_append_array(&dict, "SubscriberNumbers",
 					DBUS_TYPE_STRING, &own_numbers);
-	g_strfreev(own_numbers);
+	l_strv_free(own_numbers);
 
 	locked_pins = get_locked_pins(sim);
 	ofono_dbus_dict_append_array(&dict, "LockedPins",
 					DBUS_TYPE_STRING, &locked_pins);
-	g_strfreev(locked_pins);
+	l_strv_free(locked_pins);
 
 	if (sim->service_numbers && sim->sdn_ready) {
 		service_numbers = get_service_numbers(sim->service_numbers);
@@ -460,7 +459,7 @@ static DBusMessage *sim_get_properties(DBusConnection *conn,
 		ofono_dbus_dict_append_dict(&dict, "ServiceNumbers",
 						DBUS_TYPE_STRING,
 						&service_numbers);
-		g_strfreev(service_numbers);
+		l_strv_free(service_numbers);
 	}
 
 	if (sim->language_prefs)
@@ -832,7 +831,7 @@ static void sim_locked_cb(struct ofono_sim *sim, gboolean locked)
 	if (g_strcmp0(typestr, "pin") == 0)
 		pin_cache_update(sim->iccid, pin);
 
-	g_strfreev(locked_pins);
+	l_strv_free(locked_pins);
 
 	sim_pin_retries_check(sim);
 }
@@ -1413,13 +1412,11 @@ check:
 		sim->own_numbers = sim->new_numbers;
 
 		own_numbers = get_own_numbers(sim->own_numbers);
-
 		ofono_dbus_signal_array_property_changed(conn, path,
 						OFONO_SIM_MANAGER_INTERFACE,
 						"SubscriberNumbers",
 						DBUS_TYPE_STRING, &own_numbers);
-
-		g_strfreev(own_numbers);
+		l_strv_free(own_numbers);
 	} else {
 		g_slist_free_full(sim->new_numbers, g_free);
 	}
@@ -1504,7 +1501,7 @@ check:
 						"ServiceNumbers",
 						DBUS_TYPE_STRING,
 						&service_numbers);
-		g_strfreev(service_numbers);
+		l_strv_free(service_numbers);
 	}
 }
 
@@ -2252,7 +2249,7 @@ skip_efpl:
 	if (efli_format) {
 		if (sim->efli_length >= 2 && sim->efli[0] == 0xff &&
 				sim->efli[1] == 0xff) {
-			l_strfreev(efli);
+			l_strv_free(efli);
 			efli = NULL;
 		}
 
@@ -2328,7 +2325,7 @@ static void sim_efli_efpl_changed(int id, void *userdata)
 		return;
 
 	if (sim->language_prefs) {
-		g_strfreev(sim->language_prefs);
+		l_strv_free(sim->language_prefs);
 		sim->language_prefs = NULL;
 	}
 
@@ -2604,7 +2601,7 @@ static void sim_free_early_state(struct ofono_sim *sim)
 	}
 
 	if (sim->language_prefs) {
-		g_strfreev(sim->language_prefs);
+		l_strv_free(sim->language_prefs);
 		sim->language_prefs = NULL;
 	}
 
@@ -2764,7 +2761,7 @@ static void sim_set_locked_pin(struct ofono_sim *sim,
 				OFONO_SIM_MANAGER_INTERFACE, "LockedPins",
 				DBUS_TYPE_STRING, &locked_pins);
 
-	g_strfreev(locked_pins);
+	l_strv_free(locked_pins);
 }
 
 static void sim_query_fac_pinlock_cb(const struct ofono_error *error,
@@ -3187,7 +3184,7 @@ static void sim_pin_query_cb(const struct ofono_error *error,
 						"LockedPins", DBUS_TYPE_STRING,
 						&locked_pins);
 
-				g_strfreev(locked_pins);
+				l_strv_free(locked_pins);
 			}
 		}
 
