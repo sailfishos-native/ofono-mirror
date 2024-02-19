@@ -160,7 +160,7 @@ static void add_to_en_list(struct ofono_voicecall *vc, char **list)
 	int i = 0;
 
 	while (list[i])
-		g_hash_table_insert(vc->en_list, g_strdup(list[i++]), NULL);
+		g_hash_table_insert(vc->en_list, l_strdup(list[i++]), NULL);
 }
 
 static const char *disconnect_reason_to_string(enum ofono_disconnect_reason r)
@@ -302,7 +302,7 @@ static void dial_request_finish(struct ofono_voicecall *vc)
 		dial_req->cb(dial_req->call ? dial_req->call->call : NULL,
 				dial_req->user_data);
 
-	g_free(dial_req->message);
+	l_free(dial_req->message);
 	g_free(dial_req);
 	vc->dial_req = NULL;
 }
@@ -354,7 +354,7 @@ static int tone_queue(struct ofono_voicecall *vc, const char *tone_str,
 	if (entry == NULL)
 		return -ENOMEM;
 
-	entry->tone_str = g_strdup(tone_str);
+	entry->tone_str = l_strdup(tone_str);
 	entry->left = entry->tone_str;
 	entry->cb = cb;
 	entry->user_data = data;
@@ -381,7 +381,7 @@ static void tone_request_finish(struct ofono_voicecall *vc,
 	if (entry->destroy)
 		entry->destroy(entry->user_data);
 
-	g_free(entry->tone_str);
+	l_free(entry->tone_str);
 	g_free(entry);
 }
 
@@ -688,7 +688,7 @@ static void voicecall_destroy(gpointer userdata)
 	struct voicecall *voicecall = (struct voicecall *)userdata;
 
 	g_free(voicecall->call);
-	g_free(voicecall->message);
+	l_free(voicecall->message);
 
 	g_free(voicecall);
 }
@@ -2623,7 +2623,7 @@ static void set_new_ecc(struct ofono_voicecall *vc)
 	g_hash_table_destroy(vc->en_list);
 
 	vc->en_list = g_hash_table_new_full(g_str_hash, g_str_equal,
-							g_free, NULL);
+							l_free, NULL);
 
 	/* Emergency numbers from modem/network */
 	if (vc->nw_en_list)
@@ -2634,7 +2634,7 @@ static void set_new_ecc(struct ofono_voicecall *vc)
 		GSList *l;
 
 		for (l = vc->sim_en_list; l; l = l->next)
-			g_hash_table_insert(vc->en_list, g_strdup(l->data),
+			g_hash_table_insert(vc->en_list, l_strdup(l->data),
 							NULL);
 	} else
 		add_to_en_list(vc, (char **) default_en_list_no_sim);
@@ -2653,7 +2653,7 @@ static void free_sim_ecc_numbers(struct ofono_voicecall *vc, gboolean old_only)
 	 */
 	if (old_only == FALSE) {
 		if (vc->new_sim_en_list) {
-			g_slist_free_full(vc->new_sim_en_list, g_free);
+			g_slist_free_full(vc->new_sim_en_list, l_free);
 			vc->new_sim_en_list = NULL;
 		}
 
@@ -2661,7 +2661,7 @@ static void free_sim_ecc_numbers(struct ofono_voicecall *vc, gboolean old_only)
 	}
 
 	if (vc->sim_en_list) {
-		g_slist_free_full(vc->sim_en_list, g_free);
+		g_slist_free_full(vc->sim_en_list, l_free);
 		vc->sim_en_list = NULL;
 	}
 }
@@ -2692,7 +2692,7 @@ static void ecc_g2_read_cb(int ok, int total_length, int record,
 
 		if (en[0] != '\0')
 			vc->sim_en_list = g_slist_prepend(vc->sim_en_list,
-								g_strdup(en));
+								l_strdup(en));
 	}
 
 	vc->flags |= VOICECALL_FLAG_SIM_ECC_READY;
@@ -2723,7 +2723,7 @@ static void ecc_g3_read_cb(int ok, int total_length, int record,
 
 	if (en[0] != '\0')
 		vc->new_sim_en_list = g_slist_prepend(vc->new_sim_en_list,
-							g_strdup(en));
+							l_strdup(en));
 
 	if (record != total)
 		return;
@@ -2827,7 +2827,7 @@ static void voicecall_load_settings(struct ofono_voicecall *vc)
 	if (vc->settings == NULL)
 		return;
 
-	vc->imsi = g_strdup(imsi);
+	vc->imsi = l_strdup(imsi);
 }
 
 static void voicecall_close_settings(struct ofono_voicecall *vc)
@@ -2835,7 +2835,7 @@ static void voicecall_close_settings(struct ofono_voicecall *vc)
 	if (vc->settings) {
 		storage_close(vc->imsi, SETTINGS_STORE, vc->settings, TRUE);
 
-		g_free(vc->imsi);
+		l_free(vc->imsi);
 		vc->imsi = NULL;
 		vc->settings = NULL;
 	}
@@ -3657,7 +3657,7 @@ void ofono_voicecall_register(struct ofono_voicecall *vc)
 	ofono_modem_add_interface(modem, OFONO_VOICECALL_MANAGER_INTERFACE);
 
 	vc->en_list = g_hash_table_new_full(g_str_hash, g_str_equal,
-							g_free, NULL);
+							l_free, NULL);
 
 	/*
 	 * Start out with the 22.101 mandated numbers, if we have a SIM and
@@ -3838,7 +3838,7 @@ int __ofono_voicecall_dial(struct ofono_voicecall *vc,
 	if (req == NULL)
 		return -ENOMEM;
 
-	req->message = g_strdup(message);
+	req->message = l_strdup(message);
 	req->icon_id = icon_id;
 	req->interaction = interaction;
 	req->cb = cb;
@@ -4003,7 +4003,7 @@ void __ofono_voicecall_set_alpha_and_icon_id(struct ofono_voicecall *vc,
 
 	req = g_new0(struct dial_request, 1);
 
-	req->message = g_strdup(message);
+	req->message = l_strdup(message);
 	req->icon_id = icon_id;
 
 	req->ph.type = addr_type;
@@ -4021,7 +4021,7 @@ void __ofono_voicecall_clear_alpha_and_icon_id(struct ofono_voicecall *vc)
 	DBG("%p, %p", vc, vc->dial_req);
 
 	if (vc->dial_req) {
-		g_free(vc->dial_req->message);
+		l_free(vc->dial_req->message);
 		vc->dial_req->message = NULL;
 
 		g_free(vc->dial_req);
