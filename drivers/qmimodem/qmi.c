@@ -33,6 +33,7 @@
 #include <stdlib.h>
 #include <string.h>
 
+#include <ell/ell.h>
 #include <glib.h>
 
 #include <ofono/log.h>
@@ -176,7 +177,7 @@ static struct qmi_request *__request_alloc(uint8_t service,
 	struct qmi_message_hdr *msg;
 	uint16_t headroom;
 
-	req = g_new0(struct qmi_request, 1);
+	req = l_new(struct qmi_request, 1);
 
 	if (service == QMI_SERVICE_CONTROL)
 		headroom = QMI_CONTROL_HDR_SIZE;
@@ -185,7 +186,7 @@ static struct qmi_request *__request_alloc(uint8_t service,
 
 	req->len = QMI_MUX_HDR_SIZE + headroom + QMI_MESSAGE_HDR_SIZE + length;
 
-	req->buf = g_malloc(req->len);
+	req->buf = l_malloc(req->len);
 
 	req->client = client;
 
@@ -216,8 +217,8 @@ static void __request_free(gpointer data, gpointer user_data)
 {
 	struct qmi_request *req = data;
 
-	g_free(req->buf);
-	g_free(req);
+	l_free(req->buf);
+	l_free(req);
 }
 
 static gint __request_compare(gconstpointer a, gconstpointer b)
@@ -243,7 +244,7 @@ static void __notify_free(gpointer data, gpointer user_data)
 	if (notify->destroy)
 		notify->destroy(notify->user_data);
 
-	g_free(notify);
+	l_free(notify);
 }
 
 static gint __notify_compare(gconstpointer a, gconstpointer b)
@@ -677,7 +678,7 @@ static gboolean can_write_data(GIOChannel *channel, GIOCondition cond,
 	else
 		g_queue_push_tail(device->service_queue, req);
 
-	g_free(req->buf);
+	l_free(req->buf);
 	req->buf = NULL;
 
 	if (g_queue_get_length(device->req_queue) > 0)
@@ -954,9 +955,7 @@ struct qmi_device *qmi_device_new(int fd)
 	struct qmi_device *device;
 	long flags;
 
-	device = g_try_new0(struct qmi_device, 1);
-	if (!device)
-		return NULL;
+	device = l_new(struct qmi_device, 1);
 
 	__debug_device(device, "device %p new", device);
 
@@ -967,13 +966,13 @@ struct qmi_device *qmi_device_new(int fd)
 
 	flags = fcntl(device->fd, F_GETFL, NULL);
 	if (flags < 0) {
-		g_free(device);
+		l_free(device);
 		return NULL;
 	}
 
 	if (!(flags & O_NONBLOCK)) {
 		if (fcntl(device->fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-			g_free(device);
+			l_free(device);
 			return NULL;
 		}
 	}
@@ -1049,13 +1048,13 @@ void qmi_device_unref(struct qmi_device *device)
 
 	g_hash_table_destroy(device->service_list);
 
-	g_free(device->version_str);
-	g_free(device->version_list);
+	l_free(device->version_str);
+	l_free(device->version_list);
 
 	if (device->shutting_down)
 		device->destroyed = true;
 	else
-		g_free(device);
+		l_free(device);
 }
 
 void qmi_device_set_debug(struct qmi_device *device,
@@ -1173,7 +1172,7 @@ static void discover_data_free(gpointer user_data)
 	if (data->destroy)
 		data->destroy(data->user_data);
 
-	g_free(data);
+	l_free(data);
 }
 
 static void discover_callback(uint16_t message, uint16_t length,
@@ -1206,9 +1205,7 @@ static void discover_callback(uint16_t message, uint16_t length,
 	if (len < QMI_SERVICE_LIST_SIZE)
 		goto done;
 
-	list = g_try_malloc(sizeof(struct qmi_version) * service_list->count);
-	if (!list)
-		goto done;
+	list = l_malloc(sizeof(struct qmi_version) * service_list->count);
 
 	for (i = 0; i < service_list->count; i++) {
 		uint16_t major =
@@ -1317,9 +1314,7 @@ bool qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
 
 	__debug_device(device, "device %p discover", device);
 
-	data = g_try_new0(struct discover_data, 1);
-	if (!data)
-		return false;
+	data = l_new(struct discover_data, 1);
 
 	data->super.destroy = discover_data_free;
 	data->device = device;
@@ -1370,7 +1365,7 @@ static void shutdown_destroy(gpointer user_data)
 	device->shutdown_source = 0;
 
 	if (device->destroyed)
-		g_free(device);
+		l_free(device);
 }
 
 static gboolean shutdown_callback(gpointer user_data)
@@ -1427,7 +1422,7 @@ static void qmi_device_sync_callback(uint16_t message, uint16_t length,
 	if (data->func)
 		data->func(data->user_data);
 
-	g_free(data);
+	l_free(data);
 }
 
 /* sync will release all previous clients */
@@ -1442,7 +1437,7 @@ bool qmi_device_sync(struct qmi_device *device,
 
 	__debug_device(device, "Sending sync to reset QMI");
 
-	func_data = g_new0(struct sync_data, 1);
+	func_data = l_new(struct sync_data, 1);
 	func_data->func = func;
 	func_data->user_data = user_data;
 
@@ -1510,7 +1505,7 @@ static char *get_first_dir_in_directory(char *dir_path)
 		if (dir_entry->d_type == DT_DIR &&
 				strcmp(dir_entry->d_name, ".") != 0 &&
 				strcmp(dir_entry->d_name, "..") != 0) {
-			dir_name = g_strdup(dir_entry->d_name);
+			dir_name = l_strdup(dir_entry->d_name);
 			break;
 		}
 
@@ -1537,10 +1532,10 @@ static char *get_device_interface(struct qmi_device *device)
 	for (i = 0; i < G_N_ELEMENTS(driver_names) && !interface; i++) {
 		gchar *sysfs_path;
 
-		sysfs_path = g_strdup_printf("/sys/class/%s/%s/device/net/",
+		sysfs_path = l_strdup_printf("/sys/class/%s/%s/device/net/",
 						driver_names[i], file_name);
 		interface = get_first_dir_in_directory(sysfs_path);
-		g_free(sysfs_path);
+		l_free(sysfs_path);
 	}
 
 	return interface;
@@ -1567,7 +1562,7 @@ enum qmi_device_expected_data_format qmi_device_get_expected_data_format(
 	}
 
 	/* Build sysfs file path and open it */
-	sysfs_path = g_strdup_printf("/sys/class/net/%s/qmi/raw_ip", interface);
+	sysfs_path = l_strdup_printf("/sys/class/net/%s/qmi/raw_ip", interface);
 
 	fd = open(sysfs_path, O_RDONLY);
 	if (fd < 0) {
@@ -1593,10 +1588,10 @@ done:
 		close(fd);
 
 	if (sysfs_path)
-		g_free(sysfs_path);
+		l_free(sysfs_path);
 
 	if (interface)
-		g_free(interface);
+		l_free(interface);
 
 	return expected;
 }
@@ -1633,7 +1628,7 @@ bool qmi_device_set_expected_data_format(struct qmi_device *device,
 	}
 
 	/* Build sysfs file path and open it */
-	sysfs_path = g_strdup_printf("/sys/class/net/%s/qmi/raw_ip", interface);
+	sysfs_path = l_strdup_printf("/sys/class/net/%s/qmi/raw_ip", interface);
 
 	fd = open(sysfs_path, O_WRONLY);
 	if (fd < 0) {
@@ -1654,10 +1649,10 @@ done:
 		close(fd);
 
 	if (sysfs_path)
-		g_free(sysfs_path);
+		l_free(sysfs_path);
 
 	if (interface)
-		g_free(interface);
+		l_free(interface);
 
 	return res;
 }
@@ -1666,7 +1661,7 @@ struct qmi_param *qmi_param_new(void)
 {
 	struct qmi_param *param;
 
-	param = g_new0(struct qmi_param, 1);
+	param = l_new(struct qmi_param, 1);
 	if (!param)
 		return NULL;
 
@@ -1678,8 +1673,8 @@ void qmi_param_free(struct qmi_param *param)
 	if (!param)
 		return;
 
-	g_free(param->data);
-	g_free(param);
+	l_free(param->data);
+	l_free(param);
 }
 
 bool qmi_param_append(struct qmi_param *param, uint8_t type,
@@ -1698,13 +1693,10 @@ bool qmi_param_append(struct qmi_param *param, uint8_t type,
 		return false;
 
 	if (param->data)
-		ptr = g_try_realloc(param->data,
+		ptr = l_realloc(param->data,
 				param->length + QMI_TLV_HDR_SIZE + length);
 	else
-		ptr = g_try_malloc(QMI_TLV_HDR_SIZE + length);
-
-	if (!ptr)
-		return false;
+		ptr = l_malloc(QMI_TLV_HDR_SIZE + length);
 
 	tlv = ptr + param->length;
 
@@ -1968,7 +1960,7 @@ static void service_create_data_free(gpointer user_data)
 	if (data->destroy)
 		data->destroy(data->user_data);
 
-	g_free(data);
+	l_free(data);
 }
 
 struct service_create_shared_data {
@@ -2012,7 +2004,7 @@ static void service_create_shared_pending_reply(struct qmi_device *device,
 	}
 
 	g_list_free(*shared);
-	g_free(shared);
+	l_free(shared);
 }
 
 static gboolean service_create_reply(gpointer user_data)
@@ -2067,9 +2059,7 @@ static void service_create_callback(uint16_t message, uint16_t length,
 	if (client_id->service != data->type)
 		goto done;
 
-	service = g_try_new0(struct qmi_service, 1);
-	if (!service)
-		goto done;
+	service = l_new(struct qmi_service, 1);
 
 	service->ref_count = 1;
 	service->device = data->device;
@@ -2111,15 +2101,8 @@ static bool service_create(struct qmi_device *device,
 	if (!device->version_list)
 		return false;
 
-	shared = g_try_new0(GList *, 1);
-	if (!shared)
-		return false;
-
-	data = g_try_new0(struct service_create_data, 1);
-	if (!data) {
-		g_free(shared);
-		return false;
-	}
+	shared = l_new(GList *, 1);
+	data = l_new(struct service_create_data, 1);
 
 	data->super.destroy = service_create_data_free;
 	data->device = device;
@@ -2169,7 +2152,7 @@ static void service_create_shared_data_free(gpointer user_data)
 	if (data->destroy)
 		data->destroy(data->user_data);
 
-	g_free(data);
+	l_free(data);
 }
 
 bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
@@ -2196,9 +2179,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 	if (service) {
 		struct service_create_shared_data *data;
 
-		data = g_try_new0(struct service_create_shared_data, 1);
-		if (!data)
-			return false;
+		data = l_new(struct service_create_shared_data, 1);
 
 		data->super.destroy = service_create_shared_data_free;
 		data->device = device;
@@ -2243,7 +2224,7 @@ static void service_release_callback(uint16_t message, uint16_t length,
 	if (service->device)
 		service->device->release_users--;
 
-	g_free(service);
+	l_free(service);
 }
 
 struct qmi_service *qmi_service_ref(struct qmi_service *service)
@@ -2267,7 +2248,7 @@ void qmi_service_unref(struct qmi_service *service)
 		return;
 
 	if (!service->device) {
-		g_free(service);
+		l_free(service);
 		return;
 	}
 
@@ -2319,7 +2300,7 @@ static void service_send_free(struct service_send_data *data)
 	if (data->destroy)
 		data->destroy(data->user_data);
 
-	g_free(data);
+	l_free(data);
 }
 
 static void service_send_callback(uint16_t message, uint16_t length,
@@ -2496,9 +2477,7 @@ uint16_t qmi_service_register(struct qmi_service *service,
 	if (!service || !func)
 		return 0;
 
-	notify = g_try_new0(struct qmi_notify, 1);
-	if (!notify)
-		return 0;
+	notify = l_new(struct qmi_notify, 1);
 
 	if (service->next_notify_id < 1)
 		service->next_notify_id = 1;
