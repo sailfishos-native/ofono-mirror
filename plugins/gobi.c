@@ -431,6 +431,8 @@ static int gobi_enable(struct ofono_modem *modem)
 		return -EINVAL;
 
 	data->device = qmi_device_new_qmux(device);
+	if (!data->device)
+		return -EIO;
 
 	if (getenv("OFONO_QMI_DEBUG"))
 		qmi_device_set_debug(data->device, gobi_debug, "QMI: ");
