@@ -56,6 +56,9 @@ struct qmi_version {
 };
 
 struct qmi_device_ops {
+	int (*shutdown)(struct qmi_device *device,
+			qmi_shutdown_func_t shutdown_func,
+			void *user, qmi_destroy_func_t destroy);
 	void (*destroy)(struct qmi_device *device);
 };
 
@@ -77,10 +80,6 @@ struct qmi_device {
 	uint8_t version_count;
 	struct l_hashmap *service_list;
 	unsigned int release_users;
-	qmi_shutdown_func_t shutdown_func;
-	void *shutdown_user_data;
-	qmi_destroy_func_t shutdown_destroy;
-	guint shutdown_source;
 	const struct qmi_device_ops *ops;
 	bool shutting_down : 1;
 	bool destroyed : 1;
@@ -91,6 +90,10 @@ struct qmi_device_qmux {
 	uint16_t control_major;
 	uint16_t control_minor;
 	char *version_str;
+	qmi_shutdown_func_t shutdown_func;
+	void *shutdown_user_data;
+	qmi_destroy_func_t shutdown_destroy;
+	guint shutdown_source;
 };
 
 struct qmi_service {
@@ -971,6 +974,12 @@ struct qmi_device *qmi_device_ref(struct qmi_device *device)
 	return device;
 }
 
+static void __qmi_device_shutdown_finished(struct qmi_device *device)
+{
+	if (device->destroyed)
+		device->ops->destroy(device);
+}
+
 void qmi_device_unref(struct qmi_device *device)
 {
 	if (!device)
@@ -993,9 +1002,6 @@ void qmi_device_unref(struct qmi_device *device)
 		g_source_remove(device->read_watch);
 
 	close(device->fd);
-
-	if (device->shutdown_source)
-		g_source_remove(device->shutdown_source);
 
 	l_hashmap_destroy(device->service_list, service_destroy);
 
@@ -1330,58 +1336,16 @@ static void release_client(struct qmi_device *device,
 	__request_submit(device, req);
 }
 
-static void shutdown_destroy(gpointer user_data)
-{
-	struct qmi_device *device = user_data;
-
-	if (device->shutdown_destroy)
-		device->shutdown_destroy(device->shutdown_user_data);
-
-	device->shutdown_source = 0;
-
-	if (device->destroyed)
-		l_free(device);
-}
-
-static gboolean shutdown_callback(gpointer user_data)
-{
-	struct qmi_device *device = user_data;
-
-	if (device->release_users > 0)
-		return TRUE;
-
-	device->shutting_down = true;
-
-	if (device->shutdown_func)
-		device->shutdown_func(device->shutdown_user_data);
-
-	device->shutting_down = true;
-
-	return FALSE;
-}
-
-bool qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
+int qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
 	if (!device)
 		return false;
 
-	if (device->shutdown_source > 0)
-		return false;
+	if (!device->ops->shutdown)
+		return -ENOTSUP;
 
-	__debug_device(device, "device %p shutdown", device);
-
-	device->shutdown_source = g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
-						0, shutdown_callback, device,
-						shutdown_destroy);
-	if (device->shutdown_source == 0)
-		return false;
-
-	device->shutdown_func = func;
-	device->shutdown_user_data = user_data;
-	device->shutdown_destroy = destroy;
-
-	return true;
+	return device->ops->shutdown(device, func, user_data, destroy);
 }
 
 static bool get_device_file_name(struct qmi_device *device,
@@ -1580,16 +1544,75 @@ done:
 	return res;
 }
 
+static void qmux_shutdown_destroy(gpointer user_data)
+{
+	struct qmi_device_qmux *qmux = user_data;
+
+	if (qmux->shutdown_destroy)
+		qmux->shutdown_destroy(qmux->shutdown_user_data);
+
+	qmux->shutdown_source = 0;
+
+	__qmi_device_shutdown_finished(&qmux->super);
+}
+
+static gboolean qmux_shutdown_callback(gpointer user_data)
+{
+	struct qmi_device_qmux *qmux = user_data;
+
+	if (qmux->super.release_users > 0)
+		return TRUE;
+
+	qmux->super.shutting_down = true;
+
+	if (qmux->shutdown_func)
+		qmux->shutdown_func(qmux->shutdown_user_data);
+
+	qmux->super.shutting_down = false;
+
+	return FALSE;
+}
+
+static int qmi_device_qmux_shutdown(struct qmi_device *device,
+					qmi_shutdown_func_t func,
+					void *user_data,
+					qmi_destroy_func_t destroy)
+{
+	struct qmi_device_qmux *qmux =
+		l_container_of(device, struct qmi_device_qmux, super);
+
+	if (qmux->shutdown_source > 0)
+		return -EALREADY;
+
+	__debug_device(&qmux->super, "device %p shutdown", &qmux->super);
+
+	qmux->shutdown_source = g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
+						0, qmux_shutdown_callback,
+						qmux, qmux_shutdown_destroy);
+	if (qmux->shutdown_source == 0)
+		return -EIO;
+
+	qmux->shutdown_func = func;
+	qmux->shutdown_user_data = user_data;
+	qmux->shutdown_destroy = destroy;
+
+	return 0;
+}
+
 static void qmi_device_qmux_destroy(struct qmi_device *device)
 {
 	struct qmi_device_qmux *qmux =
 		l_container_of(device, struct qmi_device_qmux, super);
+
+	if (qmux->shutdown_source)
+		g_source_remove(qmux->shutdown_source);
 
 	l_free(qmux->version_str);
 	l_free(qmux);
 }
 
 static const struct qmi_device_ops qmux_ops = {
+	.shutdown = qmi_device_qmux_shutdown,
 	.destroy = qmi_device_qmux_destroy,
 };
 

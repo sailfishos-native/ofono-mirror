@@ -89,7 +89,7 @@ void qmi_device_set_debug(struct qmi_device *device,
 
 bool qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
-bool qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
+int qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
 
 bool qmi_device_has_service(struct qmi_device *device, uint16_t type);
