@@ -55,6 +55,10 @@ struct qmi_version {
 	const char *name;
 };
 
+struct qmi_device_ops {
+	void (*destroy)(struct qmi_device *device);
+};
+
 struct qmi_device {
 	int ref_count;
 	int fd;
@@ -81,8 +85,13 @@ struct qmi_device {
 	void *shutdown_user_data;
 	qmi_destroy_func_t shutdown_destroy;
 	guint shutdown_source;
+	const struct qmi_device_ops *ops;
 	bool shutting_down : 1;
 	bool destroyed : 1;
+};
+
+struct qmi_device_qmux {
+	struct qmi_device super;
 };
 
 struct qmi_service {
@@ -905,12 +914,10 @@ static void service_destroy(void *data)
 	service->device = NULL;
 }
 
-struct qmi_device *qmi_device_new(int fd)
+static int qmi_device_init(struct qmi_device *device, int fd,
+					const struct qmi_device_ops *ops)
 {
-	struct qmi_device *device;
 	long flags;
-
-	device = l_new(struct qmi_device, 1);
 
 	__debug_device(device, "device %p new", device);
 
@@ -920,16 +927,14 @@ struct qmi_device *qmi_device_new(int fd)
 	device->close_on_unref = false;
 
 	flags = fcntl(device->fd, F_GETFL, NULL);
-	if (flags < 0) {
-		l_free(device);
-		return NULL;
-	}
+	if (flags < 0)
+		return -EIO;
 
 	if (!(flags & O_NONBLOCK)) {
-		if (fcntl(device->fd, F_SETFL, flags | O_NONBLOCK) < 0) {
-			l_free(device);
-			return NULL;
-		}
+		int r = fcntl(device->fd, F_SETFL, flags | O_NONBLOCK);
+
+		if (r < 0)
+			return -errno;
 	}
 
 	device->io = g_io_channel_unix_new(device->fd);
@@ -953,7 +958,9 @@ struct qmi_device *qmi_device_new(int fd)
 	device->next_control_tid = 1;
 	device->next_service_tid = 256;
 
-	return device;
+	device->ops = ops;
+
+	return 0;
 }
 
 struct qmi_device *qmi_device_ref(struct qmi_device *device)
@@ -1001,7 +1008,7 @@ void qmi_device_unref(struct qmi_device *device)
 	if (device->shutting_down)
 		device->destroyed = true;
 	else
-		l_free(device);
+		device->ops->destroy(device);
 }
 
 void qmi_device_set_debug(struct qmi_device *device,
@@ -1580,6 +1587,38 @@ done:
 		l_free(interface);
 
 	return res;
+}
+
+static void qmi_device_qmux_destroy(struct qmi_device *device)
+{
+	struct qmi_device_qmux *qmux =
+		l_container_of(device, struct qmi_device_qmux, super);
+
+	l_free(qmux);
+}
+
+static const struct qmi_device_ops qmux_ops = {
+	.destroy = qmi_device_qmux_destroy,
+};
+
+struct qmi_device *qmi_device_new_qmux(const char *device)
+{
+	struct qmi_device_qmux *qmux;
+	int fd;
+
+	fd = open(device, O_RDWR | O_NONBLOCK | O_CLOEXEC);
+	if (fd < 0)
+		return NULL;
+
+	qmux = l_new(struct qmi_device_qmux, 1);
+
+	if (qmi_device_init(&qmux->super, fd, &qmux_ops) < 0) {
+		close(fd);
+		l_free(qmux);
+		return NULL;
+	}
+
+	return &qmux->super;
 }
 
 struct qmi_param *qmi_param_new(void)

@@ -423,7 +423,6 @@ static int gobi_enable(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
 	const char *device;
-	int fd;
 
 	DBG("%p", modem);
 
@@ -431,15 +430,7 @@ static int gobi_enable(struct ofono_modem *modem)
 	if (!device)
 		return -EINVAL;
 
-	fd = open(device, O_RDWR | O_NONBLOCK | O_CLOEXEC);
-	if (fd < 0)
-		return -EIO;
-
-	data->device = qmi_device_new(fd);
-	if (!data->device) {
-		close(fd);
-		return -ENOMEM;
-	}
+	data->device = qmi_device_new_qmux(device);
 
 	if (getenv("OFONO_QMI_DEBUG"))
 		qmi_device_set_debug(data->device, gobi_debug, "QMI: ");
