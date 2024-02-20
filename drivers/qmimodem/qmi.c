@@ -75,7 +75,7 @@ struct qmi_device {
 	char *version_str;
 	struct qmi_version *version_list;
 	uint8_t version_count;
-	GHashTable *service_list;
+	struct l_hashmap *service_list;
 	unsigned int release_users;
 	qmi_shutdown_func_t shutdown_func;
 	void *shutdown_user_data;
@@ -255,20 +255,23 @@ static gint __notify_compare(gconstpointer a, gconstpointer b)
 	return notify->id - id;
 }
 
-static gboolean __service_compare_shared(gpointer key, gpointer value,
-							gpointer user_data)
+struct service_find_by_type_data {
+	unsigned int type;
+	struct qmi_service *found_service;
+};
+
+static void __service_find_by_type(const void *key, void *value,
+					void *user_data)
 {
 	struct qmi_service *service = value;
-	uint8_t type = GPOINTER_TO_UINT(user_data);
+	struct service_find_by_type_data *data = user_data;
 
 	/* ignore those that are in process of creation */
 	if (GPOINTER_TO_UINT(key) & 0x80000000)
-		return FALSE;
+		return;
 
-	if (service->type == type)
-		return TRUE;
-
-	return FALSE;
+	if (service->type == data->type)
+		data->found_service = service;
 }
 
 static const char *__service_type_to_string(uint8_t type)
@@ -695,7 +698,7 @@ static uint16_t __request_submit(struct qmi_device *device,
 	return req->tid;
 }
 
-static void service_notify(gpointer key, gpointer value, gpointer user_data)
+static void service_notify(const void *key, void *value, void *user_data)
 {
 	struct qmi_service *service = value;
 	struct qmi_result *result = user_data;
@@ -732,15 +735,16 @@ static void handle_indication(struct qmi_device *device,
 	result.length = length;
 
 	if (client_id == 0xff) {
-		g_hash_table_foreach(device->service_list,
-						service_notify, &result);
+		l_hashmap_foreach(device->service_list, service_notify,
+					&result);
 		return;
 	}
 
 	hash_id = service_type | (client_id << 8);
 
-	service = g_hash_table_lookup(device->service_list,
+	service = l_hashmap_lookup(device->service_list,
 					GUINT_TO_POINTER(hash_id));
+
 	if (!service)
 		return;
 
@@ -891,7 +895,7 @@ static void __qmi_device_discovery_complete(struct qmi_device *device,
 	__discovery_free(d);
 }
 
-static void service_destroy(gpointer data)
+static void service_destroy(void *data)
 {
 	struct qmi_service *service = data;
 
@@ -944,8 +948,7 @@ struct qmi_device *qmi_device_new(int fd)
 	device->service_queue = l_queue_new();
 	device->discovery_queue = l_queue_new();
 
-	device->service_list = g_hash_table_new_full(g_direct_hash,
-					g_direct_equal, NULL, service_destroy);
+	device->service_list = l_hashmap_new();
 
 	device->next_control_tid = 1;
 	device->next_service_tid = 256;
@@ -990,7 +993,7 @@ void qmi_device_unref(struct qmi_device *device)
 	if (device->shutdown_source)
 		g_source_remove(device->shutdown_source);
 
-	g_hash_table_destroy(device->service_list);
+	l_hashmap_destroy(device->service_list, service_destroy);
 
 	l_free(device->version_str);
 	l_free(device->version_list);
@@ -1930,10 +1933,8 @@ static void service_create_shared_pending_reply(struct qmi_device *device,
 						struct qmi_service *service)
 {
 	gpointer key = GUINT_TO_POINTER(type | 0x80000000);
-	GList **shared = g_hash_table_lookup(device->service_list, key);
+	GList **shared = l_hashmap_remove(device->service_list, key);
 	GList *l;
-
-	g_hash_table_steal(device->service_list, key);
 
 	for (l = *shared; l; l = l->next) {
 		struct service_create_shared_data *shared_data = l->data;
@@ -1977,6 +1978,7 @@ static void service_create_callback(uint16_t message, uint16_t length,
 	struct service_create_data *data = user_data;
 	struct qmi_device *device = data->device;
 	struct qmi_service *service = NULL;
+	struct qmi_service *old_service = NULL;
 	const struct qmi_result_code *result_code;
 	const struct qmi_client_id *client_id;
 	uint16_t len;
@@ -2015,8 +2017,11 @@ static void service_create_callback(uint16_t message, uint16_t length,
 
 	hash_id = service->type | (service->client_id << 8);
 
-	g_hash_table_replace(device->service_list,
-				GUINT_TO_POINTER(hash_id), service);
+	l_hashmap_replace(device->service_list, GUINT_TO_POINTER(hash_id),
+				service, (void **) &old_service);
+
+	if (old_service)
+		service_destroy(old_service);
 
 done:
 	service_create_shared_pending_reply(device, data->type, service);
@@ -2072,7 +2077,7 @@ static bool service_create(struct qmi_device *device,
 	__qmi_device_discovery_started(device, &data->super);
 
 	/* Mark service creation as pending */
-	g_hash_table_insert(device->service_list,
+	l_hashmap_insert(device->service_list,
 			GUINT_TO_POINTER(type_val | 0x80000000), shared);
 
 	return true;
@@ -2099,7 +2104,8 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 			qmi_create_func_t func, void *user_data,
 			qmi_destroy_func_t destroy)
 {
-	gpointer service;
+	GList **l = NULL;
+	struct qmi_service *service = NULL;
 	unsigned int type_val = type;
 
 	if (!device || !func)
@@ -2108,15 +2114,27 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 	if (type == QMI_SERVICE_CONTROL)
 		return false;
 
-	service = g_hash_table_lookup(device->service_list,
+	l = l_hashmap_lookup(device->service_list,
 				GUINT_TO_POINTER(type_val | 0x80000000));
-	if (!service) {
-		service = g_hash_table_find(device->service_list,
-			__service_compare_shared, GUINT_TO_POINTER(type_val));
+
+	if (!l) {
+		/*
+		 * There is no way to find in an l_hashmap using a custom
+		 * function. Instead we use a temporary struct to store the
+		 * found service. This is not very clean, but we expect this
+		 * code to be refactored soon.
+		 */
+		struct service_find_by_type_data data;
+
+		data.type = type_val;
+		data.found_service = NULL;
+		l_hashmap_foreach(device->service_list,	__service_find_by_type,
+					&data);
+		service = data.found_service;
 	} else
 		type_val |= 0x80000000;
 
-	if (service) {
+	if (l || service) {
 		struct service_create_shared_data *data;
 
 		data = l_new(struct service_create_shared_data, 1);
@@ -2127,18 +2145,12 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		data->user_data = user_data;
 		data->destroy = destroy;
 
-		if (!data)
-			return false;
-
 		if (!(type_val & 0x80000000)) {
 			data->service = qmi_service_ref(service);
 			data->timeout = g_timeout_add(
 					0, service_create_shared_reply, data);
-		} else {
-			GList **l = service;
-
+		} else
 			*l = g_list_prepend(*l, data);
-		}
 
 		__qmi_device_discovery_started(device, &data->super);
 
@@ -2197,8 +2209,8 @@ void qmi_service_unref(struct qmi_service *service)
 
 	hash_id = service->type | (service->client_id << 8);
 
-	g_hash_table_steal(service->device->service_list,
-					GUINT_TO_POINTER(hash_id));
+	l_hashmap_remove(service->device->service_list,
+				GUINT_TO_POINTER(hash_id));
 
 	service->device->release_users++;
 
@@ -2347,7 +2359,7 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 	return true;
 }
 
-static bool remove_req_if_match(void* data, void* user_data)
+static bool remove_req_if_match(void *data, void *user_data)
 {
 	struct qmi_request *req = data;
 	uint8_t client = GPOINTER_TO_UINT(user_data);
