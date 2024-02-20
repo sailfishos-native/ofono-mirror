@@ -87,8 +87,6 @@ void qmi_device_unref(struct qmi_device *device);
 void qmi_device_set_debug(struct qmi_device *device,
 				qmi_debug_func_t func, void *user_data);
 
-void qmi_device_set_close_on_unref(struct qmi_device *device, bool do_close);
-
 bool qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
 bool qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,

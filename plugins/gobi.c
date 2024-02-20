@@ -435,8 +435,6 @@ static int gobi_enable(struct ofono_modem *modem)
 	if (getenv("OFONO_QMI_DEBUG"))
 		qmi_device_set_debug(data->device, gobi_debug, "QMI: ");
 
-	qmi_device_set_close_on_unref(data->device, true);
-
 	qmi_device_discover(data->device, discover_cb, modem, NULL);
 
 	return -EINPROGRESS;
