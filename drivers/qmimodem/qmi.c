@@ -73,8 +73,6 @@ struct qmi_device {
 	uint16_t next_service_tid;
 	qmi_debug_func_t debug_func;
 	void *debug_data;
-	uint16_t control_major;
-	uint16_t control_minor;
 	char *version_str;
 	struct qmi_version *version_list;
 	uint8_t version_count;
@@ -91,6 +89,8 @@ struct qmi_device {
 
 struct qmi_device_qmux {
 	struct qmi_device super;
+	uint16_t control_major;
+	uint16_t control_minor;
 };
 
 struct qmi_service {
@@ -1150,6 +1150,8 @@ static void discover_callback(uint16_t message, uint16_t length,
 {
 	struct discover_data *data = user_data;
 	struct qmi_device *device = data->device;
+	struct qmi_device_qmux *qmux =
+		l_container_of(device, struct qmi_device_qmux, super);
 	const struct qmi_result_code *result_code;
 	const struct qmi_service_list *service_list;
 	const void *ptr;
@@ -1193,8 +1195,8 @@ static void discover_callback(uint16_t message, uint16_t length,
 					type, major, minor);
 
 		if (type == QMI_SERVICE_CONTROL) {
-			device->control_major = major;
-			device->control_minor = minor;
+			qmux->control_major = major;
+			qmux->control_minor = minor;
 			continue;
 		}
 
@@ -1217,8 +1219,8 @@ done:
 	device->version_count = count;
 
 	/* if the device support the QMI call SYNC over the CTL interface */
-	if ((device->control_major == 1 && device->control_minor >= 5) ||
-			device->control_major > 1) {
+	if ((qmux->control_major == 1 && qmux->control_minor >= 5) ||
+			qmux->control_major > 1) {
 		qmi_device_sync(data->device, data);
 		return;
 	}
