@@ -62,10 +62,10 @@ struct qmi_device {
 	bool close_on_unref;
 	guint read_watch;
 	guint write_watch;
-	GQueue *req_queue;
-	GQueue *control_queue;
-	GQueue *service_queue;
-	GQueue *discovery_queue;
+	struct l_queue *req_queue;
+	struct l_queue *control_queue;
+	struct l_queue *service_queue;
+	struct l_queue *discovery_queue;
 	uint8_t next_control_tid;
 	uint16_t next_service_tid;
 	qmi_debug_func_t debug_func;
@@ -213,7 +213,7 @@ static struct qmi_request *__request_alloc(uint8_t service,
 	return req;
 }
 
-static void __request_free(gpointer data, gpointer user_data)
+static void __request_free(void *data)
 {
 	struct qmi_request *req = data;
 
@@ -221,15 +221,15 @@ static void __request_free(gpointer data, gpointer user_data)
 	l_free(req);
 }
 
-static gint __request_compare(gconstpointer a, gconstpointer b)
+static bool __request_compare(const void *a, const void *b)
 {
 	const struct qmi_request *req = a;
 	uint16_t tid = GPOINTER_TO_UINT(b);
 
-	return req->tid - tid;
+	return req->tid == tid;
 }
 
-static void __discovery_free(gpointer data, gpointer user_data)
+static void __discovery_free(void *data)
 {
 	struct discovery *d = data;
 	qmi_destroy_func_t destroy = d->destroy;
@@ -614,7 +614,7 @@ static gboolean can_write_data(GIOChannel *channel, GIOCondition cond,
 	struct qmi_request *req;
 	ssize_t bytes_written;
 
-	req = g_queue_pop_head(device->req_queue);
+	req = l_queue_pop_head(device->req_queue);
 	if (!req)
 		return FALSE;
 
@@ -631,14 +631,14 @@ static gboolean can_write_data(GIOChannel *channel, GIOCondition cond,
 	hdr = req->buf;
 
 	if (hdr->service == QMI_SERVICE_CONTROL)
-		g_queue_push_tail(device->control_queue, req);
+		l_queue_push_tail(device->control_queue, req);
 	else
-		g_queue_push_tail(device->service_queue, req);
+		l_queue_push_tail(device->service_queue, req);
 
 	l_free(req->buf);
 	req->buf = NULL;
 
-	if (g_queue_get_length(device->req_queue) > 0)
+	if (l_queue_length(device->req_queue) > 0)
 		return TRUE;
 
 	return FALSE;
@@ -688,7 +688,7 @@ static uint16_t __request_submit(struct qmi_device *device,
 		req->tid = hdr->transaction;
 	}
 
-	g_queue_push_tail(device->req_queue, req);
+	l_queue_push_tail(device->req_queue, req);
 
 	wakeup_writer(device);
 
@@ -758,7 +758,6 @@ static void handle_packet(struct qmi_device *device,
 		const struct qmi_control_hdr *control = buf;
 		const struct qmi_message_hdr *msg;
 		unsigned int tid;
-		GList *list;
 
 		/* Ignore control messages with client identifier */
 		if (hdr->client != 0x00)
@@ -779,19 +778,16 @@ static void handle_packet(struct qmi_device *device,
 			return;
 		}
 
-		list = g_queue_find_custom(device->control_queue,
-				GUINT_TO_POINTER(tid), __request_compare);
-		if (!list)
+		req = l_queue_find(device->control_queue, __request_compare,
+					GUINT_TO_POINTER(tid));
+		if (!req)
 			return;
 
-		req = list->data;
-
-		g_queue_delete_link(device->control_queue, list);
+		l_queue_remove(device->control_queue, req);
 	} else {
 		const struct qmi_service_hdr *service = buf;
 		const struct qmi_message_hdr *msg;
 		unsigned int tid;
-		GList *list;
 
 		msg = buf + QMI_SERVICE_HDR_SIZE;
 
@@ -808,20 +804,18 @@ static void handle_packet(struct qmi_device *device,
 			return;
 		}
 
-		list = g_queue_find_custom(device->service_queue,
-				GUINT_TO_POINTER(tid), __request_compare);
-		if (!list)
+		req = l_queue_find(device->service_queue, __request_compare,
+					GUINT_TO_POINTER(tid));
+		if (!req)
 			return;
 
-		req = list->data;
-
-		g_queue_delete_link(device->service_queue, list);
+		l_queue_remove(device->service_queue, req);
 	}
 
 	if (req->callback)
 		req->callback(message, length, data, req->user_data);
 
-	__request_free(req, NULL);
+	__request_free(req);
 }
 
 static gboolean received_data(GIOChannel *channel, GIOCondition cond,
@@ -885,16 +879,16 @@ static void read_watch_destroy(gpointer user_data)
 static void __qmi_device_discovery_started(struct qmi_device *device,
 						struct discovery *d)
 {
-	g_queue_push_tail(device->discovery_queue, d);
+	l_queue_push_tail(device->discovery_queue, d);
 }
 
 static void __qmi_device_discovery_complete(struct qmi_device *device,
 						struct discovery *d)
 {
-	if (g_queue_remove(device->discovery_queue, d) != TRUE)
+	if (l_queue_remove(device->discovery_queue, d) != TRUE)
 		return;
 
-	__discovery_free(d, NULL);
+	__discovery_free(d);
 }
 
 static void service_destroy(gpointer data)
@@ -945,10 +939,10 @@ struct qmi_device *qmi_device_new(int fd)
 
 	g_io_channel_unref(device->io);
 
-	device->req_queue = g_queue_new();
-	device->control_queue = g_queue_new();
-	device->service_queue = g_queue_new();
-	device->discovery_queue = g_queue_new();
+	device->req_queue = l_queue_new();
+	device->control_queue = l_queue_new();
+	device->service_queue = l_queue_new();
+	device->discovery_queue = l_queue_new();
 
 	device->service_list = g_hash_table_new_full(g_direct_hash,
 					g_direct_equal, NULL, service_destroy);
@@ -979,17 +973,10 @@ void qmi_device_unref(struct qmi_device *device)
 
 	__debug_device(device, "device %p free", device);
 
-	g_queue_foreach(device->control_queue, __request_free, NULL);
-	g_queue_free(device->control_queue);
-
-	g_queue_foreach(device->service_queue, __request_free, NULL);
-	g_queue_free(device->service_queue);
-
-	g_queue_foreach(device->req_queue, __request_free, NULL);
-	g_queue_free(device->req_queue);
-
-	g_queue_foreach(device->discovery_queue, __discovery_free, NULL);
-	g_queue_free(device->discovery_queue);
+	l_queue_destroy(device->control_queue, __request_free);
+	l_queue_destroy(device->service_queue, __request_free);
+	l_queue_destroy(device->req_queue, __request_free);
+	l_queue_destroy(device->discovery_queue, __discovery_free);
 
 	if (device->write_watch > 0)
 		g_source_remove(device->write_watch);
@@ -1212,26 +1199,22 @@ done:
 static struct qmi_request *find_control_request(struct qmi_device *device,
 						uint16_t tid)
 {
-	GList *list;
 	struct qmi_request *req = NULL;
 	unsigned int _tid = tid;
 
 	if (_tid != 0) {
-		list = g_queue_find_custom(device->req_queue,
-				GUINT_TO_POINTER(_tid), __request_compare);
+		req = l_queue_find(device->req_queue, __request_compare,
+					GUINT_TO_POINTER(_tid));
 
-		if (list) {
-			req = list->data;
-			g_queue_delete_link(device->req_queue, list);
-		} else {
-			list = g_queue_find_custom(device->control_queue,
-				GUINT_TO_POINTER(_tid), __request_compare);
+		if (req)
+			l_queue_remove(device->req_queue, req);
+		else {
+			req = l_queue_find(device->control_queue,
+						__request_compare,
+						GUINT_TO_POINTER(_tid));
 
-			if (list) {
-				req = list->data;
-				g_queue_delete_link(device->control_queue,
-							list);
-			}
+			if (req)
+				l_queue_remove(device->control_queue, req);
 		}
 	}
 
@@ -1255,7 +1238,7 @@ static gboolean discover_reply(gpointer user_data)
 	__qmi_device_discovery_complete(device, &data->super);
 
 	if (req)
-		__request_free(req, NULL);
+		__request_free(req);
 
 	return FALSE;
 }
@@ -1983,7 +1966,7 @@ static gboolean service_create_reply(gpointer user_data)
 	__qmi_device_discovery_complete(device, &data->super);
 
 	if (req)
-		__request_free(req, NULL);
+		__request_free(req);
 
 	return FALSE;
 }
@@ -2309,9 +2292,7 @@ uint16_t qmi_service_send(struct qmi_service *service,
 	if (!device)
 		return 0;
 
-	data = g_try_new0(struct service_send_data, 1);
-	if (!data)
-		return 0;
+	data = l_new(struct service_send_data, 1);
 
 	data->func = func;
 	data->user_data = user_data;
@@ -2335,7 +2316,6 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 	unsigned int tid = id;
 	struct qmi_device *device;
 	struct qmi_request *req;
-	GList *list;
 
 	if (!service || !tid)
 		return false;
@@ -2347,59 +2327,44 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 	if (!device)
 		return false;
 
-	list = g_queue_find_custom(device->req_queue,
-				GUINT_TO_POINTER(tid), __request_compare);
-	if (list) {
-		req = list->data;
-
-		g_queue_delete_link(device->req_queue, list);
-	} else {
-		list = g_queue_find_custom(device->service_queue,
-				GUINT_TO_POINTER(tid), __request_compare);
-		if (!list)
+	req = l_queue_find(device->req_queue, __request_compare,
+				GUINT_TO_POINTER(tid));
+	if (req)
+		l_queue_remove(device->req_queue, req);
+	else {
+		req = l_queue_find(device->service_queue, __request_compare,
+					GUINT_TO_POINTER(tid));
+		if (!req)
 			return false;
 
-		req = list->data;
-
-		g_queue_delete_link(device->service_queue, list);
+		l_queue_remove(device->service_queue, req);
 	}
 
 	service_send_free(req->user_data);
 
-	__request_free(req, NULL);
+	__request_free(req);
 
 	return true;
 }
 
-static GQueue *remove_client(GQueue *queue, uint8_t client)
+static bool remove_req_if_match(void* data, void* user_data)
 {
-	GQueue *new_queue;
-	GList *list;
+	struct qmi_request *req = data;
+	uint8_t client = GPOINTER_TO_UINT(user_data);
 
-	new_queue = g_queue_new();
+	if (!req->client || req->client != client)
+		return false;
 
-	while (1) {
-		struct qmi_request *req;
+	service_send_free(req->user_data);
+	__request_free(req);
 
-		list = g_queue_pop_head_link(queue);
-		if (!list)
-			break;
+	return true;
+}
 
-		req = list->data;
-
-		if (!req->client || req->client != client) {
-			g_queue_push_tail_link(new_queue, list);
-			continue;
-		}
-
-		service_send_free(req->user_data);
-
-		__request_free(req, NULL);
-	}
-
-	g_queue_free(queue);
-
-	return new_queue;
+static void remove_client(struct l_queue *queue, uint8_t client)
+{
+	l_queue_foreach_remove(queue, remove_req_if_match,
+				GUINT_TO_POINTER(client));
 }
 
 bool qmi_service_cancel_all(struct qmi_service *service)
@@ -2416,11 +2381,8 @@ bool qmi_service_cancel_all(struct qmi_service *service)
 	if (!device)
 		return false;
 
-	device->req_queue = remove_client(device->req_queue,
-						service->client_id);
-
-	device->service_queue = remove_client(device->service_queue,
-							service->client_id);
+	remove_client(device->req_queue, service->client_id);
+	remove_client(device->service_queue, service->client_id);
 
 	return true;
 }
