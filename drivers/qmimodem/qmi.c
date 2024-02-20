@@ -73,7 +73,6 @@ struct qmi_device {
 	uint16_t next_service_tid;
 	qmi_debug_func_t debug_func;
 	void *debug_data;
-	char *version_str;
 	struct qmi_version *version_list;
 	uint8_t version_count;
 	struct l_hashmap *service_list;
@@ -91,6 +90,7 @@ struct qmi_device_qmux {
 	struct qmi_device super;
 	uint16_t control_major;
 	uint16_t control_minor;
+	char *version_str;
 };
 
 struct qmi_service {
@@ -999,7 +999,6 @@ void qmi_device_unref(struct qmi_device *device)
 
 	l_hashmap_destroy(device->service_list, service_destroy);
 
-	l_free(device->version_str);
 	l_free(device->version_list);
 
 	if (device->shutting_down)
@@ -1212,7 +1211,8 @@ static void discover_callback(uint16_t message, uint16_t length,
 	if (!ptr)
 		goto done;
 
-	device->version_str = strndup(ptr + 1, *((uint8_t *) ptr));
+	qmux->version_str = l_strndup(ptr + 1, *((uint8_t *) ptr));
+	__debug_device(device, "version string: %s", qmux->version_str);
 
 done:
 	device->version_list = list;
@@ -1585,6 +1585,7 @@ static void qmi_device_qmux_destroy(struct qmi_device *device)
 	struct qmi_device_qmux *qmux =
 		l_container_of(device, struct qmi_device_qmux, super);
 
+	l_free(qmux->version_str);
 	l_free(qmux);
 }
 
