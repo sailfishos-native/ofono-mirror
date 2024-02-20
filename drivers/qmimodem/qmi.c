@@ -271,49 +271,6 @@ static gboolean __service_compare_shared(gpointer key, gpointer value,
 	return FALSE;
 }
 
-static void __hexdump(const char dir, const unsigned char *buf, size_t len,
-				qmi_debug_func_t function, void *user_data)
-{
-	static const char hexdigits[] = "0123456789abcdef";
-	char str[68];
-	size_t i;
-
-	if (!function || !len)
-		return;
-
-	str[0] = dir;
-
-	for (i = 0; i < len; i++) {
-		str[((i % 16) * 3) + 1] = ' ';
-		str[((i % 16) * 3) + 2] = hexdigits[buf[i] >> 4];
-		str[((i % 16) * 3) + 3] = hexdigits[buf[i] & 0xf];
-		str[(i % 16) + 51] = isprint(buf[i]) ? buf[i] : '.';
-
-		if ((i + 1) % 16 == 0) {
-			str[49] = ' ';
-			str[50] = ' ';
-			str[67] = '\0';
-			function(str, user_data);
-			str[0] = ' ';
-		}
-	}
-
-	if (i % 16 > 0) {
-		size_t j;
-
-		for (j = (i % 16); j < 16; j++) {
-			str[(j * 3) + 1] = ' ';
-			str[(j * 3) + 2] = ' ';
-			str[(j * 3) + 3] = ' ';
-			str[j + 51] = ' ';
-		}
-		str[49] = ' ';
-		str[50] = ' ';
-		str[67] = '\0';
-		function(str, user_data);
-	}
-}
-
 static const char *__service_type_to_string(uint8_t type)
 {
 	switch (type) {
@@ -665,8 +622,8 @@ static gboolean can_write_data(GIOChannel *channel, GIOCondition cond,
 	if (bytes_written < 0)
 		return FALSE;
 
-	__hexdump('>', req->buf, bytes_written,
-				device->debug_func, device->debug_data);
+	l_util_hexdump(false, req->buf, bytes_written,
+			device->debug_func, device->debug_data);
 
 	__debug_msg(' ', req->buf, bytes_written,
 				device->debug_func, device->debug_data);
@@ -883,8 +840,8 @@ static gboolean received_data(GIOChannel *channel, GIOCondition cond,
 	if (bytes_read < 0)
 		return TRUE;
 
-	__hexdump('<', buf, bytes_read,
-				device->debug_func, device->debug_data);
+	l_util_hexdump(true, buf, bytes_read,
+			device->debug_func, device->debug_data);
 
 	offset = 0;
 
