@@ -78,7 +78,6 @@ typedef void (*qmi_destroy_func_t)(void *user_data);
 struct qmi_device;
 
 typedef void (*qmi_debug_func_t)(const char *str, void *user_data);
-typedef void (*qmi_sync_func_t)(void *user_data);
 typedef void (*qmi_shutdown_func_t)(void *user_data);
 typedef void (*qmi_discover_func_t)(void *user_data);
 
@@ -100,10 +99,6 @@ bool qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
 bool qmi_device_has_service(struct qmi_device *device, uint16_t type);
 bool qmi_device_get_service_version(struct qmi_device *device, uint16_t type,
 					uint16_t *major, uint16_t *minor);
-
-bool qmi_device_sync(struct qmi_device *device,
-		     qmi_sync_func_t func, void *user_data);
-bool qmi_device_is_sync_supported(struct qmi_device *device);
 
 enum qmi_device_expected_data_format qmi_device_get_expected_data_format(
 						struct qmi_device *device);
