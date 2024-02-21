@@ -793,12 +793,9 @@ static void handle_packet(struct qmi_device *device,
 			return;
 		}
 
-		req = l_queue_find(device->control_queue, __request_compare,
-					GUINT_TO_POINTER(tid));
-		if (!req)
-			return;
-
-		l_queue_remove(device->control_queue, req);
+		req = l_queue_remove_if(device->control_queue,
+						__request_compare,
+						GUINT_TO_POINTER(tid));
 	} else {
 		const struct qmi_service_hdr *service = buf;
 		const struct qmi_message_hdr *msg;
@@ -819,13 +816,13 @@ static void handle_packet(struct qmi_device *device,
 			return;
 		}
 
-		req = l_queue_find(device->service_queue, __request_compare,
-					GUINT_TO_POINTER(tid));
-		if (!req)
-			return;
-
-		l_queue_remove(device->service_queue, req);
+		req = l_queue_remove_if(device->service_queue,
+						__request_compare,
+						GUINT_TO_POINTER(tid));
 	}
+
+	if (!req)
+		return;
 
 	if (req->callback)
 		req->callback(message, length, data, req->user_data);
@@ -1244,19 +1241,13 @@ static struct qmi_request *find_control_request(struct qmi_device *device,
 	unsigned int _tid = tid;
 
 	if (_tid != 0) {
-		req = l_queue_find(device->req_queue, __request_compare,
-					GUINT_TO_POINTER(_tid));
-
-		if (req)
-			l_queue_remove(device->req_queue, req);
-		else {
-			req = l_queue_find(device->control_queue,
-						__request_compare,
+		req = l_queue_remove_if(device->req_queue, __request_compare,
 						GUINT_TO_POINTER(_tid));
 
-			if (req)
-				l_queue_remove(device->control_queue, req);
-		}
+		if (!req)
+			req = l_queue_remove_if(device->control_queue,
+							__request_compare,
+							GUINT_TO_POINTER(_tid));
 	}
 
 	return req;
@@ -2375,17 +2366,14 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 	if (!device)
 		return false;
 
-	req = l_queue_find(device->req_queue, __request_compare,
-				GUINT_TO_POINTER(tid));
-	if (req)
-		l_queue_remove(device->req_queue, req);
-	else {
-		req = l_queue_find(device->service_queue, __request_compare,
+	req = l_queue_remove_if(device->req_queue, __request_compare,
 					GUINT_TO_POINTER(tid));
+	if (!req) {
+		req = l_queue_remove_if(device->service_queue,
+						__request_compare,
+						GUINT_TO_POINTER(tid));
 		if (!req)
 			return false;
-
-		l_queue_remove(device->service_queue, req);
 	}
 
 	service_send_free(req->user_data);
