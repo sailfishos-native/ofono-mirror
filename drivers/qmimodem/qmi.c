@@ -204,15 +204,15 @@ static struct qmi_request *__request_alloc(uint8_t service,
 	hdr = req->buf;
 
 	hdr->frame = 0x01;
-	hdr->length = GUINT16_TO_LE(req->len - 1);
+	hdr->length = L_CPU_TO_LE16(req->len - 1);
 	hdr->flags = 0x00;
 	hdr->service = service;
 	hdr->client = client;
 
 	msg = req->buf + QMI_MUX_HDR_SIZE + headroom;
 
-	msg->message = GUINT16_TO_LE(message);
-	msg->length = GUINT16_TO_LE(length);
+	msg->message = L_CPU_TO_LE16(message);
+	msg->length = L_CPU_TO_LE16(length);
 
 	if (data && length > 0)
 		memcpy(req->buf + QMI_MUX_HDR_SIZE + headroom +
@@ -235,7 +235,7 @@ static void __request_free(void *data)
 static bool __request_compare(const void *a, const void *b)
 {
 	const struct qmi_request *req = a;
-	uint16_t tid = GPOINTER_TO_UINT(b);
+	uint16_t tid = L_PTR_TO_UINT(b);
 
 	return req->tid == tid;
 }
@@ -261,7 +261,7 @@ static void __notify_free(gpointer data, gpointer user_data)
 static gint __notify_compare(gconstpointer a, gconstpointer b)
 {
 	const struct qmi_notify *notify = a;
-	uint16_t id = GPOINTER_TO_UINT(b);
+	uint16_t id = L_PTR_TO_UINT(b);
 
 	return notify->id - id;
 }
@@ -278,7 +278,7 @@ static void __service_find_by_type(const void *key, void *value,
 	struct service_find_by_type_data *data = user_data;
 
 	/* ignore those that are in process of creation */
-	if (GPOINTER_TO_UINT(key) & 0x80000000)
+	if (L_PTR_TO_UINT(key) & 0x80000000)
 		return;
 
 	if (service->type == data->type)
@@ -515,13 +515,13 @@ static void __debug_msg(const char dir, const void *buf, size_t len,
 		}
 
 		str += sprintf(str, "%s msg=%d len=%d", type,
-					GUINT16_FROM_LE(msg->message),
-					GUINT16_FROM_LE(msg->length));
+					L_LE16_TO_CPU(msg->message),
+					L_LE16_TO_CPU(msg->length));
 
 		str += sprintf(str, " [client=%d,type=%d,tid=%d,len=%d]",
 					hdr->client, ctl->type,
 					ctl->transaction,
-					GUINT16_FROM_LE(hdr->length));
+					L_LE16_TO_CPU(hdr->length));
 	} else {
 		const struct qmi_service_hdr *srv;
 		const char *type;
@@ -547,13 +547,13 @@ static void __debug_msg(const char dir, const void *buf, size_t len,
 		}
 
 		str += sprintf(str, "%s msg=%d len=%d", type,
-					GUINT16_FROM_LE(msg->message),
-					GUINT16_FROM_LE(msg->length));
+					L_LE16_TO_CPU(msg->message),
+					L_LE16_TO_CPU(msg->length));
 
 		str += sprintf(str, " [client=%d,type=%d,tid=%d,len=%d]",
 					hdr->client, srv->type,
-					GUINT16_FROM_LE(srv->transaction),
-					GUINT16_FROM_LE(hdr->length));
+					L_LE16_TO_CPU(srv->transaction),
+					L_LE16_TO_CPU(hdr->length));
 	}
 
 	function(strbuf, user_data);
@@ -565,14 +565,14 @@ static void __debug_msg(const char dir, const void *buf, size_t len,
 	str += sprintf(str, "      ");
 	offset = 0;
 
-	while (offset + QMI_TLV_HDR_SIZE < GUINT16_FROM_LE(msg->length)) {
+	while (offset + QMI_TLV_HDR_SIZE < L_LE16_TO_CPU(msg->length)) {
 		const struct qmi_tlv_hdr *tlv = ptr + offset;
-		uint16_t tlv_length = GUINT16_FROM_LE(tlv->length);
+		uint16_t tlv_length = L_LE16_TO_CPU(tlv->length);
 
 		if (tlv->type == 0x02 && tlv_length == QMI_RESULT_CODE_SIZE) {
 			const struct qmi_result_code *result = ptr + offset +
 							QMI_TLV_HDR_SIZE;
-			uint16_t error = GUINT16_FROM_LE(result->error);
+			uint16_t error = L_LE16_TO_CPU(result->error);
 			const char *error_str;
 
 			error_str = __error_to_string(error);
@@ -716,7 +716,7 @@ static void service_notify(const void *key, void *value, void *user_data)
 	GList *list;
 
 	/* ignore those that are in process of creation */
-	if (GPOINTER_TO_UINT(key) & 0x80000000)
+	if (L_PTR_TO_UINT(key) & 0x80000000)
 		return;
 
 	for (list = g_list_first(service->notify_list); list;
@@ -754,7 +754,7 @@ static void handle_indication(struct qmi_device *device,
 	hash_id = service_type | (client_id << 8);
 
 	service = l_hashmap_lookup(device->service_list,
-					GUINT_TO_POINTER(hash_id));
+					L_UINT_TO_PTR(hash_id));
 
 	if (!service)
 		return;
@@ -780,8 +780,8 @@ static void handle_packet(struct qmi_device *device,
 
 		msg = buf + QMI_CONTROL_HDR_SIZE;
 
-		message = GUINT16_FROM_LE(msg->message);
-		length = GUINT16_FROM_LE(msg->length);
+		message = L_LE16_TO_CPU(msg->message);
+		length = L_LE16_TO_CPU(msg->length);
 
 		data = buf + QMI_CONTROL_HDR_SIZE + QMI_MESSAGE_HDR_SIZE;
 
@@ -795,7 +795,7 @@ static void handle_packet(struct qmi_device *device,
 
 		req = l_queue_remove_if(device->control_queue,
 						__request_compare,
-						GUINT_TO_POINTER(tid));
+						L_UINT_TO_PTR(tid));
 	} else {
 		const struct qmi_service_hdr *service = buf;
 		const struct qmi_message_hdr *msg;
@@ -803,12 +803,12 @@ static void handle_packet(struct qmi_device *device,
 
 		msg = buf + QMI_SERVICE_HDR_SIZE;
 
-		message = GUINT16_FROM_LE(msg->message);
-		length = GUINT16_FROM_LE(msg->length);
+		message = L_LE16_TO_CPU(msg->message);
+		length = L_LE16_TO_CPU(msg->length);
 
 		data = buf + QMI_SERVICE_HDR_SIZE + QMI_MESSAGE_HDR_SIZE;
 
-		tid = GUINT16_FROM_LE(service->transaction);
+		tid = L_LE16_TO_CPU(service->transaction);
 
 		if (service->type == 0x04) {
 			handle_indication(device, hdr->service, hdr->client,
@@ -818,7 +818,7 @@ static void handle_packet(struct qmi_device *device,
 
 		req = l_queue_remove_if(device->service_queue,
 						__request_compare,
-						GUINT_TO_POINTER(tid));
+						L_UINT_TO_PTR(tid));
 	}
 
 	if (!req)
@@ -864,7 +864,7 @@ static gboolean received_data(GIOChannel *channel, GIOCondition cond,
 		if (hdr->frame != 0x01 || hdr->flags != 0x80)
 			break;
 
-		len = GUINT16_FROM_LE(hdr->length) + 1;
+		len = L_LE16_TO_CPU(hdr->length) + 1;
 
 		/* Check that packet size matches frame size */
 		if (bytes_read - offset < len)
@@ -1027,7 +1027,7 @@ void qmi_result_print_tlvs(struct qmi_result *result)
 
 	while (len > QMI_TLV_HDR_SIZE) {
 		const struct qmi_tlv_hdr *tlv = ptr;
-		uint16_t tlv_length = GUINT16_FROM_LE(tlv->length);
+		uint16_t tlv_length = L_LE16_TO_CPU(tlv->length);
 
 		DBG("tlv: 0x%02x len 0x%04x", tlv->type, tlv->length);
 
@@ -1044,7 +1044,7 @@ static const void *tlv_get(const void *data, uint16_t size,
 
 	while (len > QMI_TLV_HDR_SIZE) {
 		const struct qmi_tlv_hdr *tlv = ptr;
-		uint16_t tlv_length = GUINT16_FROM_LE(tlv->length);
+		uint16_t tlv_length = L_LE16_TO_CPU(tlv->length);
 
 		if (tlv->type == type) {
 			if (length)
@@ -1185,9 +1185,9 @@ static void discover_callback(uint16_t message, uint16_t length,
 
 	for (i = 0; i < service_list->count; i++) {
 		uint16_t major =
-			GUINT16_FROM_LE(service_list->services[i].major);
+			L_LE16_TO_CPU(service_list->services[i].major);
 		uint16_t minor =
-			GUINT16_FROM_LE(service_list->services[i].minor);
+			L_LE16_TO_CPU(service_list->services[i].minor);
 		uint8_t type = service_list->services[i].type;
 		const char *name = __service_type_to_string(type);
 
@@ -1244,12 +1244,12 @@ static struct qmi_request *find_control_request(struct qmi_device *device,
 
 	if (_tid != 0) {
 		req = l_queue_remove_if(device->req_queue, __request_compare,
-						GUINT_TO_POINTER(_tid));
+						L_UINT_TO_PTR(_tid));
 
 		if (!req)
 			req = l_queue_remove_if(device->control_queue,
 							__request_compare,
-							GUINT_TO_POINTER(_tid));
+							L_UINT_TO_PTR(_tid));
 	}
 
 	return req;
@@ -1423,7 +1423,7 @@ static char *get_device_interface(struct qmi_device *device)
 
 	file_name = basename(file_path);
 
-	for (i = 0; i < G_N_ELEMENTS(driver_names) && !interface; i++) {
+	for (i = 0; i < L_ARRAY_SIZE(driver_names) && !interface; i++) {
 		gchar *sysfs_path;
 
 		sysfs_path = l_strdup_printf("/sys/class/%s/%s/device/net/",
@@ -1687,7 +1687,7 @@ bool qmi_param_append(struct qmi_param *param, uint8_t type,
 	tlv = ptr + param->length;
 
 	tlv->type = type;
-	tlv->length = GUINT16_TO_LE(length);
+	tlv->length = L_CPU_TO_LE16(length);
 	memcpy(tlv->value, data, length);
 
 	param->data = ptr;
@@ -1851,7 +1851,7 @@ bool qmi_result_get_int16(struct qmi_result *result, uint8_t type,
 	memcpy(&tmp, ptr, 2);
 
 	if (value)
-		*value = GINT16_FROM_LE(tmp);
+		*value = L_LE16_TO_CPU(tmp);
 
 	return true;
 }
@@ -1872,7 +1872,7 @@ bool qmi_result_get_uint16(struct qmi_result *result, uint8_t type,
 	memcpy(&tmp, ptr, 2);
 
 	if (value)
-		*value = GUINT16_FROM_LE(tmp);
+		*value = L_LE16_TO_CPU(tmp);
 
 	return true;
 }
@@ -1894,7 +1894,7 @@ bool qmi_result_get_uint32(struct qmi_result *result, uint8_t type,
 	memcpy(&tmp, ptr, 4);
 
 	if (value)
-		*value = GUINT32_FROM_LE(tmp);
+		*value = L_LE32_TO_CPU(tmp);
 
 	return true;
 }
@@ -1916,7 +1916,7 @@ bool qmi_result_get_uint64(struct qmi_result *result, uint8_t type,
 	memcpy(&tmp, ptr, 8);
 
 	if (value)
-		*value = GUINT64_FROM_LE(tmp);
+		*value = L_LE64_TO_CPU(tmp);
 
 	return true;
 }
@@ -1972,7 +1972,7 @@ static void service_create_shared_pending_reply(struct qmi_device *device,
 						unsigned int type,
 						struct qmi_service *service)
 {
-	gpointer key = GUINT_TO_POINTER(type | 0x80000000);
+	gpointer key = L_UINT_TO_PTR(type | 0x80000000);
 	GList **shared = l_hashmap_remove(device->service_list, key);
 	GList *l;
 
@@ -2058,7 +2058,7 @@ static void service_create_callback(uint16_t message, uint16_t length,
 
 	hash_id = service->type | (service->client_id << 8);
 
-	l_hashmap_replace(device->service_list, GUINT_TO_POINTER(hash_id),
+	l_hashmap_replace(device->service_list, L_UINT_TO_PTR(hash_id),
 				service, (void **) &old_service);
 
 	if (old_service)
@@ -2119,7 +2119,7 @@ static bool service_create(struct qmi_device *device,
 
 	/* Mark service creation as pending */
 	l_hashmap_insert(device->service_list,
-			GUINT_TO_POINTER(type_val | 0x80000000), shared);
+			L_UINT_TO_PTR(type_val | 0x80000000), shared);
 
 	return true;
 }
@@ -2154,7 +2154,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		return false;
 
 	l = l_hashmap_lookup(device->service_list,
-				GUINT_TO_POINTER(type_val | 0x80000000));
+				L_UINT_TO_PTR(type_val | 0x80000000));
 
 	if (!l) {
 		/*
@@ -2249,7 +2249,7 @@ void qmi_service_unref(struct qmi_service *service)
 	hash_id = service->type | (service->client_id << 8);
 
 	l_hashmap_remove(service->device->service_list,
-				GUINT_TO_POINTER(hash_id));
+				L_UINT_TO_PTR(hash_id));
 
 	service->device->release_users++;
 
@@ -2313,8 +2313,8 @@ static void service_send_callback(uint16_t message, uint16_t length,
 	if (len != QMI_RESULT_CODE_SIZE)
 		goto done;
 
-	result.result = GUINT16_FROM_LE(result_code->result);
-	result.error = GUINT16_FROM_LE(result_code->error);
+	result.result = L_LE16_TO_CPU(result_code->result);
+	result.error = L_LE16_TO_CPU(result_code->error);
 
 done:
 	if (data->func)
@@ -2379,11 +2379,11 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 		return false;
 
 	req = l_queue_remove_if(device->req_queue, __request_compare,
-					GUINT_TO_POINTER(tid));
+					L_UINT_TO_PTR(tid));
 	if (!req) {
 		req = l_queue_remove_if(device->service_queue,
 						__request_compare,
-						GUINT_TO_POINTER(tid));
+						L_UINT_TO_PTR(tid));
 		if (!req)
 			return false;
 	}
@@ -2398,7 +2398,7 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 static bool remove_req_if_match(void *data, void *user_data)
 {
 	struct qmi_request *req = data;
-	uint8_t client = GPOINTER_TO_UINT(user_data);
+	uint8_t client = L_PTR_TO_UINT(user_data);
 
 	if (!req->client || req->client != client)
 		return false;
@@ -2412,7 +2412,7 @@ static bool remove_req_if_match(void *data, void *user_data)
 static void remove_client(struct l_queue *queue, uint8_t client)
 {
 	l_queue_foreach_remove(queue, remove_req_if_match,
-				GUINT_TO_POINTER(client));
+				L_UINT_TO_PTR(client));
 }
 
 bool qmi_service_cancel_all(struct qmi_service *service)
@@ -2470,7 +2470,7 @@ bool qmi_service_unregister(struct qmi_service *service, uint16_t id)
 		return false;
 
 	list = g_list_find_custom(service->notify_list,
-				GUINT_TO_POINTER(nid), __notify_compare);
+				L_UINT_TO_PTR(nid), __notify_compare);
 	if (!list)
 		return false;
 
