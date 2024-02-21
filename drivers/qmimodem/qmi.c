@@ -961,16 +961,6 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 	return 0;
 }
 
-struct qmi_device *qmi_device_ref(struct qmi_device *device)
-{
-	if (!device)
-		return NULL;
-
-	__sync_fetch_and_add(&device->ref_count, 1);
-
-	return device;
-}
-
 static void __qmi_device_shutdown_finished(struct qmi_device *device)
 {
 	if (device->destroyed)
