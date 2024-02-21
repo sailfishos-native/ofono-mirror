@@ -174,7 +174,7 @@ struct qmi_tlv_hdr {
 
 void qmi_free(void *ptr)
 {
-	free(ptr);
+	l_free(ptr);
 }
 
 static struct qmi_request *__request_alloc(uint8_t service,
@@ -1424,7 +1424,7 @@ static char *get_device_interface(struct qmi_device *device)
 	file_name = basename(file_path);
 
 	for (i = 0; i < L_ARRAY_SIZE(driver_names) && !interface; i++) {
-		gchar *sysfs_path;
+		char *sysfs_path;
 
 		sysfs_path = l_strdup_printf("/sys/class/%s/%s/device/net/",
 						driver_names[i], file_name);
@@ -1813,7 +1813,7 @@ char *qmi_result_get_string(struct qmi_result *result, uint8_t type)
 	if (!ptr)
 		return NULL;
 
-	return strndup(ptr, len);
+	return l_strndup(ptr, len);
 }
 
 bool qmi_result_get_uint8(struct qmi_result *result, uint8_t type,
