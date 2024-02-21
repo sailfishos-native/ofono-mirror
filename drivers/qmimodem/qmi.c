@@ -93,7 +93,7 @@ struct qmi_device_qmux {
 	qmi_shutdown_func_t shutdown_func;
 	void *shutdown_user_data;
 	qmi_destroy_func_t shutdown_destroy;
-	guint shutdown_source;
+	struct l_idle *shutdown_idle;
 };
 
 struct qmi_service {
@@ -1551,24 +1551,24 @@ done:
 	return res;
 }
 
-static void qmux_shutdown_destroy(gpointer user_data)
+static void qmux_shutdown_destroy(void *user_data)
 {
 	struct qmi_device_qmux *qmux = user_data;
 
 	if (qmux->shutdown_destroy)
 		qmux->shutdown_destroy(qmux->shutdown_user_data);
 
-	qmux->shutdown_source = 0;
+	qmux->shutdown_idle = NULL;
 
 	__qmi_device_shutdown_finished(&qmux->super);
 }
 
-static gboolean qmux_shutdown_callback(gpointer user_data)
+static void qmux_shutdown_callback(struct l_idle *idle, void *user_data)
 {
 	struct qmi_device_qmux *qmux = user_data;
 
 	if (qmux->super.release_users > 0)
-		return TRUE;
+		return;
 
 	qmux->super.shutting_down = true;
 
@@ -1577,7 +1577,7 @@ static gboolean qmux_shutdown_callback(gpointer user_data)
 
 	qmux->super.shutting_down = false;
 
-	return FALSE;
+	l_idle_remove(qmux->shutdown_idle);
 }
 
 static int qmi_device_qmux_shutdown(struct qmi_device *device,
@@ -1588,15 +1588,15 @@ static int qmi_device_qmux_shutdown(struct qmi_device *device,
 	struct qmi_device_qmux *qmux =
 		l_container_of(device, struct qmi_device_qmux, super);
 
-	if (qmux->shutdown_source > 0)
+	if (qmux->shutdown_idle)
 		return -EALREADY;
 
 	__debug_device(&qmux->super, "device %p shutdown", &qmux->super);
 
-	qmux->shutdown_source = g_timeout_add_seconds_full(G_PRIORITY_DEFAULT,
-						0, qmux_shutdown_callback,
-						qmux, qmux_shutdown_destroy);
-	if (qmux->shutdown_source == 0)
+	qmux->shutdown_idle = l_idle_create(qmux_shutdown_callback, qmux,
+						qmux_shutdown_destroy);
+
+	if (!qmux->shutdown_idle)
 		return -EIO;
 
 	qmux->shutdown_func = func;
@@ -1611,8 +1611,8 @@ static void qmi_device_qmux_destroy(struct qmi_device *device)
 	struct qmi_device_qmux *qmux =
 		l_container_of(device, struct qmi_device_qmux, super);
 
-	if (qmux->shutdown_source)
-		g_source_remove(qmux->shutdown_source);
+	if (qmux->shutdown_idle)
+		l_idle_remove(qmux->shutdown_idle);
 
 	l_free(qmux->version_str);
 	l_free(qmux);
