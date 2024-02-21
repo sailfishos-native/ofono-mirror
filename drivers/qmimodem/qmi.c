@@ -56,6 +56,8 @@ struct qmi_version {
 };
 
 struct qmi_device_ops {
+	void (*client_release)(struct qmi_device *device,
+				uint16_t service_type, uint16_t client_id);
 	int (*shutdown)(struct qmi_device *device,
 			qmi_shutdown_func_t shutdown_func,
 			void *user, qmi_destroy_func_t destroy);
@@ -78,7 +80,6 @@ struct qmi_device {
 	struct qmi_version *version_list;
 	uint8_t version_count;
 	struct l_hashmap *service_list;
-	unsigned int release_users;
 	const struct qmi_device_ops *ops;
 	bool shutting_down : 1;
 	bool destroyed : 1;
@@ -93,6 +94,7 @@ struct qmi_device_qmux {
 	void *shutdown_user_data;
 	qmi_destroy_func_t shutdown_destroy;
 	struct l_idle *shutdown_idle;
+	unsigned int release_users;
 };
 
 struct qmi_service {
@@ -1312,21 +1314,6 @@ bool qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
 	return true;
 }
 
-static void release_client(struct qmi_device *device,
-				uint8_t type, uint8_t client_id,
-				qmi_message_func_t func, void *user_data)
-{
-	unsigned char release_req[] = { 0x01, 0x02, 0x00, type, client_id };
-	struct qmi_request *req;
-
-	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
-			QMI_CTL_RELEASE_CLIENT_ID,
-			release_req, sizeof(release_req),
-			func, user_data);
-
-	__request_submit(device, req);
-}
-
 int qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
@@ -1535,7 +1522,34 @@ done:
 	return res;
 }
 
-static void qmux_shutdown_destroy(void *user_data)
+static void qmux_client_release_callback(uint16_t message, uint16_t length,
+					const void *buffer, void *user_data)
+{
+	struct qmi_device_qmux *qmux = user_data;
+
+	qmux->release_users--;
+}
+
+static void qmi_device_qmux_client_release(struct qmi_device *device,
+						uint16_t service_type,
+						uint16_t client_id)
+{
+	struct qmi_device_qmux *qmux =
+		l_container_of(device, struct qmi_device_qmux, super);
+	uint8_t release_req[] = { 0x01, 0x02, 0x00, service_type, client_id };
+	struct qmi_request *req;
+
+	qmux->release_users++;
+
+	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
+			QMI_CTL_RELEASE_CLIENT_ID,
+			release_req, sizeof(release_req),
+			qmux_client_release_callback, qmux);
+
+	__request_submit(device, req);
+}
+
+static void qmux_shutdown_destroy(gpointer user_data)
 {
 	struct qmi_device_qmux *qmux = user_data;
 
@@ -1551,7 +1565,7 @@ static void qmux_shutdown_callback(struct l_idle *idle, void *user_data)
 {
 	struct qmi_device_qmux *qmux = user_data;
 
-	if (qmux->super.release_users > 0)
+	if (qmux->release_users > 0)
 		return;
 
 	qmux->super.shutting_down = true;
@@ -1603,6 +1617,7 @@ static void qmi_device_qmux_destroy(struct qmi_device *device)
 }
 
 static const struct qmi_device_ops qmux_ops = {
+	.client_release = qmi_device_qmux_client_release,
 	.shutdown = qmi_device_qmux_shutdown,
 	.destroy = qmi_device_qmux_destroy,
 };
@@ -2191,17 +2206,6 @@ bool qmi_service_create(struct qmi_device *device,
 						user_data, destroy);
 }
 
-static void service_release_callback(uint16_t message, uint16_t length,
-					const void *buffer, void *user_data)
-{
-	struct qmi_service *service = user_data;
-
-	if (service->device)
-		service->device->release_users--;
-
-	l_free(service);
-}
-
 struct qmi_service *qmi_service_ref(struct qmi_service *service)
 {
 	if (!service)
@@ -2214,6 +2218,7 @@ struct qmi_service *qmi_service_ref(struct qmi_service *service)
 
 void qmi_service_unref(struct qmi_service *service)
 {
+	struct qmi_device *device;
 	unsigned int hash_id;
 
 	if (!service)
@@ -2222,7 +2227,8 @@ void qmi_service_unref(struct qmi_service *service)
 	if (__sync_sub_and_fetch(&service->ref_count, 1))
 		return;
 
-	if (!service->device) {
+	device = service->device;
+	if (!device) {
 		l_free(service);
 		return;
 	}
@@ -2232,13 +2238,13 @@ void qmi_service_unref(struct qmi_service *service)
 
 	hash_id = service->type | (service->client_id << 8);
 
-	l_hashmap_remove(service->device->service_list,
-				L_UINT_TO_PTR(hash_id));
+	l_hashmap_remove(device->service_list, L_UINT_TO_PTR(hash_id));
 
-	service->device->release_users++;
+	if (device->ops->client_release)
+		device->ops->client_release(device, service->type,
+							service->client_id);
 
-	release_client(service->device, service->type, service->client_id,
-					service_release_callback, service);
+	l_free(service);
 }
 
 const char *qmi_service_get_identifier(struct qmi_service *service)
