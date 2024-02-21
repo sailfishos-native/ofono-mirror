@@ -63,7 +63,6 @@ struct qmi_device_ops {
 };
 
 struct qmi_device {
-	int ref_count;
 	int fd;
 	GIOChannel *io;
 	guint read_watch;
@@ -920,8 +919,6 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 
 	__debug_device(device, "device %p new", device);
 
-	device->ref_count = 1;
-
 	device->fd = fd;
 
 	flags = fcntl(device->fd, F_GETFL, NULL);
@@ -967,12 +964,9 @@ static void __qmi_device_shutdown_finished(struct qmi_device *device)
 		device->ops->destroy(device);
 }
 
-void qmi_device_unref(struct qmi_device *device)
+void qmi_device_free(struct qmi_device *device)
 {
 	if (!device)
-		return;
-
-	if (__sync_sub_and_fetch(&device->ref_count, 1))
 		return;
 
 	__debug_device(device, "device %p free", device);
