@@ -406,11 +406,10 @@ static void discover_cb(void *user_data)
 			data->features |= GOBI_VOICE;
 
 	if (!(data->features & GOBI_DMS)) {
-		if (++data->discover_attempts < 3) {
-			qmi_device_discover(data->device, discover_cb,
-								modem, NULL);
+		if (++data->discover_attempts < 3 &&
+				!qmi_device_discover(data->device, discover_cb,
+								modem, NULL))
 			return;
-		}
 
 		shutdown_device(modem);
 		return;
