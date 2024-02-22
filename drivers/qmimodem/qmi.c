@@ -56,6 +56,10 @@ struct qmi_version {
 };
 
 struct qmi_device_ops {
+	int (*client_create)(struct qmi_device *device,
+				uint16_t service_type,
+				qmi_create_func_t func,
+				void *user, qmi_destroy_func_t destroy);
 	void (*client_release)(struct qmi_device *device,
 				uint16_t service_type, uint16_t client_id);
 	int (*shutdown)(struct qmi_device *device,
@@ -1522,6 +1526,226 @@ done:
 	return res;
 }
 
+struct service_create_shared_data {
+	struct discovery super;
+	struct qmi_service *service;
+	struct qmi_device *device;
+	qmi_create_func_t func;
+	void *user_data;
+	qmi_destroy_func_t destroy;
+	struct l_idle *idle;
+};
+
+static void service_create_shared_reply(struct l_idle *idle, void *user_data)
+{
+	struct service_create_shared_data *data = user_data;
+
+	l_idle_remove(data->idle);
+	data->idle = NULL;
+	data->func(data->service, data->user_data);
+
+	__qmi_device_discovery_complete(data->device, &data->super);
+}
+
+static void service_create_shared_pending_reply(struct qmi_device *device,
+						unsigned int type,
+						struct qmi_service *service)
+{
+	gpointer key = L_UINT_TO_PTR(type | 0x80000000);
+	GList **shared = l_hashmap_remove(device->service_list, key);
+	GList *l;
+
+	for (l = *shared; l; l = l->next) {
+		struct service_create_shared_data *shared_data = l->data;
+
+		shared_data->service = qmi_service_ref(service);
+		shared_data->idle = l_idle_create(service_create_shared_reply,
+							shared_data, NULL);
+	}
+
+	g_list_free(*shared);
+	l_free(shared);
+}
+
+static void service_create_shared_data_free(gpointer user_data)
+{
+	struct service_create_shared_data *data = user_data;
+
+	if (data->idle)
+		l_idle_remove(data->idle);
+
+	qmi_service_unref(data->service);
+
+	if (data->destroy)
+		data->destroy(data->user_data);
+
+	l_free(data);
+}
+
+struct qmux_client_create_data {
+	struct discovery super;
+	struct qmi_device *device;
+	uint8_t type;
+	uint16_t major;
+	uint16_t minor;
+	qmi_create_func_t func;
+	void *user_data;
+	qmi_destroy_func_t destroy;
+	struct l_timeout *timeout;
+	uint16_t tid;
+};
+
+static void qmux_client_create_data_free(gpointer user_data)
+{
+	struct qmux_client_create_data *data = user_data;
+
+	if (data->timeout)
+		l_timeout_remove(data->timeout);
+
+	if (data->destroy)
+		data->destroy(data->user_data);
+
+	l_free(data);
+}
+
+static void qmux_client_create_reply(struct l_timeout *timeout, void *user_data)
+{
+	struct qmux_client_create_data *data = user_data;
+	struct qmi_device *device = data->device;
+	struct qmi_request *req;
+
+	DBG("");
+
+	service_create_shared_pending_reply(device, data->type, NULL);
+
+	/* remove request from queues */
+	req = find_control_request(device, data->tid);
+
+	l_timeout_remove(data->timeout);
+	data->timeout = NULL;
+
+	if (data->func)
+		data->func(NULL, data->user_data);
+
+	__qmi_device_discovery_complete(device, &data->super);
+
+	if (req)
+		__request_free(req);
+}
+
+static void qmux_client_create_callback(uint16_t message, uint16_t length,
+					const void *buffer, void *user_data)
+{
+	struct qmux_client_create_data *data = user_data;
+	struct qmi_device *device = data->device;
+	struct qmi_service *service = NULL;
+	struct qmi_service *old_service = NULL;
+	const struct qmi_result_code *result_code;
+	const struct qmi_client_id *client_id;
+	uint16_t len;
+	unsigned int hash_id;
+
+	result_code = tlv_get(buffer, length, 0x02, &len);
+	if (!result_code)
+		goto done;
+
+	if (len != QMI_RESULT_CODE_SIZE)
+		goto done;
+
+	client_id = tlv_get(buffer, length, 0x01, &len);
+	if (!client_id)
+		goto done;
+
+	if (len != QMI_CLIENT_ID_SIZE)
+		goto done;
+
+	if (client_id->service != data->type)
+		goto done;
+
+	service = l_new(struct qmi_service, 1);
+
+	service->ref_count = 1;
+	service->device = data->device;
+
+	service->type = data->type;
+	service->major = data->major;
+	service->minor = data->minor;
+
+	service->client_id = client_id->client;
+
+	__debug_device(device, "service created [client=%d,type=%d]",
+					service->client_id, service->type);
+
+	hash_id = service->type | (service->client_id << 8);
+
+	l_hashmap_replace(device->service_list, L_UINT_TO_PTR(hash_id),
+				service, (void **) &old_service);
+
+	if (old_service)
+		service_destroy(old_service);
+
+done:
+	service_create_shared_pending_reply(device, data->type, service);
+
+	data->func(service, data->user_data);
+	qmi_service_unref(service);
+
+	__qmi_device_discovery_complete(data->device, &data->super);
+}
+
+static int qmi_device_qmux_client_create(struct qmi_device *device,
+					uint16_t service_type,
+					qmi_create_func_t func, void *user_data,
+					qmi_destroy_func_t destroy)
+{
+	unsigned char client_req[] = { 0x01, 0x01, 0x00, service_type };
+	struct qmi_request *req;
+	struct qmux_client_create_data *data;
+	GList **shared;
+	unsigned int type_val = service_type;
+	int i;
+
+	if (!device->version_list)
+		return -ENOENT;
+
+	shared = l_new(GList *, 1);
+	data = l_new(struct qmux_client_create_data, 1);
+
+	data->super.destroy = qmux_client_create_data_free;
+	data->device = device;
+	data->type = service_type;
+	data->func = func;
+	data->user_data = user_data;
+	data->destroy = destroy;
+
+	__debug_device(device, "service create [type=%d]", service_type);
+
+	for (i = 0; i < device->version_count; i++) {
+		if (device->version_list[i].type == data->type) {
+			data->major = device->version_list[i].major;
+			data->minor = device->version_list[i].minor;
+			break;
+		}
+	}
+
+	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
+			QMI_CTL_GET_CLIENT_ID,
+			client_req, sizeof(client_req),
+			qmux_client_create_callback, data);
+
+	data->tid = __request_submit(device, req);
+	data->timeout = l_timeout_create(8, qmux_client_create_reply,
+								data, NULL);
+
+	__qmi_device_discovery_started(device, &data->super);
+
+	/* Mark service creation as pending */
+	l_hashmap_insert(device->service_list,
+			L_UINT_TO_PTR(type_val | 0x80000000), shared);
+
+	return 0;
+}
+
 static void qmux_client_release_callback(uint16_t message, uint16_t length,
 					const void *buffer, void *user_data)
 {
@@ -1617,6 +1841,7 @@ static void qmi_device_qmux_destroy(struct qmi_device *device)
 }
 
 static const struct qmi_device_ops qmux_ops = {
+	.client_create = qmi_device_qmux_client_create,
 	.client_release = qmi_device_qmux_client_release,
 	.shutdown = qmi_device_qmux_shutdown,
 	.destroy = qmi_device_qmux_destroy,
@@ -1920,224 +2145,6 @@ bool qmi_result_get_uint64(struct qmi_result *result, uint8_t type,
 	return true;
 }
 
-struct service_create_data {
-	struct discovery super;
-	struct qmi_device *device;
-	uint8_t type;
-	uint16_t major;
-	uint16_t minor;
-	qmi_create_func_t func;
-	void *user_data;
-	qmi_destroy_func_t destroy;
-	struct l_timeout *timeout;
-	uint16_t tid;
-};
-
-static void service_create_data_free(gpointer user_data)
-{
-	struct service_create_data *data = user_data;
-
-	if (data->timeout)
-		l_timeout_remove(data->timeout);
-
-	if (data->destroy)
-		data->destroy(data->user_data);
-
-	l_free(data);
-}
-
-struct service_create_shared_data {
-	struct discovery super;
-	struct qmi_service *service;
-	struct qmi_device *device;
-	qmi_create_func_t func;
-	void *user_data;
-	qmi_destroy_func_t destroy;
-	struct l_idle *idle;
-};
-
-static void service_create_shared_reply(struct l_idle *idle, void *user_data)
-{
-	struct service_create_shared_data *data = user_data;
-
-	l_idle_remove(data->idle);
-	data->idle = NULL;
-	data->func(data->service, data->user_data);
-
-	__qmi_device_discovery_complete(data->device, &data->super);
-}
-
-static void service_create_shared_pending_reply(struct qmi_device *device,
-						unsigned int type,
-						struct qmi_service *service)
-{
-	gpointer key = L_UINT_TO_PTR(type | 0x80000000);
-	GList **shared = l_hashmap_remove(device->service_list, key);
-	GList *l;
-
-	for (l = *shared; l; l = l->next) {
-		struct service_create_shared_data *shared_data = l->data;
-
-		shared_data->service = qmi_service_ref(service);
-		shared_data->idle = l_idle_create(service_create_shared_reply,
-							shared_data, NULL);
-	}
-
-	g_list_free(*shared);
-	l_free(shared);
-}
-
-static void service_create_reply(struct l_timeout *timeout, void *user_data)
-{
-	struct service_create_data *data = user_data;
-	struct qmi_device *device = data->device;
-	struct qmi_request *req;
-
-	DBG("");
-
-	service_create_shared_pending_reply(device, data->type, NULL);
-
-	/* remove request from queues */
-	req = find_control_request(device, data->tid);
-
-	l_timeout_remove(data->timeout);
-	data->timeout = NULL;
-
-	if (data->func)
-		data->func(NULL, data->user_data);
-
-	__qmi_device_discovery_complete(device, &data->super);
-
-	if (req)
-		__request_free(req);
-}
-
-static void service_create_callback(uint16_t message, uint16_t length,
-					const void *buffer, void *user_data)
-{
-	struct service_create_data *data = user_data;
-	struct qmi_device *device = data->device;
-	struct qmi_service *service = NULL;
-	struct qmi_service *old_service = NULL;
-	const struct qmi_result_code *result_code;
-	const struct qmi_client_id *client_id;
-	uint16_t len;
-	unsigned int hash_id;
-
-	result_code = tlv_get(buffer, length, 0x02, &len);
-	if (!result_code)
-		goto done;
-
-	if (len != QMI_RESULT_CODE_SIZE)
-		goto done;
-
-	client_id = tlv_get(buffer, length, 0x01, &len);
-	if (!client_id)
-		goto done;
-
-	if (len != QMI_CLIENT_ID_SIZE)
-		goto done;
-
-	if (client_id->service != data->type)
-		goto done;
-
-	service = l_new(struct qmi_service, 1);
-
-	service->ref_count = 1;
-	service->device = data->device;
-
-	service->type = data->type;
-	service->major = data->major;
-	service->minor = data->minor;
-
-	service->client_id = client_id->client;
-
-	__debug_device(device, "service created [client=%d,type=%d]",
-					service->client_id, service->type);
-
-	hash_id = service->type | (service->client_id << 8);
-
-	l_hashmap_replace(device->service_list, L_UINT_TO_PTR(hash_id),
-				service, (void **) &old_service);
-
-	if (old_service)
-		service_destroy(old_service);
-
-done:
-	service_create_shared_pending_reply(device, data->type, service);
-
-	data->func(service, data->user_data);
-	qmi_service_unref(service);
-
-	__qmi_device_discovery_complete(data->device, &data->super);
-}
-
-static bool service_create(struct qmi_device *device,
-				uint8_t type, qmi_create_func_t func,
-				void *user_data, qmi_destroy_func_t destroy)
-{
-	struct service_create_data *data;
-	unsigned char client_req[] = { 0x01, 0x01, 0x00, type };
-	struct qmi_request *req;
-	GList **shared;
-	unsigned int type_val = type;
-	int i;
-
-	if (!device->version_list)
-		return false;
-
-	shared = l_new(GList *, 1);
-	data = l_new(struct service_create_data, 1);
-
-	data->super.destroy = service_create_data_free;
-	data->device = device;
-	data->type = type;
-	data->func = func;
-	data->user_data = user_data;
-	data->destroy = destroy;
-
-	__debug_device(device, "service create [type=%d]", type);
-
-	for (i = 0; i < device->version_count; i++) {
-		if (device->version_list[i].type == data->type) {
-			data->major = device->version_list[i].major;
-			data->minor = device->version_list[i].minor;
-			break;
-		}
-	}
-
-	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
-			QMI_CTL_GET_CLIENT_ID,
-			client_req, sizeof(client_req),
-			service_create_callback, data);
-
-	data->tid = __request_submit(device, req);
-	data->timeout = l_timeout_create(8, service_create_reply, data, NULL);
-
-	__qmi_device_discovery_started(device, &data->super);
-
-	/* Mark service creation as pending */
-	l_hashmap_insert(device->service_list,
-			L_UINT_TO_PTR(type_val | 0x80000000), shared);
-
-	return true;
-}
-
-static void service_create_shared_data_free(gpointer user_data)
-{
-	struct service_create_shared_data *data = user_data;
-
-	if (data->idle)
-		l_idle_remove(data->idle);
-
-	qmi_service_unref(data->service);
-
-	if (data->destroy)
-		data->destroy(data->user_data);
-
-	l_free(data);
-}
-
 bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 			qmi_create_func_t func, void *user_data,
 			qmi_destroy_func_t destroy)
@@ -2145,6 +2152,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 	GList **l = NULL;
 	struct qmi_service *service = NULL;
 	unsigned int type_val = type;
+	int r;
 
 	if (!device || !func)
 		return false;
@@ -2195,7 +2203,11 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		return true;
 	}
 
-	return service_create(device, type, func, user_data, destroy);
+	if (!device->ops->client_create)
+		return -ENOTSUP;
+
+	r = device->ops->client_create(device, type, func, user_data, destroy);
+	return r == 0;
 }
 
 bool qmi_service_create(struct qmi_device *device,
