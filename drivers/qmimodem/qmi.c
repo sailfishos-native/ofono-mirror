@@ -112,7 +112,7 @@ struct qmi_service {
 	uint16_t minor;
 	uint8_t client_id;
 	uint16_t next_notify_id;
-	GList *notify_list;
+	struct l_queue *notify_list;
 };
 
 struct qmi_param {
@@ -256,7 +256,7 @@ static void __discovery_free(void *data)
 	destroy(d);
 }
 
-static void __notify_free(gpointer data, gpointer user_data)
+static void __notify_free(void *data)
 {
 	struct qmi_notify *notify = data;
 
@@ -266,12 +266,12 @@ static void __notify_free(gpointer data, gpointer user_data)
 	l_free(notify);
 }
 
-static gint __notify_compare(gconstpointer a, gconstpointer b)
+static bool __notify_compare(const void *data, const void *user_data)
 {
-	const struct qmi_notify *notify = a;
-	uint16_t id = L_PTR_TO_UINT(b);
+	const struct qmi_notify *notify = data;
+	uint16_t id = L_PTR_TO_UINT(user_data);
 
-	return notify->id - id;
+	return notify->id == id;
 }
 
 struct service_find_by_type_data {
@@ -717,23 +717,26 @@ static uint16_t __request_submit(struct qmi_device *device,
 	return req->tid;
 }
 
+static void service_notify_if_message_matches(void *data, void *user_data)
+{
+	struct qmi_notify *notify = data;
+	struct qmi_result *result = user_data;
+
+	if (notify->message == result->message)
+		notify->callback(result, notify->user_data);
+}
+
 static void service_notify(const void *key, void *value, void *user_data)
 {
 	struct qmi_service *service = value;
 	struct qmi_result *result = user_data;
-	GList *list;
 
 	/* ignore those that are in process of creation */
 	if (L_PTR_TO_UINT(key) & 0x80000000)
 		return;
 
-	for (list = g_list_first(service->notify_list); list;
-						list = g_list_next(list)) {
-		struct qmi_notify *notify = list->data;
-
-		if (notify->message == result->message)
-			notify->callback(result, notify->user_data);
-	}
+	l_queue_foreach(service->notify_list, service_notify_if_message_matches,
+				result);
 }
 
 static void handle_indication(struct qmi_device *device,
@@ -1666,6 +1669,7 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 	service->minor = data->minor;
 
 	service->client_id = client_id->client;
+	service->notify_list = l_queue_new();
 
 	__debug_device(device, "service created [client=%d,type=%d]",
 					service->client_id, service->type);
@@ -2452,7 +2456,7 @@ uint16_t qmi_service_register(struct qmi_service *service,
 	notify->user_data = user_data;
 	notify->destroy = destroy;
 
-	service->notify_list = g_list_append(service->notify_list, notify);
+	l_queue_push_tail(service->notify_list, notify);
 
 	return notify->id;
 }
@@ -2461,21 +2465,17 @@ bool qmi_service_unregister(struct qmi_service *service, uint16_t id)
 {
 	unsigned int nid = id;
 	struct qmi_notify *notify;
-	GList *list;
 
 	if (!service || !id)
 		return false;
 
-	list = g_list_find_custom(service->notify_list,
-				L_UINT_TO_PTR(nid), __notify_compare);
-	if (!list)
+	notify = l_queue_remove_if(service->notify_list, __notify_compare,
+					L_UINT_TO_PTR(nid));
+
+	if (!notify)
 		return false;
 
-	notify = list->data;
-
-	service->notify_list = g_list_delete_link(service->notify_list, list);
-
-	__notify_free(notify, NULL);
+	__notify_free(notify);
 
 	return true;
 }
@@ -2485,9 +2485,7 @@ bool qmi_service_unregister_all(struct qmi_service *service)
 	if (!service)
 		return false;
 
-	g_list_foreach(service->notify_list, __notify_free, NULL);
-	g_list_free(service->notify_list);
-
+	l_queue_destroy(service->notify_list, __notify_free);
 	service->notify_list = NULL;
 
 	return true;
