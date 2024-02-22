@@ -1095,7 +1095,6 @@ struct discover_data {
 	qmi_destroy_func_t destroy;
 	uint16_t tid;
 	struct l_timeout *timeout;
-	struct l_idle *idle;
 };
 
 static void discover_data_free(void *user_data)
@@ -1104,9 +1103,6 @@ static void discover_data_free(void *user_data)
 
 	if (data->timeout)
 		l_timeout_remove(data->timeout);
-
-	if (data->idle)
-		l_idle_remove(data->idle);
 
 	if (data->destroy)
 		data->destroy(data->user_data);
@@ -1524,20 +1520,6 @@ done:
 	__qmi_device_discovery_complete(data->device, &data->super);
 }
 
-static void qmux_discover_reply_idle(struct l_idle *idle, void *user_data)
-{
-	struct discover_data *data = user_data;
-	struct qmi_device *device = data->device;
-
-	l_idle_remove(data->idle);
-	data->idle = NULL;
-
-	if (data->func)
-		data->func(data->user_data);
-
-	__qmi_device_discovery_complete(device, &data->super);
-}
-
 static void qmux_discover_reply_timeout(struct l_timeout *timeout,
 							void *user_data)
 {
@@ -1570,6 +1552,9 @@ static int qmi_device_qmux_discover(struct qmi_device *device,
 
 	__debug_device(device, "device %p discover", device);
 
+	if (device->version_list)
+		return -EALREADY;
+
 	data = l_new(struct discover_data, 1);
 
 	data->super.destroy = discover_data_free;
@@ -1577,12 +1562,6 @@ static int qmi_device_qmux_discover(struct qmi_device *device,
 	data->func = func;
 	data->user_data = user_data;
 	data->destroy = destroy;
-
-	if (device->version_list) {
-		data->idle = l_idle_create(qmux_discover_reply_idle, data, NULL);
-		__qmi_device_discovery_started(device, &data->super);
-		return 0;
-	}
 
 	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
 			QMI_CTL_GET_VERSION_INFO,
