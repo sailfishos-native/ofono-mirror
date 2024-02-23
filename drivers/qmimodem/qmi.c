@@ -129,10 +129,10 @@ struct qmi_result {
 struct qmi_request {
 	uint16_t tid;
 	uint8_t client;
-	void *buf;
-	size_t len;
 	qmi_message_func_t callback;
 	void *user_data;
+	uint16_t len;
+	uint8_t data[];
 };
 
 struct qmi_notify {
@@ -192,22 +192,20 @@ static struct qmi_request *__request_alloc(uint8_t service,
 	struct qmi_request *req;
 	struct qmi_mux_hdr *hdr;
 	struct qmi_message_hdr *msg;
-	uint16_t headroom;
-
-	req = l_new(struct qmi_request, 1);
+	uint16_t hdrlen = QMI_MUX_HDR_SIZE;
+	uint16_t msglen;
 
 	if (service == QMI_SERVICE_CONTROL)
-		headroom = QMI_CONTROL_HDR_SIZE;
+		hdrlen += QMI_CONTROL_HDR_SIZE;
 	else
-		headroom = QMI_SERVICE_HDR_SIZE;
+		hdrlen += QMI_SERVICE_HDR_SIZE;
 
-	req->len = QMI_MUX_HDR_SIZE + headroom + QMI_MESSAGE_HDR_SIZE + length;
-
-	req->buf = l_malloc(req->len);
-
+	msglen = hdrlen + QMI_MESSAGE_HDR_SIZE + length;
+	req = l_malloc(sizeof(struct qmi_request) + msglen);
+	req->len = msglen;
 	req->client = client;
 
-	hdr = req->buf;
+	hdr = (struct qmi_mux_hdr *) req->data;
 
 	hdr->frame = 0x01;
 	hdr->length = L_CPU_TO_LE16(req->len - 1);
@@ -215,14 +213,13 @@ static struct qmi_request *__request_alloc(uint8_t service,
 	hdr->service = service;
 	hdr->client = client;
 
-	msg = req->buf + QMI_MUX_HDR_SIZE + headroom;
+	msg = (struct qmi_message_hdr *) &req->data[hdrlen];
 
 	msg->message = L_CPU_TO_LE16(message);
 	msg->length = L_CPU_TO_LE16(length);
 
 	if (data && length > 0)
-		memcpy(req->buf + QMI_MUX_HDR_SIZE + headroom +
-					QMI_MESSAGE_HDR_SIZE, data, length);
+		memcpy(req->data + hdrlen + QMI_MESSAGE_HDR_SIZE, data, length);
 
 	req->callback = func;
 	req->user_data = user_data;
@@ -234,7 +231,6 @@ static void __request_free(void *data)
 {
 	struct qmi_request *req = data;
 
-	l_free(req->buf);
 	l_free(req);
 }
 
@@ -637,25 +633,22 @@ static bool can_write_data(struct l_io *io, void *user_data)
 	if (!req)
 		return false;
 
-	bytes_written = write(l_io_get_fd(device->io), req->buf, req->len);
+	bytes_written = write(l_io_get_fd(device->io), req->data, req->len);
 	if (bytes_written < 0)
 		return false;
 
-	l_util_hexdump(false, req->buf, bytes_written,
+	l_util_hexdump(false, req->data, bytes_written,
 			device->debug_func, device->debug_data);
 
-	__debug_msg(' ', req->buf, bytes_written,
+	__debug_msg(' ', req->data, bytes_written,
 				device->debug_func, device->debug_data);
 
-	hdr = req->buf;
+	hdr = (struct qmi_mux_hdr *) req->data;
 
 	if (hdr->service == QMI_SERVICE_CONTROL)
 		l_queue_push_tail(device->control_queue, req);
 	else
 		l_queue_push_tail(device->service_queue, req);
-
-	l_free(req->buf);
-	req->buf = NULL;
 
 	if (l_queue_length(device->req_queue) > 0)
 		return true;
@@ -686,12 +679,12 @@ static uint16_t __request_submit(struct qmi_device *device,
 {
 	struct qmi_mux_hdr *mux;
 
-	mux = req->buf;
+	mux = (struct qmi_mux_hdr *) req->data;
 
 	if (mux->service == QMI_SERVICE_CONTROL) {
 		struct qmi_control_hdr *hdr;
 
-		hdr = req->buf + QMI_MUX_HDR_SIZE;
+		hdr = (struct qmi_control_hdr *) &req->data[QMI_MUX_HDR_SIZE];
 		hdr->type = 0x00;
 		hdr->transaction = device->next_control_tid++;
 		if (device->next_control_tid == 0)
@@ -700,7 +693,7 @@ static uint16_t __request_submit(struct qmi_device *device,
 	} else {
 		struct qmi_service_hdr *hdr;
 
-		hdr = req->buf + QMI_MUX_HDR_SIZE;
+		hdr = (struct qmi_service_hdr *) &req->data[QMI_MUX_HDR_SIZE];
 		hdr->type = 0x00;
 		hdr->transaction = device->next_service_tid++;
 		if (device->next_service_tid < 256)
