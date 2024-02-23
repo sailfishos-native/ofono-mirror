@@ -72,10 +72,7 @@ struct qmi_device_ops {
 };
 
 struct qmi_device {
-	int fd;
-	GIOChannel *io;
-	guint read_watch;
-	guint write_watch;
+	struct l_io *io;
 	struct l_queue *req_queue;
 	struct l_queue *control_queue;
 	struct l_queue *service_queue;
@@ -88,6 +85,7 @@ struct qmi_device {
 	uint8_t version_count;
 	struct l_hashmap *service_list;
 	const struct qmi_device_ops *ops;
+	bool writer_active : 1;
 	bool shutting_down : 1;
 	bool destroyed : 1;
 };
@@ -628,8 +626,7 @@ static void __debug_device(struct qmi_device *device,
 	device->debug_func(strbuf, device->debug_data);
 }
 
-static gboolean can_write_data(GIOChannel *channel, GIOCondition cond,
-							gpointer user_data)
+static bool can_write_data(struct l_io *io, void *user_data)
 {
 	struct qmi_device *device = user_data;
 	struct qmi_mux_hdr *hdr;
@@ -638,11 +635,11 @@ static gboolean can_write_data(GIOChannel *channel, GIOCondition cond,
 
 	req = l_queue_pop_head(device->req_queue);
 	if (!req)
-		return FALSE;
+		return false;
 
-	bytes_written = write(device->fd, req->buf, req->len);
+	bytes_written = write(l_io_get_fd(device->io), req->buf, req->len);
 	if (bytes_written < 0)
-		return FALSE;
+		return false;
 
 	l_util_hexdump(false, req->buf, bytes_written,
 			device->debug_func, device->debug_data);
@@ -661,26 +658,27 @@ static gboolean can_write_data(GIOChannel *channel, GIOCondition cond,
 	req->buf = NULL;
 
 	if (l_queue_length(device->req_queue) > 0)
-		return TRUE;
+		return true;
 
-	return FALSE;
+	return false;
 }
 
 static void write_watch_destroy(gpointer user_data)
 {
 	struct qmi_device *device = user_data;
 
-	device->write_watch = 0;
+	device->writer_active = false;
 }
 
 static void wakeup_writer(struct qmi_device *device)
 {
-	if (device->write_watch > 0)
+	if (device->writer_active)
 		return;
 
-	device->write_watch = g_io_add_watch_full(device->io, G_PRIORITY_HIGH,
-				G_IO_OUT | G_IO_HUP | G_IO_ERR | G_IO_NVAL,
-				can_write_data, device, write_watch_destroy);
+	l_io_set_write_handler(device->io, can_write_data, device,
+				write_watch_destroy);
+
+	device->writer_active = true;
 }
 
 static uint16_t __request_submit(struct qmi_device *device,
@@ -841,8 +839,7 @@ static void handle_packet(struct qmi_device *device,
 	__request_free(req);
 }
 
-static gboolean received_data(GIOChannel *channel, GIOCondition cond,
-							gpointer user_data)
+static bool received_data(struct l_io *io, void *user_data)
 {
 	struct qmi_device *device = user_data;
 	struct qmi_mux_hdr *hdr;
@@ -850,12 +847,9 @@ static gboolean received_data(GIOChannel *channel, GIOCondition cond,
 	ssize_t bytes_read;
 	uint16_t offset;
 
-	if (cond & G_IO_NVAL)
-		return FALSE;
-
-	bytes_read = read(device->fd, buf, sizeof(buf));
+	bytes_read = read(l_io_get_fd(device->io), buf, sizeof(buf));
 	if (bytes_read < 0)
-		return TRUE;
+		return true;
 
 	l_util_hexdump(true, buf, bytes_read,
 			device->debug_func, device->debug_data);
@@ -889,14 +883,7 @@ static gboolean received_data(GIOChannel *channel, GIOCondition cond,
 		offset += len;
 	}
 
-	return TRUE;
-}
-
-static void read_watch_destroy(gpointer user_data)
-{
-	struct qmi_device *device = user_data;
-
-	device->read_watch = 0;
+	return true;
 }
 
 static void __qmi_device_discovery_started(struct qmi_device *device,
@@ -931,29 +918,20 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 
 	__debug_device(device, "device %p new", device);
 
-	device->fd = fd;
-
-	flags = fcntl(device->fd, F_GETFL, NULL);
+	flags = fcntl(fd, F_GETFL, NULL);
 	if (flags < 0)
 		return -EIO;
 
 	if (!(flags & O_NONBLOCK)) {
-		int r = fcntl(device->fd, F_SETFL, flags | O_NONBLOCK);
+		int r = fcntl(fd, F_SETFL, flags | O_NONBLOCK);
 
 		if (r < 0)
 			return -errno;
 	}
 
-	device->io = g_io_channel_unix_new(device->fd);
-
-	g_io_channel_set_encoding(device->io, NULL, NULL);
-	g_io_channel_set_buffered(device->io, FALSE);
-
-	device->read_watch = g_io_add_watch_full(device->io, G_PRIORITY_DEFAULT,
-				G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL,
-				received_data, device, read_watch_destroy);
-
-	g_io_channel_unref(device->io);
+	device->io = l_io_new(fd);
+	l_io_set_close_on_destroy(device->io, true);
+	l_io_set_read_handler(device->io, received_data, device, NULL);
 
 	device->req_queue = l_queue_new();
 	device->control_queue = l_queue_new();
@@ -988,13 +966,7 @@ void qmi_device_free(struct qmi_device *device)
 	l_queue_destroy(device->req_queue, __request_free);
 	l_queue_destroy(device->discovery_queue, __discovery_free);
 
-	if (device->write_watch > 0)
-		g_source_remove(device->write_watch);
-
-	if (device->read_watch > 0)
-		g_source_remove(device->read_watch);
-
-	close(device->fd);
+	l_io_destroy(device->io);
 
 	l_hashmap_destroy(device->service_list, service_destroy);
 
@@ -1171,13 +1143,14 @@ static bool get_device_file_name(struct qmi_device *device,
 	pid_t pid;
 	char temp[100];
 	ssize_t result;
+	int fd = l_io_get_fd(device->io);
 
 	if (size <= 0)
 		return false;
 
 	pid = getpid();
 
-	snprintf(temp, 100, "/proc/%d/fd/%d", (int) pid, device->fd);
+	snprintf(temp, 100, "/proc/%d/fd/%d", (int) pid, fd);
 	temp[99] = 0;
 
 	result = readlink(temp, file_name, size - 1);
