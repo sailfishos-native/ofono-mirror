@@ -77,7 +77,6 @@ struct qmi_device {
 	struct l_queue *control_queue;
 	struct l_queue *service_queue;
 	struct l_queue *discovery_queue;
-	uint8_t next_control_tid;
 	uint16_t next_service_tid;
 	qmi_debug_func_t debug_func;
 	void *debug_data;
@@ -100,6 +99,7 @@ struct qmi_device_qmux {
 	qmi_destroy_func_t shutdown_destroy;
 	struct l_idle *shutdown_idle;
 	unsigned int release_users;
+	uint8_t next_control_tid;
 };
 
 struct qmi_service {
@@ -678,32 +678,18 @@ static void wakeup_writer(struct qmi_device *device)
 static uint16_t __request_submit(struct qmi_device *device,
 				struct qmi_request *req)
 {
-	struct qmi_mux_hdr *mux;
+	struct qmi_service_hdr *hdr =
+		(struct qmi_service_hdr *) &req->data[QMI_MUX_HDR_SIZE];
 
-	mux = (struct qmi_mux_hdr *) req->data;
+	hdr->type = 0x00;
+	hdr->transaction = device->next_service_tid++;
 
-	if (mux->service == QMI_SERVICE_CONTROL) {
-		struct qmi_control_hdr *hdr;
+	if (device->next_service_tid < 256)
+		device->next_service_tid = 256;
 
-		hdr = (struct qmi_control_hdr *) &req->data[QMI_MUX_HDR_SIZE];
-		hdr->type = 0x00;
-		hdr->transaction = device->next_control_tid++;
-		if (device->next_control_tid == 0)
-			device->next_control_tid = 1;
-		req->tid = hdr->transaction;
-	} else {
-		struct qmi_service_hdr *hdr;
-
-		hdr = (struct qmi_service_hdr *) &req->data[QMI_MUX_HDR_SIZE];
-		hdr->type = 0x00;
-		hdr->transaction = device->next_service_tid++;
-		if (device->next_service_tid < 256)
-			device->next_service_tid = 256;
-		req->tid = hdr->transaction;
-	}
+	req->tid = hdr->transaction;
 
 	l_queue_push_tail(device->req_queue, req);
-
 	wakeup_writer(device);
 
 	return req->tid;
@@ -934,7 +920,6 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 
 	device->service_list = l_hashmap_new();
 
-	device->next_control_tid = 1;
 	device->next_service_tid = 256;
 
 	device->ops = ops;
@@ -1310,6 +1295,26 @@ struct service_create_shared_data {
 	struct l_idle *idle;
 };
 
+static uint8_t __ctl_request_submit(struct qmi_device_qmux *qmux,
+					struct qmi_request *req)
+{
+	struct qmi_control_hdr *hdr =
+		(struct qmi_control_hdr *) &req->data[QMI_MUX_HDR_SIZE];
+
+	hdr->type = 0x00;
+	hdr->transaction = qmux->next_control_tid++;
+
+	if (qmux->next_control_tid == 0)
+		qmux->next_control_tid = 1;
+
+	req->tid = hdr->transaction;
+
+	l_queue_push_tail(qmux->super.req_queue, req);
+	wakeup_writer(&qmux->super);
+
+	return req->tid;
+}
+
 static void service_create_shared_reply(struct l_idle *idle, void *user_data)
 {
 	struct service_create_shared_data *data = user_data;
@@ -1386,18 +1391,18 @@ static void qmux_sync_callback(uint16_t message, uint16_t length,
 }
 
 /* sync will release all previous clients */
-static bool qmi_device_qmux_sync(struct qmi_device *device,
+static bool qmi_device_qmux_sync(struct qmi_device_qmux *qmux,
 					struct discover_data *data)
 {
 	struct qmi_request *req;
 
-	__debug_device(device, "Sending sync to reset QMI");
+	__debug_device(&qmux->super, "Sending sync to reset QMI");
 
 	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
 				QMI_CTL_SYNC, NULL, 0,
 				qmux_sync_callback, data);
 
-	__request_submit(device, req);
+	__ctl_request_submit(qmux, req);
 
 	return true;
 }
@@ -1479,7 +1484,7 @@ done:
 	/* if the device support the QMI call SYNC over the CTL interface */
 	if ((qmux->control_major == 1 && qmux->control_minor >= 5) ||
 			qmux->control_major > 1) {
-		qmi_device_qmux_sync(data->device, data);
+		qmi_device_qmux_sync(qmux, data);
 		return;
 	}
 
@@ -1516,6 +1521,8 @@ static int qmi_device_qmux_discover(struct qmi_device *device,
 					void *user_data,
 					qmi_destroy_func_t destroy)
 {
+	struct qmi_device_qmux *qmux =
+		l_container_of(device, struct qmi_device_qmux, super);
 	struct discover_data *data;
 	struct qmi_request *req;
 
@@ -1536,7 +1543,7 @@ static int qmi_device_qmux_discover(struct qmi_device *device,
 			QMI_CTL_GET_VERSION_INFO,
 			NULL, 0, qmux_discover_callback, data);
 
-	data->tid = __request_submit(device, req);
+	data->tid = __ctl_request_submit(qmux, req);
 	data->timeout = l_timeout_create(5, qmux_discover_reply_timeout,
 								data, NULL);
 
@@ -1662,6 +1669,8 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 					qmi_create_func_t func, void *user_data,
 					qmi_destroy_func_t destroy)
 {
+	struct qmi_device_qmux *qmux =
+		l_container_of(device, struct qmi_device_qmux, super);
 	unsigned char client_req[] = { 0x01, 0x01, 0x00, service_type };
 	struct qmi_request *req;
 	struct qmux_client_create_data *data;
@@ -1697,7 +1706,7 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 			client_req, sizeof(client_req),
 			qmux_client_create_callback, data);
 
-	data->tid = __request_submit(device, req);
+	data->tid = __ctl_request_submit(qmux, req);
 	data->timeout = l_timeout_create(8, qmux_client_create_reply,
 								data, NULL);
 
@@ -1734,7 +1743,7 @@ static void qmi_device_qmux_client_release(struct qmi_device *device,
 			release_req, sizeof(release_req),
 			qmux_client_release_callback, qmux);
 
-	__request_submit(device, req);
+	__ctl_request_submit(qmux, req);
 }
 
 static void qmux_shutdown_destroy(void *user_data)
@@ -1828,6 +1837,8 @@ struct qmi_device *qmi_device_new_qmux(const char *device)
 		l_free(qmux);
 		return NULL;
 	}
+
+	qmux->next_control_tid = 1;
 
 	return &qmux->super;
 }
