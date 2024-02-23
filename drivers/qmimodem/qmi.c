@@ -751,65 +751,30 @@ static void handle_indication(struct qmi_device *device,
 	service_notify(NULL, service, &result);
 }
 
-static void handle_packet(struct qmi_device *device,
-				const struct qmi_mux_hdr *hdr, const void *buf)
+static void __rx_message(struct qmi_device *device,
+				uint8_t service_type, uint8_t client_id,
+				const void *buf)
 {
+	const struct qmi_service_hdr *service = buf;
+	const struct qmi_message_hdr *msg = buf + QMI_SERVICE_HDR_SIZE;
+	const void *data = buf + QMI_SERVICE_HDR_SIZE + QMI_MESSAGE_HDR_SIZE;
 	struct qmi_request *req;
-	uint16_t message, length;
-	const void *data;
+	unsigned int tid;
+	uint16_t message;
+	uint16_t length;
 
-	if (hdr->service == QMI_SERVICE_CONTROL) {
-		const struct qmi_control_hdr *control = buf;
-		const struct qmi_message_hdr *msg;
-		unsigned int tid;
+	message = L_LE16_TO_CPU(msg->message);
+	length = L_LE16_TO_CPU(msg->length);
+	tid = L_LE16_TO_CPU(service->transaction);
 
-		/* Ignore control messages with client identifier */
-		if (hdr->client != 0x00)
-			return;
-
-		msg = buf + QMI_CONTROL_HDR_SIZE;
-
-		message = L_LE16_TO_CPU(msg->message);
-		length = L_LE16_TO_CPU(msg->length);
-
-		data = buf + QMI_CONTROL_HDR_SIZE + QMI_MESSAGE_HDR_SIZE;
-
-		tid = control->transaction;
-
-		if (control->type == 0x02 && control->transaction == 0x00) {
-			handle_indication(device, hdr->service, hdr->client,
-							message, length, data);
-			return;
-		}
-
-		req = l_queue_remove_if(device->control_queue,
-						__request_compare,
-						L_UINT_TO_PTR(tid));
-	} else {
-		const struct qmi_service_hdr *service = buf;
-		const struct qmi_message_hdr *msg;
-		unsigned int tid;
-
-		msg = buf + QMI_SERVICE_HDR_SIZE;
-
-		message = L_LE16_TO_CPU(msg->message);
-		length = L_LE16_TO_CPU(msg->length);
-
-		data = buf + QMI_SERVICE_HDR_SIZE + QMI_MESSAGE_HDR_SIZE;
-
-		tid = L_LE16_TO_CPU(service->transaction);
-
-		if (service->type == 0x04) {
-			handle_indication(device, hdr->service, hdr->client,
-							message, length, data);
-			return;
-		}
-
-		req = l_queue_remove_if(device->service_queue,
-						__request_compare,
-						L_UINT_TO_PTR(tid));
+	if (service->type == 0x04) {
+		handle_indication(device, service_type, client_id,
+					message, length, data);
+		return;
 	}
 
+	req = l_queue_remove_if(device->service_queue, __request_compare,
+						L_UINT_TO_PTR(tid));
 	if (!req)
 		return;
 
@@ -817,53 +782,6 @@ static void handle_packet(struct qmi_device *device,
 		req->callback(message, length, data, req->user_data);
 
 	__request_free(req);
-}
-
-static bool received_data(struct l_io *io, void *user_data)
-{
-	struct qmi_device *device = user_data;
-	struct qmi_mux_hdr *hdr;
-	unsigned char buf[2048];
-	ssize_t bytes_read;
-	uint16_t offset;
-
-	bytes_read = read(l_io_get_fd(device->io), buf, sizeof(buf));
-	if (bytes_read < 0)
-		return true;
-
-	l_util_hexdump(true, buf, bytes_read,
-			device->debug_func, device->debug_data);
-
-	offset = 0;
-
-	while (offset < bytes_read) {
-		uint16_t len;
-
-		/* Check if QMI mux header fits into packet */
-		if (bytes_read - offset < QMI_MUX_HDR_SIZE)
-			break;
-
-		hdr = (void *) (buf + offset);
-
-		/* Check for fixed frame and flags value */
-		if (hdr->frame != 0x01 || hdr->flags != 0x80)
-			break;
-
-		len = L_LE16_TO_CPU(hdr->length) + 1;
-
-		/* Check that packet size matches frame size */
-		if (bytes_read - offset < len)
-			break;
-
-		__debug_msg(' ', buf + offset, len,
-				device->debug_func, device->debug_data);
-
-		handle_packet(device, hdr, buf + offset + QMI_MUX_HDR_SIZE);
-
-		offset += len;
-	}
-
-	return true;
 }
 
 static void __qmi_device_discovery_started(struct qmi_device *device,
@@ -911,7 +829,6 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 
 	device->io = l_io_new(fd);
 	l_io_set_close_on_destroy(device->io, true);
-	l_io_set_read_handler(device->io, received_data, device, NULL);
 
 	device->req_queue = l_queue_new();
 	device->control_queue = l_queue_new();
@@ -1283,6 +1200,97 @@ done:
 		l_free(interface);
 
 	return res;
+}
+
+static void __rx_ctl_message(struct qmi_device_qmux *qmux,
+				uint8_t service_type, uint8_t client_id,
+				const void *buf)
+{
+	const struct qmi_control_hdr *control = buf;
+	const struct qmi_message_hdr *msg = buf + QMI_CONTROL_HDR_SIZE;
+	const void *data = buf + QMI_CONTROL_HDR_SIZE + QMI_MESSAGE_HDR_SIZE;
+	struct qmi_request *req;
+	uint16_t message;
+	uint16_t length;
+	unsigned int tid;
+
+	/* Ignore control messages with client identifier */
+	if (client_id != 0x00)
+		return;
+
+	message = L_LE16_TO_CPU(msg->message);
+	length = L_LE16_TO_CPU(msg->length);
+	tid = control->transaction;
+
+	if (control->type == 0x02 && control->transaction == 0x00) {
+		handle_indication(&qmux->super, service_type, client_id,
+					message, length, data);
+		return;
+	}
+
+	req = l_queue_remove_if(qmux->super.control_queue, __request_compare,
+						L_UINT_TO_PTR(tid));
+	if (!req)
+		return;
+
+	if (req->callback)
+		req->callback(message, length, data, req->user_data);
+
+	__request_free(req);
+}
+
+static bool received_qmux_data(struct l_io *io, void *user_data)
+{
+	struct qmi_device_qmux *qmux = user_data;
+	struct qmi_mux_hdr *hdr;
+	unsigned char buf[2048];
+	ssize_t bytes_read;
+	uint16_t offset;
+
+	bytes_read = read(l_io_get_fd(qmux->super.io), buf, sizeof(buf));
+	if (bytes_read < 0)
+		return true;
+
+	l_util_hexdump(true, buf, bytes_read,
+			qmux->super.debug_func, qmux->super.debug_data);
+
+	offset = 0;
+
+	while (offset < bytes_read) {
+		uint16_t len;
+		const void *msg;
+
+		/* Check if QMI mux header fits into packet */
+		if (bytes_read - offset < QMI_MUX_HDR_SIZE)
+			break;
+
+		hdr = (void *) (buf + offset);
+
+		/* Check for fixed frame and flags value */
+		if (hdr->frame != 0x01 || hdr->flags != 0x80)
+			break;
+
+		len = L_LE16_TO_CPU(hdr->length) + 1;
+
+		/* Check that packet size matches frame size */
+		if (bytes_read - offset < len)
+			break;
+
+		__debug_msg(' ', buf + offset, len,
+				qmux->super.debug_func, qmux->super.debug_data);
+
+		msg = buf + offset + QMI_MUX_HDR_SIZE;
+
+		if (hdr->service == QMI_SERVICE_CONTROL)
+			__rx_ctl_message(qmux, hdr->service, hdr->client, msg);
+		else
+			__rx_message(&qmux->super,
+					hdr->service, hdr->client, msg);
+
+		offset += len;
+	}
+
+	return true;
 }
 
 struct service_create_shared_data {
@@ -1839,6 +1847,7 @@ struct qmi_device *qmi_device_new_qmux(const char *device)
 	}
 
 	qmux->next_control_tid = 1;
+	l_io_set_read_handler(qmux->super.io, received_qmux_data, qmux, NULL);
 
 	return &qmux->super;
 }
