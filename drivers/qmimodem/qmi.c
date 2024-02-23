@@ -34,7 +34,6 @@
 #include <string.h>
 
 #include <ell/ell.h>
-#include <glib.h>
 
 #include <ofono/log.h>
 
@@ -663,7 +662,7 @@ static bool can_write_data(struct l_io *io, void *user_data)
 	return false;
 }
 
-static void write_watch_destroy(gpointer user_data)
+static void write_watch_destroy(void *user_data)
 {
 	struct qmi_device *device = user_data;
 
@@ -895,7 +894,7 @@ static void __qmi_device_discovery_started(struct qmi_device *device,
 static void __qmi_device_discovery_complete(struct qmi_device *device,
 						struct discovery *d)
 {
-	if (l_queue_remove(device->discovery_queue, d) != TRUE)
+	if (!l_queue_remove(device->discovery_queue, d))
 		return;
 
 	__discovery_free(d);
@@ -1374,7 +1373,7 @@ static void service_create_shared_pending_reply(struct qmi_device *device,
 	l_queue_destroy(shared, NULL);
 }
 
-static void service_create_shared_data_free(gpointer user_data)
+static void service_create_shared_data_free(void *user_data)
 {
 	struct service_create_shared_data *data = user_data;
 
@@ -1564,7 +1563,7 @@ struct qmux_client_create_data {
 	uint16_t tid;
 };
 
-static void qmux_client_create_data_free(gpointer user_data)
+static void qmux_client_create_data_free(void *user_data)
 {
 	struct qmux_client_create_data *data = user_data;
 
@@ -1743,7 +1742,7 @@ static void qmi_device_qmux_client_release(struct qmi_device *device,
 	__request_submit(device, req);
 }
 
-static void qmux_shutdown_destroy(gpointer user_data)
+static void qmux_shutdown_destroy(void *user_data)
 {
 	struct qmi_device_qmux *qmux = user_data;
 
