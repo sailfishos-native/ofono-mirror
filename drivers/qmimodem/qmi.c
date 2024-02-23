@@ -1079,34 +1079,6 @@ static void discover_data_free(void *user_data)
 	l_free(data);
 }
 
-static void qmi_device_sync_callback(uint16_t message, uint16_t length,
-					const void *buffer, void *user_data)
-{
-	struct discover_data *data = user_data;
-
-	if (data->func)
-		data->func(data->user_data);
-
-	__qmi_device_discovery_complete(data->device, &data->super);
-}
-
-/* sync will release all previous clients */
-static bool qmi_device_sync(struct qmi_device *device,
-				struct discover_data *data)
-{
-	struct qmi_request *req;
-
-	__debug_device(device, "Sending sync to reset QMI");
-
-	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
-				QMI_CTL_SYNC, NULL, 0,
-				qmi_device_sync_callback, data);
-
-	__request_submit(device, req);
-
-	return true;
-}
-
 int qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
@@ -1402,6 +1374,34 @@ static struct qmi_request *find_control_request(struct qmi_device *device,
 	return req;
 }
 
+static void qmux_sync_callback(uint16_t message, uint16_t length,
+					const void *buffer, void *user_data)
+{
+	struct discover_data *data = user_data;
+
+	if (data->func)
+		data->func(data->user_data);
+
+	__qmi_device_discovery_complete(data->device, &data->super);
+}
+
+/* sync will release all previous clients */
+static bool qmi_device_qmux_sync(struct qmi_device *device,
+					struct discover_data *data)
+{
+	struct qmi_request *req;
+
+	__debug_device(device, "Sending sync to reset QMI");
+
+	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
+				QMI_CTL_SYNC, NULL, 0,
+				qmux_sync_callback, data);
+
+	__request_submit(device, req);
+
+	return true;
+}
+
 static void qmux_discover_callback(uint16_t message, uint16_t length,
 					const void *buffer, void *user_data)
 {
@@ -1479,7 +1479,7 @@ done:
 	/* if the device support the QMI call SYNC over the CTL interface */
 	if ((qmux->control_major == 1 && qmux->control_minor >= 5) ||
 			qmux->control_major > 1) {
-		qmi_device_sync(data->device, data);
+		qmi_device_qmux_sync(data->device, data);
 		return;
 	}
 
