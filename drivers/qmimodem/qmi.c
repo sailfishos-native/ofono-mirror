@@ -670,13 +670,13 @@ static uint16_t __request_submit(struct qmi_device *device,
 	struct qmi_service_hdr *hdr =
 		(struct qmi_service_hdr *) &req->data[QMI_MUX_HDR_SIZE];
 
-	hdr->type = 0x00;
-	hdr->transaction = device->next_service_tid++;
+	req->tid = device->next_service_tid++;
 
 	if (device->next_service_tid < 256)
 		device->next_service_tid = 256;
 
-	req->tid = hdr->transaction;
+	hdr->type = 0x00;
+	hdr->transaction = L_CPU_TO_LE16(req->tid);
 
 	l_queue_push_tail(device->req_queue, req);
 	wakeup_writer(device);
