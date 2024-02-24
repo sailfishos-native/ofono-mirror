@@ -48,6 +48,15 @@ struct discovery {
 	qmi_destroy_func_t destroy;
 };
 
+struct qmi_request {
+	uint16_t tid;
+	uint8_t client;
+	qmi_message_func_t callback;
+	void *user_data;
+	uint16_t len;
+	uint8_t data[];
+};
+
 struct qmi_version {
 	uint8_t type;
 	uint16_t major;
@@ -56,6 +65,7 @@ struct qmi_version {
 };
 
 struct qmi_device_ops {
+	int (*write)(struct qmi_device *device, struct qmi_request *req);
 	int (*discover)(struct qmi_device *device,
 			qmi_discover_func_t discover_func,
 			void *user, qmi_destroy_func_t destroy);
@@ -124,15 +134,6 @@ struct qmi_result {
 	uint16_t error;
 	const void *data;
 	uint16_t length;
-};
-
-struct qmi_request {
-	uint16_t tid;
-	uint8_t client;
-	qmi_message_func_t callback;
-	void *user_data;
-	uint16_t len;
-	uint8_t data[];
 };
 
 struct qmi_notify {
@@ -626,30 +627,18 @@ static void __debug_device(struct qmi_device *device,
 static bool can_write_data(struct l_io *io, void *user_data)
 {
 	struct qmi_device *device = user_data;
-	struct qmi_mux_hdr *hdr;
 	struct qmi_request *req;
-	ssize_t bytes_written;
+	int r;
 
 	req = l_queue_pop_head(device->req_queue);
 	if (!req)
 		return false;
 
-	bytes_written = write(l_io_get_fd(device->io), req->data, req->len);
-	if (bytes_written < 0)
+	r = device->ops->write(device, req);
+	if (r < 0) {
+		__request_free(req);
 		return false;
-
-	l_util_hexdump(false, req->data, bytes_written,
-			device->debug_func, device->debug_data);
-
-	__debug_msg(' ', req->data, bytes_written,
-				device->debug_func, device->debug_data);
-
-	hdr = (struct qmi_mux_hdr *) req->data;
-
-	if (hdr->service == QMI_SERVICE_CONTROL)
-		l_queue_push_tail(device->control_queue, req);
-	else
-		l_queue_push_tail(device->service_queue, req);
+	}
 
 	if (l_queue_length(device->req_queue) > 0)
 		return true;
@@ -1200,6 +1189,32 @@ done:
 		l_free(interface);
 
 	return res;
+}
+
+static int qmi_device_qmux_write(struct qmi_device *device,
+					struct qmi_request *req)
+{
+	struct qmi_mux_hdr *hdr;
+	ssize_t bytes_written;
+
+	bytes_written = write(l_io_get_fd(device->io), req->data, req->len);
+	if (bytes_written < 0)
+		return -errno;
+
+	l_util_hexdump(false, req->data, bytes_written,
+			device->debug_func, device->debug_data);
+
+	__debug_msg(' ', req->data, bytes_written,
+				device->debug_func, device->debug_data);
+
+	hdr = (struct qmi_mux_hdr *) req->data;
+
+	if (hdr->service == QMI_SERVICE_CONTROL)
+		l_queue_push_tail(device->control_queue, req);
+	else
+		l_queue_push_tail(device->service_queue, req);
+
+	return 0;
 }
 
 static void __rx_ctl_message(struct qmi_device_qmux *qmux,
@@ -1822,6 +1837,7 @@ static void qmi_device_qmux_destroy(struct qmi_device *device)
 }
 
 static const struct qmi_device_ops qmux_ops = {
+	.write = qmi_device_qmux_write,
 	.discover = qmi_device_qmux_discover,
 	.client_create = qmi_device_qmux_client_create,
 	.client_release = qmi_device_qmux_client_release,
