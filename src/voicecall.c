@@ -671,11 +671,7 @@ static const GDBusSignalTable voicecall_signals[] = {
 static struct voicecall *voicecall_create(struct ofono_voicecall *vc,
 						struct ofono_call *call)
 {
-	struct voicecall *v;
-
-	v = g_try_new0(struct voicecall, 1);
-	if (v == NULL)
-		return NULL;
+	struct voicecall *v = l_new(struct voicecall, 1);
 
 	v->call = call;
 	v->vc = vc;
@@ -687,10 +683,10 @@ static void voicecall_destroy(gpointer userdata)
 {
 	struct voicecall *voicecall = (struct voicecall *)userdata;
 
-	g_free(voicecall->call);
+	l_free(voicecall->call);
 	l_free(voicecall->message);
 
-	g_free(voicecall);
+	l_free(voicecall);
 }
 
 static const char *voicecall_build_path(struct ofono_voicecall *vc,
@@ -1051,13 +1047,13 @@ static void voicecall_set_call_name(struct voicecall *v,
 						DBUS_TYPE_STRING, &name_str);
 }
 
-static gboolean voicecall_dbus_register(struct voicecall *v)
+static bool voicecall_dbus_register(struct voicecall *v)
 {
 	DBusConnection *conn = ofono_dbus_get_connection();
 	const char *path;
 
 	if (v == NULL)
-		return FALSE;
+		return false;
 
 	path = voicecall_build_path(v->vc, v->call);
 
@@ -1068,10 +1064,10 @@ static gboolean voicecall_dbus_register(struct voicecall *v)
 		ofono_error("Could not register VoiceCall %s", path);
 		voicecall_destroy(v);
 
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 static gboolean voicecall_dbus_unregister(struct ofono_voicecall *vc,
@@ -1357,20 +1353,16 @@ static struct voicecall *synthesize_outgoing_call(struct ofono_voicecall *vc,
 	struct ofono_modem *modem = __ofono_atom_get_modem(vc->atom);
 	struct ofono_call *call;
 	struct voicecall *v;
+	unsigned int id;
 
-	call = g_try_new0(struct ofono_call, 1);
-	if (call == NULL)
-		return NULL;
-
-	call->id = __ofono_modem_callid_next(modem);
-
-	if (call->id == 0) {
+	id = __ofono_modem_callid_next(modem);
+	if (!id) {
 		ofono_error("Failed to alloc callid, too many calls");
-		g_free(call);
 		return NULL;
 	}
 
-	__ofono_modem_callid_hold(modem, call->id);
+	call = l_new(struct ofono_call, 1);
+	call->id = id;
 
 	if (number)
 		string_to_phone_number(number, &call->phone_number);
@@ -1380,16 +1372,15 @@ static struct voicecall *synthesize_outgoing_call(struct ofono_voicecall *vc,
 	call->clip_validity = CLIP_VALIDITY_VALID;
 
 	v = voicecall_create(vc, call);
-	if (v == NULL) {
-		g_free(call);
-		return NULL;
-	}
-
 	v->detect_time = time(NULL);
 
 	DBG("Registering new call: %d", call->id);
-	voicecall_dbus_register(v);
+	if (!voicecall_dbus_register(v)) {
+		ofono_error("Unable to register synthetic voice call");
+		return NULL;
+	}
 
+	__ofono_modem_callid_hold(modem, call->id);
 	vc->call_list = g_slist_insert_sorted(vc->call_list, v, call_compare);
 
 	return v;
@@ -2384,7 +2375,7 @@ void ofono_voicecall_notify(struct ofono_voicecall *vc,
 {
 	struct ofono_modem *modem = __ofono_atom_get_modem(vc->atom);
 	GSList *l;
-	struct voicecall *v = NULL;
+	struct voicecall *v;
 	struct ofono_call *newcall;
 
 	DBG("Got a voicecall event, status: %s (%d), id: %u, number: %s"
@@ -2410,19 +2401,8 @@ void ofono_voicecall_notify(struct ofono_voicecall *vc,
 
 	DBG("Did not find a call with id: %d", call->id);
 
-	__ofono_modem_callid_hold(modem, call->id);
-
-	newcall = g_memdup2(call, sizeof(struct ofono_call));
-	if (newcall == NULL) {
-		ofono_error("Unable to allocate call");
-		goto error;
-	}
-
+	newcall = l_memdup(call, sizeof(struct ofono_call));
 	v = voicecall_create(vc, newcall);
-	if (v == NULL) {
-		ofono_error("Unable to allocate voicecall_data");
-		goto error;
-	}
 
 	if (vc->flags & VOICECALL_FLAG_STK_MODEM_CALLSETUP) {
 		struct dial_request *req = vc->dial_req;
@@ -2460,21 +2440,13 @@ void ofono_voicecall_notify(struct ofono_voicecall *vc,
 
 	if (!voicecall_dbus_register(v)) {
 		ofono_error("Unable to register voice call");
-		goto error;
+		return;
 	}
 
+	__ofono_modem_callid_hold(modem, call->id);
 	vc->call_list = g_slist_insert_sorted(vc->call_list, v, call_compare);
 
 	voicecalls_emit_call_added(vc, v);
-
-	return;
-
-error:
-	if (newcall)
-		g_free(newcall);
-
-	if (v)
-		g_free(v);
 }
 
 void ofono_voicecall_mpty_hint(struct ofono_voicecall *vc, unsigned int ids)
