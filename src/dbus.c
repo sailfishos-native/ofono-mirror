@@ -455,8 +455,10 @@ DBusMessage *__ofono_error_from_error(const struct ofono_error *error,
 	case OFONO_ERROR_TYPE_ERRNO:
 		return __ofono_map_error(errno_errors_mapping,
 						ABS(error->error), msg);
-	default:
-		return __ofono_error_failed(msg);
+	case OFONO_ERROR_TYPE_SIM:
+	case OFONO_ERROR_TYPE_NO_ERROR:
+	case OFONO_ERROR_TYPE_FAILURE:
+		break;
 	}
 
 	return __ofono_error_failed(msg);
