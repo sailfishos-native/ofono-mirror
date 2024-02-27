@@ -101,6 +101,7 @@ bool qmi_device_set_expected_data_format(struct qmi_device *device,
 			enum qmi_device_expected_data_format format);
 
 struct qmi_device *qmi_device_new_qmux(const char *device);
+struct qmi_device *qmi_device_new_qrtr(void);
 
 struct qmi_param;
 
