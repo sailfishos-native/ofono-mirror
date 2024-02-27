@@ -1700,7 +1700,8 @@ int ofono_emulator_start_codec_negotiation(struct ofono_emulator *em,
 		 * Report we're done even if we don't have done any
 		 * negotiation as the other side may have to clean up.
 		 */
-		cb(0, data);
+		if (cb)
+			cb(0, data);
 
 		/*
 		 * If we didn't received any +BAC during the SLC setup the
