@@ -50,6 +50,15 @@ struct discovery {
 	qmi_destroy_func_t destroy;
 };
 
+struct qmi_service_info {
+	uint32_t service_type;
+	uint32_t qrtr_port;		/* Always 0 on qmux */
+	uint32_t qrtr_node;		/* Always 0 on qmux */
+	uint16_t major;
+	uint16_t minor;			/* Always 0 on qrtr */
+	uint32_t instance;		/* Always 0 on qmux */
+};
+
 struct qmi_request {
 	uint16_t tid;
 	uint8_t client;
@@ -57,13 +66,6 @@ struct qmi_request {
 	void *user_data;
 	uint16_t len;
 	uint8_t data[];
-};
-
-struct qmi_version {
-	uint8_t type;
-	uint16_t major;
-	uint16_t minor;
-	const char *name;
 };
 
 struct qmi_device_ops {
@@ -91,8 +93,7 @@ struct qmi_device {
 	uint16_t next_service_tid;
 	qmi_debug_func_t debug_func;
 	void *debug_data;
-	struct qmi_version *version_list;
-	uint8_t version_count;
+	struct l_queue *service_infos;
 	struct l_hashmap *service_list;
 	const struct qmi_device_ops *ops;
 	bool writer_active : 1;
@@ -184,6 +185,33 @@ struct qmi_tlv_hdr {
 void qmi_free(void *ptr)
 {
 	l_free(ptr);
+}
+
+static bool qmi_service_info_matches(const void *data, const void *user)
+{
+	const struct qmi_service_info *info = data;
+	const struct qmi_service_info *match = user;
+
+	if (info->service_type != match->service_type)
+		return false;
+
+	if (info->qrtr_node != match->qrtr_node)
+		return false;
+
+	if (info->qrtr_port != match->qrtr_port)
+		return false;
+
+	return true;
+}
+
+static void __qmi_service_appeared(struct qmi_device *device,
+					const struct qmi_service_info *info)
+{
+	if (l_queue_find(device->service_infos, qmi_service_info_matches, info))
+		return;
+
+	l_queue_push_tail(device->service_infos,
+				l_memdup(info, sizeof(struct qmi_service_info)));
 }
 
 static struct qmi_request *__request_alloc(uint8_t service,
@@ -836,7 +864,7 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 	device->req_queue = l_queue_new();
 	device->service_queue = l_queue_new();
 	device->discovery_queue = l_queue_new();
-
+	device->service_infos = l_queue_new();
 	device->service_list = l_hashmap_new();
 
 	device->next_service_tid = 256;
@@ -867,7 +895,7 @@ void qmi_device_free(struct qmi_device *device)
 
 	l_hashmap_destroy(device->service_list, service_destroy);
 
-	l_free(device->version_list);
+	l_queue_destroy(device->service_infos, l_free);
 
 	if (device->shutting_down)
 		device->destroyed = true;
@@ -928,17 +956,18 @@ static const void *tlv_get(const void *data, uint16_t size,
 bool qmi_device_get_service_version(struct qmi_device *device, uint16_t type,
 					uint16_t *major, uint16_t *minor)
 {
-	struct qmi_version *info;
-	int i;
+	const struct l_queue_entry *entry;
 
-	for (i = 0, info = device->version_list;
-			i < device->version_count;
-			i++, info++) {
-		if (info->type == type) {
-			*major = info->major;
-			*minor = info->minor;
-			return true;
-		}
+	for (entry = l_queue_get_entries(device->service_infos);
+						entry; entry = entry->next) {
+		const struct qmi_service_info *info = entry->data;
+
+		if (info->service_type != type)
+			continue;
+
+		*major = info->major;
+		*minor = info->minor;
+		return true;
 	}
 
 	return false;
@@ -946,13 +975,13 @@ bool qmi_device_get_service_version(struct qmi_device *device, uint16_t type,
 
 bool qmi_device_has_service(struct qmi_device *device, uint16_t type)
 {
-	struct qmi_version *info;
-	int i;
+	const struct l_queue_entry *entry;
 
-	for (i = 0, info = device->version_list;
-			i < device->version_count;
-			i++, info++) {
-		if (info->type == type)
+	for (entry = l_queue_get_entries(device->service_infos);
+						entry; entry = entry->next) {
+		const struct qmi_service_info *info = entry->data;
+
+		if (info->service_type == type)
 			return true;
 	}
 
@@ -1450,12 +1479,7 @@ static void qmux_discover_callback(uint16_t message, uint16_t length,
 	const struct qmi_service_list *service_list;
 	const void *ptr;
 	uint16_t len;
-	struct qmi_version *list;
-	uint8_t count;
 	unsigned int i;
-
-	count = 0;
-	list = NULL;
 
 	result_code = tlv_get(buffer, length, 0x02, &len);
 	if (!result_code)
@@ -1471,8 +1495,6 @@ static void qmux_discover_callback(uint16_t message, uint16_t length,
 	if (len < QMI_SERVICE_LIST_SIZE)
 		goto done;
 
-	list = l_malloc(sizeof(struct qmi_version) * service_list->count);
-
 	for (i = 0; i < service_list->count; i++) {
 		uint16_t major =
 			L_LE16_TO_CPU(service_list->services[i].major);
@@ -1480,6 +1502,7 @@ static void qmux_discover_callback(uint16_t message, uint16_t length,
 			L_LE16_TO_CPU(service_list->services[i].minor);
 		uint8_t type = service_list->services[i].type;
 		const char *name = __service_type_to_string(type);
+		struct qmi_service_info info;
 
 		if (name)
 			__debug_device(device, "found service [%s %d.%d]",
@@ -1494,12 +1517,12 @@ static void qmux_discover_callback(uint16_t message, uint16_t length,
 			continue;
 		}
 
-		list[count].type = type;
-		list[count].major = major;
-		list[count].minor = minor;
-		list[count].name = name;
+		memset(&info, 0, sizeof(info));
+		info.service_type = type;
+		info.major = major;
+		info.minor = minor;
 
-		count++;
+		__qmi_service_appeared(device, &info);
 	}
 
 	ptr = tlv_get(buffer, length, 0x10, &len);
@@ -1510,9 +1533,6 @@ static void qmux_discover_callback(uint16_t message, uint16_t length,
 	__debug_device(device, "version string: %s", qmux->version_str);
 
 done:
-	device->version_list = list;
-	device->version_count = count;
-
 	/* if the device support the QMI call SYNC over the CTL interface */
 	if ((qmux->control_major == 1 && qmux->control_minor >= 5) ||
 			qmux->control_major > 1) {
@@ -1556,7 +1576,7 @@ static int qmi_device_qmux_discover(struct qmi_device *device,
 
 	__debug_device(device, "device %p discover", device);
 
-	if (device->version_list)
+	if (l_queue_length(device->service_infos) > 0)
 		return -EALREADY;
 
 	data = l_new(struct discover_data, 1);
@@ -1701,9 +1721,8 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 	struct qmux_client_create_data *data;
 	struct l_queue *shared;
 	unsigned int type_val = service_type;
-	int i;
 
-	if (!device->version_list)
+	if (!l_queue_length(device->service_infos))
 		return -ENOENT;
 
 	shared = l_queue_new();
@@ -1718,13 +1737,8 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 
 	__debug_device(device, "service create [type=%d]", service_type);
 
-	for (i = 0; i < device->version_count; i++) {
-		if (device->version_list[i].type == data->type) {
-			data->major = device->version_list[i].major;
-			data->minor = device->version_list[i].minor;
-			break;
-		}
-	}
+	qmi_device_get_service_version(device, data->type,
+						&data->major, &data->minor);
 
 	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
 			QMI_CTL_GET_CLIENT_ID,
