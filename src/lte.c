@@ -63,8 +63,8 @@ static bool provision_default_attach_info(struct ofono_lte *lte,
 						const char *mcc, const char *mnc,
 						const char *spn)
 {
-	struct provision_db_entry *settings;
-	_auto_(l_free) const struct provision_db_entry *ap = NULL;
+	_auto_(l_free) struct provision_db_entry *settings = NULL;
+	const struct provision_db_entry *ap = NULL;
 	size_t count;
 	size_t i;
 
@@ -83,7 +83,7 @@ static bool provision_default_attach_info(struct ofono_lte *lte,
 		}
 	}
 
-	if (!is_valid_apn(ap->apn))
+	if (!ap || !is_valid_apn(ap->apn))
 		return false;
 
 	if (ap->username && strlen(ap->username) >
