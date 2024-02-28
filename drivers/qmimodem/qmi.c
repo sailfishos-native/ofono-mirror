@@ -1957,8 +1957,19 @@ static void qrtr_handle_control_packet(struct qmi_device_qrtr *qrtr,
 	port = L_LE32_TO_CPU(packet->server.port);
 
 	if (cmd == QRTR_TYPE_NEW_SERVER) {
+		struct qmi_service_info info;
+
 		DBG("New server: Type: %d Version: %d Instance: %d Node: %d Port: %d",
 			type, version, instance, node, port);
+
+		memset(&info, 0, sizeof(info));
+		info.service_type = type;
+		info.qrtr_port = port;
+		info.qrtr_node = node;
+		info.major = version;
+		info.instance = instance;
+
+		__qmi_service_appeared(device, &info);
 	}
 }
 
