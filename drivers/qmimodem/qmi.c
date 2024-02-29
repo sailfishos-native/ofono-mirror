@@ -953,39 +953,42 @@ static const void *tlv_get(const void *data, uint16_t size,
 	return NULL;
 }
 
-bool qmi_device_get_service_version(struct qmi_device *device, uint16_t type,
-					uint16_t *major, uint16_t *minor)
+static const struct qmi_service_info *__find_service_info_by_type(
+				struct qmi_device *device, uint16_t type)
 {
+	const struct qmi_service_info *info = NULL;
 	const struct l_queue_entry *entry;
 
 	for (entry = l_queue_get_entries(device->service_infos);
 						entry; entry = entry->next) {
-		const struct qmi_service_info *info = entry->data;
+		struct qmi_service_info *data = entry->data;
 
-		if (info->service_type != type)
-			continue;
-
-		*major = info->major;
-		*minor = info->minor;
-		return true;
+		if (data->service_type == type) {
+			info = data;
+			break;
+		}
 	}
 
-	return false;
+	return info;
+}
+
+bool qmi_device_get_service_version(struct qmi_device *device, uint16_t type,
+					uint16_t *major, uint16_t *minor)
+{
+	const struct qmi_service_info *info;
+
+	info = __find_service_info_by_type(device, type);
+	if (!info)
+		return false;
+
+	*major = info->major;
+	*minor = info->minor;
+	return true;
 }
 
 bool qmi_device_has_service(struct qmi_device *device, uint16_t type)
 {
-	const struct l_queue_entry *entry;
-
-	for (entry = l_queue_get_entries(device->service_infos);
-						entry; entry = entry->next) {
-		const struct qmi_service_info *info = entry->data;
-
-		if (info->service_type == type)
-			return true;
-	}
-
-	return false;
+	return __find_service_info_by_type(device, type);
 }
 
 struct discover_data {
