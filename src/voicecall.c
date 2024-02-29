@@ -3438,10 +3438,9 @@ static void emulator_dial_callback(const struct ofono_error *error, void *data)
 	gboolean need_to_emit;
 	struct voicecall *v;
 	char *number;
-	GError *err = NULL;
 
 	number = g_key_file_get_string(vc->settings, SETTINGS_GROUP,
-					"Number", &err);
+					"Number", NULL);
 
 	v = dial_handle_result(vc, error, number, &need_to_emit);
 
@@ -3564,7 +3563,6 @@ static void emulator_bldn_cb(struct ofono_emulator *em,
 	struct ofono_voicecall *vc = userdata;
 	char *number = NULL;
 	struct ofono_error result;
-	GError *error = NULL;
 
 	switch (ofono_emulator_request_get_type(req)) {
 	case OFONO_EMULATOR_REQUEST_TYPE_COMMAND_ONLY:
@@ -3572,7 +3570,7 @@ static void emulator_bldn_cb(struct ofono_emulator *em,
 			goto fail;
 
 		number = g_key_file_get_string(vc->settings, SETTINGS_GROUP,
-						"Number", &error);
+						"Number", NULL);
 		if (number == NULL || number[0] == '\0')
 			goto fail;
 
