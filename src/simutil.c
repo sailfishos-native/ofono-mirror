@@ -588,8 +588,9 @@ gboolean ber_tlv_builder_set_length(struct ber_tlv_builder *builder,
 	if (new_pos > builder->max)
 		return FALSE;
 
-	if (builder->parent)
-		ber_tlv_builder_set_length(builder->parent, new_pos);
+	if (builder->parent &&
+			!ber_tlv_builder_set_length(builder->parent, new_pos))
+		return FALSE;
 
 	builder->len = new_len;
 
@@ -730,9 +731,9 @@ gboolean comprehension_tlv_builder_set_length(
 	if (builder->pos + new_ctlv_len > builder->max)
 		return FALSE;
 
-	if (builder->parent)
-		ber_tlv_builder_set_length(builder->parent,
-						builder->pos + new_ctlv_len);
+	if (builder->parent && !ber_tlv_builder_set_length(builder->parent,
+						builder->pos + new_ctlv_len))
+		return FALSE;
 
 	len = MIN(builder->len, new_len);
 	if (len > 0 && new_len_size != len_size)
