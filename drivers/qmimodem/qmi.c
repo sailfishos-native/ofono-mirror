@@ -118,9 +118,7 @@ struct qmi_device_qmux {
 struct qmi_service {
 	int ref_count;
 	struct qmi_device *device;
-	uint8_t type;
-	uint16_t major;
-	uint16_t minor;
+	struct qmi_service_info info;
 	uint8_t client_id;
 	uint16_t next_notify_id;
 	struct l_queue *notify_list;
@@ -315,7 +313,7 @@ static void __service_find_by_type(const void *key, void *value,
 	if (L_PTR_TO_UINT(key) & 0x80000000)
 		return;
 
-	if (service->type == data->type)
+	if (service->info.service_type == data->type)
 		data->found_service = service;
 }
 
@@ -1687,17 +1685,18 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 	service->ref_count = 1;
 	service->device = data->device;
 
-	service->type = data->type;
-	service->major = data->major;
-	service->minor = data->minor;
+	service->info.service_type = data->type;
+	service->info.major = data->major;
+	service->info.minor = data->minor;
 
 	service->client_id = client_id->client;
 	service->notify_list = l_queue_new();
 
 	__debug_device(device, "service created [client=%d,type=%d]",
-					service->client_id, service->type);
+					service->client_id,
+					service->info.service_type);
 
-	hash_id = service->type | (service->client_id << 8);
+	hash_id = service->info.service_type | (service->client_id << 8);
 
 	l_hashmap_replace(device->service_list, L_UINT_TO_PTR(hash_id),
 				service, (void **) &old_service);
@@ -2526,12 +2525,12 @@ void qmi_service_unref(struct qmi_service *service)
 	qmi_service_cancel_all(service);
 	qmi_service_unregister_all(service);
 
-	hash_id = service->type | (service->client_id << 8);
+	hash_id = service->info.service_type | (service->client_id << 8);
 
 	l_hashmap_remove(device->service_list, L_UINT_TO_PTR(hash_id));
 
 	if (device->ops->client_release)
-		device->ops->client_release(device, service->type,
+		device->ops->client_release(device, service->info.service_type,
 							service->client_id);
 
 	l_free(service);
@@ -2542,7 +2541,7 @@ const char *qmi_service_get_identifier(struct qmi_service *service)
 	if (!service)
 		return NULL;
 
-	return __service_type_to_string(service->type);
+	return __service_type_to_string(service->info.service_type);
 }
 
 bool qmi_service_get_version(struct qmi_service *service,
@@ -2552,10 +2551,10 @@ bool qmi_service_get_version(struct qmi_service *service,
 		return false;
 
 	if (major)
-		*major = service->major;
+		*major = service->info.major;
 
 	if (minor)
-		*minor = service->minor;
+		*minor = service->info.minor;
 
 	return true;
 }
@@ -2629,7 +2628,7 @@ uint16_t qmi_service_send(struct qmi_service *service,
 	data->user_data = user_data;
 	data->destroy = destroy;
 
-	req = __request_alloc(service->type, service->client_id,
+	req = __request_alloc(service->info.service_type, service->client_id,
 				message,
 				param ? param->data : NULL,
 				param ? param->length : 0,
