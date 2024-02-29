@@ -1175,8 +1175,11 @@ static void voicecalls_multiparty_changed(GSList *old, GSList *new)
 			voicecall_emit_multiparty(nc, TRUE);
 			n = n->next;
 		} else {
-			n = n->next;
-			o = o->next;
+			if (n)
+				n = n->next;
+
+			if (o)
+				o = o->next;
 		}
 	}
 }
