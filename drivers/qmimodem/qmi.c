@@ -1387,6 +1387,25 @@ static uint8_t __ctl_request_submit(struct qmi_device_qmux *qmux,
 	return req->tid;
 }
 
+static struct qmi_service *service_create(struct qmi_device *device,
+			const struct qmi_service_info *info, uint8_t client_id)
+{
+	struct qmi_service *service = l_new(struct qmi_service, 1);
+
+	service->ref_count = 1;
+	service->device = device;
+	service->client_id = client_id;
+	service->notify_list = l_queue_new();
+
+	memcpy(&service->info, info, sizeof(service->info));
+
+	__debug_device(device, "service created [client=%d,type=%d]",
+					service->client_id,
+					service->info.service_type);
+
+	return service;
+}
+
 static void service_create_shared_reply(struct l_idle *idle, void *user_data)
 {
 	struct service_create_shared_data *data = user_data;
@@ -1663,6 +1682,7 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 	struct qmi_device *device = data->device;
 	struct qmi_service *service = NULL;
 	struct qmi_service *old_service = NULL;
+	struct qmi_service_info info;
 	const struct qmi_result_code *result_code;
 	const struct qmi_client_id *client_id;
 	uint16_t len;
@@ -1685,21 +1705,12 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 	if (client_id->service != data->type)
 		goto done;
 
-	service = l_new(struct qmi_service, 1);
+	memset(&info, 0, sizeof(service->info));
+	info.service_type = data->type;
+	info.major = data->major;
+	info.minor = data->minor;
 
-	service->ref_count = 1;
-	service->device = data->device;
-
-	service->info.service_type = data->type;
-	service->info.major = data->major;
-	service->info.minor = data->minor;
-
-	service->client_id = client_id->client;
-	service->notify_list = l_queue_new();
-
-	__debug_device(device, "service created [client=%d,type=%d]",
-					service->client_id,
-					service->info.service_type);
+	service = service_create(device, &info, client_id->client);
 
 	hash_id = service_list_create_hash(service->info.service_type,
 							service->client_id);
@@ -2442,6 +2453,45 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 	if (type == QMI_SERVICE_CONTROL)
 		return false;
 
+	if (!device->ops->client_create) {
+		struct service_create_shared_data *data;
+
+		/*
+		 * The hash id is simply the service type in this case. There
+		 * is no "pending" state for discovery and no client id.
+		 */
+		service = l_hashmap_lookup(device->service_list,
+						L_UINT_TO_PTR(type_val));
+		if (!service) {
+			const struct qmi_service_info *info;
+
+			info = __find_service_info_by_type(device, type);
+			if (!info)
+				return false;
+
+			service = service_create(device, info, 0);
+			l_hashmap_insert(device->service_list,
+					L_UINT_TO_PTR(type_val), service);
+		}
+
+		data = l_new(struct service_create_shared_data, 1);
+
+		data->super.destroy = service_create_shared_data_free;
+		data->device = device;
+		data->func = func;
+		data->user_data = user_data;
+		data->destroy = destroy;
+
+		data->service = qmi_service_ref(service);
+		data->idle = l_idle_create(service_create_shared_reply,
+							data, NULL);
+
+		/* Not really discovery... just tracking the idle callback. */
+		__qmi_device_discovery_started(device, &data->super);
+
+		return true;
+	}
+
 	shared = l_hashmap_lookup(device->service_list,
 					L_UINT_TO_PTR(type_val | 0x80000000));
 
@@ -2484,9 +2534,6 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 
 		return true;
 	}
-
-	if (!device->ops->client_create)
-		return -ENOTSUP;
 
 	r = device->ops->client_create(device, type, func, user_data, destroy);
 	return r == 0;
