@@ -643,7 +643,12 @@ gboolean sms_decode_address_field(const unsigned char *pdu, int len,
 	else
 		byte_len = (addr_len + 1) / 2;
 
-	if ((len - *offset) < byte_len)
+	/*
+	 * 23.040:
+	 * The maximum length of the full address field
+	 * (AddressLength, TypeofAddress and AddressValue) is 12 octets.
+	 */
+	if ((len - *offset) < byte_len || byte_len > 10)
 		return FALSE;
 
 	out->number_type = bit_field(addr_type, 4, 3);
