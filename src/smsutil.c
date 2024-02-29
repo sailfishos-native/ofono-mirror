@@ -1887,15 +1887,15 @@ time_t sms_scts_to_time(const struct sms_scts *scts, struct tm *remote)
 	return ret;
 }
 
-void sms_address_from_string(struct sms_address *addr, const char *str)
+void __sms_address_from_string(struct sms_address *addr, const char *str)
 {
 	addr->numbering_plan = SMS_NUMBERING_PLAN_ISDN;
 	if (str[0] == '+') {
 		addr->number_type = SMS_NUMBER_TYPE_INTERNATIONAL;
-		strcpy(addr->address, str + 1);
+		l_strlcpy(addr->address, str + 1, sizeof(addr->address));
 	} else {
 		addr->number_type = SMS_NUMBER_TYPE_UNKNOWN;
-		strcpy(addr->address, str);
+		l_strlcpy(addr->address, str, sizeof(addr->address));
 	}
 }
 
@@ -3084,7 +3084,7 @@ gboolean status_report_assembly_report(struct status_report_assembly *assembly,
 		}
 	}
 
-	sms_address_from_string(&addr, straddr);
+	__sms_address_from_string(&addr, straddr);
 
 	if (pending == TRUE && node->deliverable == TRUE) {
 		/*
@@ -3177,7 +3177,7 @@ void status_report_assembly_expire(struct status_report_assembly *assembly,
 	while (g_hash_table_iter_next(&iter_addr, (gpointer) &straddr,
 					(gpointer) &id_table)) {
 
-		sms_address_from_string(&addr, straddr);
+		__sms_address_from_string(&addr, straddr);
 		g_hash_table_iter_init(&iter_node, id_table);
 
 		/* Go through different messages. */
@@ -3470,7 +3470,7 @@ GSList *sms_datagram_prepare(const char *to,
 	template.submit.vp.relative = 0xA7; /* 24 Hours */
 	template.submit.dcs = 0x04; /* Class Unspecified, 8 Bit */
 	template.submit.udhi = TRUE;
-	sms_address_from_string(&template.submit.daddr, to);
+	__sms_address_from_string(&template.submit.daddr, to);
 
 	offset = 1;
 
@@ -3597,7 +3597,7 @@ GSList *sms_text_prepare_with_alphabet(const char *to, const char *utf8,
 	template.submit.srr = use_delivery_reports;
 	template.submit.mr = 0;
 	template.submit.vp.relative = 0xA7; /* 24 Hours */
-	sms_address_from_string(&template.submit.daddr, to);
+	__sms_address_from_string(&template.submit.daddr, to);
 
 	/* There are two enums for the same thing */
 	dialect = (enum gsm_dialect)alphabet;

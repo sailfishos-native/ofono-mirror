@@ -1603,7 +1603,7 @@ static void test_sr_assembly(void)
 			sr3.status_report.mr);
 	}
 
-	sms_address_from_string(&addr, "+4915259911630");
+	__sms_address_from_string(&addr, "+4915259911630");
 
 	sra = status_report_assembly_new(NULL);
 
@@ -1626,7 +1626,7 @@ static void test_sr_assembly(void)
 	 * Send sms-message in the national address-format,
 	 * but receive in the international address-format.
 	 */
-	sms_address_from_string(&addr, "9911630");
+	__sms_address_from_string(&addr, "9911630");
 	status_report_assembly_add_fragment(sra, sha1, &addr, 4, time(NULL), 2);
 	status_report_assembly_add_fragment(sra, sha1, &addr, 5, time(NULL), 2);
 
@@ -1641,7 +1641,7 @@ static void test_sr_assembly(void)
 	 * Send sms-message in the international address-format,
 	 * but receive in the national address-format.
 	 */
-	sms_address_from_string(&addr, "+358123456789");
+	__sms_address_from_string(&addr, "+358123456789");
 	status_report_assembly_add_fragment(sra, sha1, &addr, 6, time(NULL), 1);
 
 	g_assert(status_report_assembly_report(sra, &sr3, id, &delivered));
