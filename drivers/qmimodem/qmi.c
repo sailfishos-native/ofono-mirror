@@ -734,6 +734,12 @@ static void service_notify(const void *key, void *value, void *user_data)
 				result);
 }
 
+static unsigned int service_list_create_hash(uint16_t service_type,
+							uint8_t client_id)
+{
+	return (service_type | (client_id << 16));
+}
+
 static void handle_indication(struct qmi_device *device,
 			uint8_t service_type, uint8_t client_id,
 			uint16_t message, uint16_t length, const void *data)
@@ -757,8 +763,7 @@ static void handle_indication(struct qmi_device *device,
 		return;
 	}
 
-	hash_id = service_type | (client_id << 8);
-
+	hash_id = service_list_create_hash(service_type, client_id);
 	service = l_hashmap_lookup(device->service_list,
 					L_UINT_TO_PTR(hash_id));
 
@@ -1696,8 +1701,8 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 					service->client_id,
 					service->info.service_type);
 
-	hash_id = service->info.service_type | (service->client_id << 8);
-
+	hash_id = service_list_create_hash(service->info.service_type,
+							service->client_id);
 	l_hashmap_replace(device->service_list, L_UINT_TO_PTR(hash_id),
 				service, (void **) &old_service);
 
@@ -2525,8 +2530,8 @@ void qmi_service_unref(struct qmi_service *service)
 	qmi_service_cancel_all(service);
 	qmi_service_unregister_all(service);
 
-	hash_id = service->info.service_type | (service->client_id << 8);
-
+	hash_id = service_list_create_hash(service->info.service_type,
+							service->client_id);
 	l_hashmap_remove(device->service_list, L_UINT_TO_PTR(hash_id));
 
 	if (device->ops->client_release)
