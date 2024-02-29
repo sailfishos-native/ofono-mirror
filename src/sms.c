@@ -552,14 +552,12 @@ static DBusMessage *sms_set_property(DBusConnection *conn, DBusMessage *msg,
 
 		dbus_message_iter_get_basic(&var, &value);
 
-		if (strlen(value) == 0 || !valid_phone_number_format(value))
+		if (string_to_phone_number(value, &sca) < 0)
 			return __ofono_error_invalid_format(msg);
 
 		if (sms->driver->sca_set == NULL ||
 				sms->driver->sca_query == NULL)
 			return __ofono_error_not_implemented(msg);
-
-		string_to_phone_number(value, &sca);
 
 		sms->pending = dbus_message_ref(msg);
 

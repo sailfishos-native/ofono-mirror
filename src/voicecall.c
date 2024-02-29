@@ -499,7 +499,6 @@ static DBusMessage *voicecall_deflect(DBusConnection *conn,
 	struct voicecall *v = data;
 	struct ofono_voicecall *vc = v->vc;
 	struct ofono_call *call = v->call;
-
 	struct ofono_phone_number ph;
 	const char *number;
 
@@ -517,13 +516,10 @@ static DBusMessage *voicecall_deflect(DBusConnection *conn,
 					DBUS_TYPE_INVALID) == FALSE)
 		return __ofono_error_invalid_args(msg);
 
-	if (!valid_phone_number_format(number))
+	if (string_to_phone_number(number, &ph) < 0)
 		return __ofono_error_invalid_format(msg);
 
 	vc->pending = dbus_message_ref(msg);
-
-	string_to_phone_number(number, &ph);
-
 	vc->driver->deflect(vc, &ph, generic_callback, vc);
 
 	return NULL;
@@ -1368,7 +1364,7 @@ static struct voicecall *synthesize_outgoing_call(struct ofono_voicecall *vc,
 	call->id = id;
 
 	if (number)
-		string_to_phone_number(number, &call->phone_number);
+		__string_to_phone_number(number, &call->phone_number);
 
 	call->direction = CALL_DIRECTION_MOBILE_ORIGINATED;
 	call->status = CALL_STATUS_DIALING;
@@ -1511,7 +1507,7 @@ static int voicecall_dial(struct ofono_voicecall *vc, const char *number,
 	if (is_emergency_number(vc, number) == TRUE)
 		__ofono_modem_inc_emergency_mode(modem);
 
-	string_to_phone_number(number, &ph);
+	__string_to_phone_number(number, &ph);
 
 	if (vc->settings) {
 		g_key_file_set_string(vc->settings, SETTINGS_GROUP,

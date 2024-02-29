@@ -201,7 +201,7 @@ static DBusMessage *smart_messaging_send_vcard(DBusConnection *conn,
 					&bytes, &len, DBUS_TYPE_INVALID))
 		return __ofono_error_invalid_args(msg);
 
-	if (valid_phone_number_format(to) == FALSE)
+	if (!valid_phone_number_format(to))
 		return __ofono_error_invalid_format(msg);
 
 	ref = __ofono_sms_get_next_ref(sm->sms);
@@ -243,7 +243,7 @@ static DBusMessage *smart_messaging_send_vcal(DBusConnection *conn,
 					&bytes, &len, DBUS_TYPE_INVALID))
 		return __ofono_error_invalid_args(msg);
 
-	if (valid_phone_number_format(to) == FALSE)
+	if (!valid_phone_number_format(to))
 		return __ofono_error_invalid_format(msg);
 
 	ref = __ofono_sms_get_next_ref(sm->sms);

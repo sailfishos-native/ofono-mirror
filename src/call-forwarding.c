@@ -794,7 +794,7 @@ static DBusMessage *cf_set_property(DBusConnection *conn, DBusMessage *msg,
 			return __ofono_error_not_available(msg);
 
 		if (number[0] != '\0')
-			string_to_phone_number(number, &ph);
+			__string_to_phone_number(number, &ph);
 
 		timeout = cf_cond_find_timeout(cf->cf_conditions[type], cls);
 
@@ -1206,7 +1206,7 @@ static gboolean cf_ss_control(int type, const char *sc,
 
 	switch (cf->ss_req->ss_type) {
 	case SS_CONTROL_TYPE_REGISTRATION:
-		string_to_phone_number(sia, &ph);
+		__string_to_phone_number(sia, &ph);
 		cf->driver->registration(cf, cf_type, cls, &ph, timeout,
 					cf_ss_control_callback, cf);
 		break;

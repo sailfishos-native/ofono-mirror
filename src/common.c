@@ -236,23 +236,27 @@ struct error_entry ceer_errors[] = {
 	{ 127,	"Interworking, unspecified" },
 };
 
-gboolean valid_number_format(const char *number, int length)
+bool valid_number_format(const char *number, size_t length)
 {
-	int len = strlen(number);
-	int begin = 0;
-	int i;
+	size_t len;
+	size_t begin = 0;
+	size_t i;
 
+	if (!number)
+		return false;
+
+	len = strlen(number);
 	if (!len)
-		return FALSE;
+		return false;
 
 	if (number[0] == '+')
 		begin = 1;
 
 	if (begin == len)
-		return FALSE;
+		return false;
 
 	if ((len - begin) > length)
-		return FALSE;
+		return false;
 
 	for (i = begin; i < len; i++) {
 		if (number[i] >= '0' && number[i] <= '9')
@@ -261,10 +265,10 @@ gboolean valid_number_format(const char *number, int length)
 		if (number[i] == '*' || number[i] == '#')
 			continue;
 
-		return FALSE;
+		return false;
 	}
 
-	return TRUE;
+	return true;
 }
 
 /*
@@ -273,12 +277,12 @@ gboolean valid_number_format(const char *number, int length)
  * Destination address, or EFADN (Abbreviated dialling numbers),
  * are up 20 digits.
  */
-gboolean valid_phone_number_format(const char *number)
+bool valid_phone_number_format(const char *number)
 {
 	return valid_number_format(number, 20);
 }
 
-gboolean valid_long_phone_number_format(const char *number)
+bool valid_long_phone_number_format(const char *number)
 {
 	return valid_number_format(number, OFONO_MAX_PHONE_NUMBER_LENGTH);
 }
@@ -415,15 +419,24 @@ const char *phone_number_to_string(const struct ofono_phone_number *ph)
 	return buffer;
 }
 
-void string_to_phone_number(const char *str, struct ofono_phone_number *ph)
+void __string_to_phone_number(const char *str, struct ofono_phone_number *ph)
 {
 	if (str[0] == '+') {
-		strcpy(ph->number, str+1);
+		l_strlcpy(ph->number, str + 1, sizeof(ph->number));
 		ph->type = 145;	/* International */
 	} else {
-		strcpy(ph->number, str);
+		l_strlcpy(ph->number, str, sizeof(ph->number));
 		ph->type = 129;	/* Local */
 	}
+}
+
+int string_to_phone_number(const char *str, struct ofono_phone_number *ph)
+{
+	if (!valid_phone_number_format(str))
+		return -EINVAL;
+
+	__string_to_phone_number(str, ph);
+	return 0;
 }
 
 gboolean valid_ussd_string(const char *str, gboolean call_in_progress)

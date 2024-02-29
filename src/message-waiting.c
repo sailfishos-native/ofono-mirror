@@ -199,7 +199,7 @@ static DBusMessage *set_cphs_mbdn(struct ofono_message_waiting *mw,
 
 	req->mw = mw;
 	req->mailbox = mailbox;
-	string_to_phone_number(number, &req->number);
+	__string_to_phone_number(number, &req->number);
 	req->cphs = TRUE;
 
 	sim_adn_build(efmbdn, req->mw->ef_cphs_mbdn_length,
@@ -298,7 +298,7 @@ static DBusMessage *set_mbdn(struct ofono_message_waiting *mw, int mailbox,
 
 	req->mw = mw;
 	req->mailbox = mailbox;
-	string_to_phone_number(number, &req->number);
+	__string_to_phone_number(number, &req->number);
 	req->cphs = FALSE;
 
 	sim_adn_build(efmbdn, req->mw->efmbdn_length, &req->number, NULL);
