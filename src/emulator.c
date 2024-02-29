@@ -256,7 +256,9 @@ static void dun_ath_cb(GAtServer *server, GAtServerRequestType type,
 	switch (type) {
 	case G_AT_SERVER_REQUEST_TYPE_SET:
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto error;
 
 		if (g_at_result_iter_next_number(&iter, &val) == FALSE)
 			goto error;
@@ -307,7 +309,9 @@ static void dun_ato_cb(GAtServer *server, GAtServerRequestType type,
 	switch (type) {
 	case G_AT_SERVER_REQUEST_TYPE_SET:
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto error;
 
 		if (g_at_result_iter_next_number(&iter, &val) == FALSE)
 			goto error;
@@ -470,7 +474,9 @@ static void brsf_cb(GAtServer *server, GAtServerRequestType type,
 	switch (type) {
 	case G_AT_SERVER_REQUEST_TYPE_SET:
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		if (g_at_result_iter_next_number(&iter, &val) == FALSE)
 			goto fail;
@@ -599,7 +605,9 @@ static void cmer_cb(GAtServer *server, GAtServerRequestType type,
 		int val;
 
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		/* mode */
 		if (!g_at_result_iter_next_number_default(&iter, mode, &mode))
@@ -683,7 +691,9 @@ static void clip_cb(GAtServer *server, GAtServerRequestType type,
 	switch (type) {
 	case G_AT_SERVER_REQUEST_TYPE_SET:
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		if (!g_at_result_iter_next_number(&iter, &val))
 			goto fail;
@@ -721,7 +731,9 @@ static void ccwa_cb(GAtServer *server, GAtServerRequestType type,
 	switch (type) {
 	case G_AT_SERVER_REQUEST_TYPE_SET:
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		if (!g_at_result_iter_next_number(&iter, &val))
 			goto fail;
@@ -764,7 +776,9 @@ static void cmee_cb(GAtServer *server, GAtServerRequestType type,
 	switch (type) {
 	case G_AT_SERVER_REQUEST_TYPE_SET:
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		if (g_at_result_iter_next_number(&iter, &val) == FALSE)
 			goto fail;
@@ -810,7 +824,9 @@ static void bia_cb(GAtServer *server, GAtServerRequestType type,
 		int val;
 
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		/* check validity of the request */
 		while (g_at_result_iter_next_number_default(&iter, 0, &val))
@@ -823,7 +839,9 @@ static void bia_cb(GAtServer *server, GAtServerRequestType type,
 
 		/* request is valid, update the indicator activation status */
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		for (l = em->indicators; l; l = l->next) {
 			struct indicator *ind = l->data;
@@ -877,7 +895,9 @@ static void bind_cb(GAtServer *server, GAtServerRequestType type,
 		int num_hf_indicators = 0;
 
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		/* check validity of the request */
 		while (num_hf_indicators < 20 &&
@@ -895,7 +915,9 @@ static void bind_cb(GAtServer *server, GAtServerRequestType type,
 
 		/* request is valid, update the indicator activation status */
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		while (g_at_result_iter_next_number(&iter, &hf_indicator))
 			ofono_info("HF supports indicator: 0x%04x",
@@ -926,7 +948,9 @@ static void biev_cb(GAtServer *server, GAtServerRequestType type,
 		int val;
 
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		if (g_at_result_iter_next_number(&iter, &hf_indicator) == FALSE)
 			goto fail;
@@ -980,7 +1004,9 @@ static void bac_cb(GAtServer *server, GAtServerRequestType type,
 	switch (type) {
 	case G_AT_SERVER_REQUEST_TYPE_SET:
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			goto fail;
 
 		/*
 		 * CVSD codec is mandatory and must come first.
@@ -1069,7 +1095,9 @@ static void bcs_cb(GAtServer *server, GAtServerRequestType type,
 	switch (type) {
 	case G_AT_SERVER_REQUEST_TYPE_SET:
 		g_at_result_iter_init(&iter, result);
-		g_at_result_iter_next(&iter, "");
+
+		if (!g_at_result_iter_next(&iter, ""))
+			break;
 
 		if (!g_at_result_iter_next_number(&iter, &val))
 			break;
