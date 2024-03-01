@@ -403,6 +403,8 @@ static void qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc)
 		endpoint_info.endpoint_type = QMI_DATA_ENDPOINT_TYPE_PCIE;
 	else if (!strcmp(bus, "usb"))
 		endpoint_info.endpoint_type = QMI_DATA_ENDPOINT_TYPE_HSUSB;
+	else if (!strcmp(bus, "embedded"))
+		endpoint_info.endpoint_type = QMI_DATA_ENDPOINT_TYPE_EMBEDDED;
 	else {
 		ofono_error("%s: Invalid 'Bus' value",
 				ofono_modem_get_path(modem));
