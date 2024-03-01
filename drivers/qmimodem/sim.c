@@ -121,7 +121,7 @@ static void get_file_attributes_cb(struct qmi_result *result, void *user_data)
 	int flen, rlen, str;
 	unsigned char access[3];
 	unsigned char file_status;
-	gboolean ok;
+	bool ok;
 
 	DBG("");
 
@@ -146,7 +146,7 @@ static void get_file_attributes_cb(struct qmi_result *result, void *user_data)
 		file_status = EF_STATUS_VALID;
 		break;
 	default:
-		ok = FALSE;
+		ok = false;
 		break;
 	}
 
@@ -608,7 +608,7 @@ static void query_passwd_state_cb(struct qmi_result *result,
 		data->retry_count = 0;
 		if (sim_stat.passwd_state == OFONO_SIM_PASSWORD_INVALID) {
 			CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-			ofono_sim_inserted_notify(sim, FALSE);
+			ofono_sim_inserted_notify(sim, false);
 		} else
 			CALLBACK_WITH_SUCCESS(cb, sim_stat.passwd_state,
 								cbd->data);
@@ -621,7 +621,7 @@ static void query_passwd_state_cb(struct qmi_result *result,
 							sim_stat.card_state);
 			data->retry_count = 0;
 			CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-			ofono_sim_inserted_notify(sim, FALSE);
+			ofono_sim_inserted_notify(sim, false);
 		} else {
 			DBG("Retry command");
 			retry_cbd = cb_data_new(cb, cbd->data);
@@ -635,7 +635,7 @@ static void query_passwd_state_cb(struct qmi_result *result,
 		DBG("Command failed");
 		data->retry_count = 0;
 		CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-		ofono_sim_inserted_notify(sim, FALSE);
+		ofono_sim_inserted_notify(sim, false);
 		break;
 	}
 }
@@ -781,7 +781,7 @@ static void get_card_status_cb(struct qmi_result *result, void *user_data)
 	case 0x02:	/* Error */
 		break;
 	case 0x01:	/* Present */
-		ofono_sim_inserted_notify(sim, TRUE);
+		ofono_sim_inserted_notify(sim, true);
 		ofono_sim_initialized_notify(sim);
 		break;
 	}
@@ -806,10 +806,10 @@ static void card_status_notify(struct qmi_result *result, void *user_data)
 	switch (sim_stat.card_state) {
 	case 0x00:	/* Absent */
 	case 0x02:	/* Error */
-		ofono_sim_inserted_notify(sim, FALSE);
+		ofono_sim_inserted_notify(sim, false);
 		break;
 	case 0x01:	/* Present */
-		ofono_sim_inserted_notify(sim, TRUE);
+		ofono_sim_inserted_notify(sim, true);
 		break;
 	}
 }
