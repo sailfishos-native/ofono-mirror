@@ -134,8 +134,8 @@ static bool extract_ss_info(struct qmi_result *result, int *status,
 
 	plmn = qmi_result_get(result, QMI_NAS_RESULT_CURRENT_PLMN, &len);
 	if (plmn) {
-		uint16_t mcc = GUINT16_FROM_LE(plmn->mcc);
-		uint16_t mnc = GUINT16_FROM_LE(plmn->mnc);
+		uint16_t mcc = L_LE16_TO_CPU(plmn->mcc);
+		uint16_t mnc = L_LE16_TO_CPU(plmn->mnc);
 
 		if (mcc > 999)
 			mcc = 999;
@@ -311,7 +311,7 @@ static void scan_nets_cb(struct qmi_result *result, void *user_data)
 
 	netlist = ptr;
 
-	num = GUINT16_FROM_LE(netlist->count);
+	num = L_LE16_TO_CPU(netlist->count);
 
 	DBG("found %d operators", num);
 
@@ -325,8 +325,8 @@ static void scan_nets_cb(struct qmi_result *result, void *user_data)
 
 	for (i = 0; i < num; i++) {
 		const struct qmi_nas_network_info *netinfo = ptr + offset;
-		uint16_t mcc = GUINT16_FROM_LE(netinfo->mcc);
-		uint16_t mnc = GUINT16_FROM_LE(netinfo->mnc);
+		uint16_t mcc = L_LE16_TO_CPU(netinfo->mcc);
+		uint16_t mnc = L_LE16_TO_CPU(netinfo->mnc);
 
 		if (mcc > 999)
 			mcc = 999;
@@ -361,7 +361,7 @@ static void scan_nets_cb(struct qmi_result *result, void *user_data)
 	if (!netrat)
 		goto done;
 
-	if (GUINT16_FROM_LE(netrat->count) != num)
+	if (L_LE16_TO_CPU(netrat->count) != num)
 		goto done;
 
 	for (i = 0; i < num; i++) {

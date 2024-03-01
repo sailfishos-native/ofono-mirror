@@ -132,7 +132,7 @@ static void get_file_attributes_cb(struct qmi_result *result, void *user_data)
 	if (!attr)
 		goto error;
 
-	raw_len = GUINT16_FROM_LE(attr->raw_len);
+	raw_len = L_LE16_TO_CPU(attr->raw_len);
 
 	switch (data->app_type) {
 	case 0x01:	/* SIM card */
@@ -547,7 +547,7 @@ static enum get_card_status_result handle_get_card_status_data(
 			info2 = ptr + offset;
 			offset += sizeof(struct qmi_uim_app_info2);
 
-			index = GUINT16_FROM_LE(status->index_gw_pri);
+			index = L_LE16_TO_CPU(status->index_gw_pri);
 
 			if ((index & 0xff) == n && (index >> 8) == i) {
 				if (get_card_status(slot, info1, info2,

@@ -197,7 +197,7 @@ static void qmi_submit(struct ofono_sms *sms,
 	message = alloca(3 + pdu_len);
 
 	message->msg_format = 0x06;
-	message->msg_length = GUINT16_TO_LE(pdu_len);
+	message->msg_length = L_CPU_TO_LE16(pdu_len);
 	memcpy(message->msg_data, pdu, pdu_len);
 
 	param = qmi_param_new();
@@ -357,7 +357,7 @@ static void delete_msg_cb(struct qmi_result *result, void *user_data)
 		 */
 		if (msg < data->msg_list->cnt)
 			raw_read(sms, data->msg_list->msg[msg].type,
-				GUINT32_FROM_LE(data->msg_list->msg[msg].ndx));
+				L_LE32_TO_CPU(data->msg_list->msg[msg].ndx));
 		else
 			get_msg_list(sms);
 	}
@@ -422,7 +422,7 @@ static void raw_read_cb(struct qmi_result *result, void *user_data)
 		uint16_t plen;
 		uint16_t tpdu_len;
 
-		plen = GUINT16_FROM_LE(msg->msg_length);
+		plen = L_LE16_TO_CPU(msg->msg_length);
 		tpdu_len = plen - msg->msg_data[0] - 1;
 
 		ofono_sms_deliver_notify(sms, msg->msg_data, plen, tpdu_len);
@@ -482,12 +482,12 @@ static void get_msg_list_cb(struct qmi_result *result, void *user_data)
 		goto done;
 	}
 
-	cnt = GUINT32_FROM_LE(list->cnt);
+	cnt = L_LE32_TO_CPU(list->cnt);
 	DBG("msgs found %d", cnt);
 
 	for (tmp = 0; tmp < cnt; tmp++) {
 		DBG("unread type %d ndx %d", list->msg[tmp].type,
-			GUINT32_FROM_LE(list->msg[tmp].ndx));
+			L_LE32_TO_CPU(list->msg[tmp].ndx));
 	}
 
 	/* free list from last time */
@@ -509,7 +509,7 @@ static void get_msg_list_cb(struct qmi_result *result, void *user_data)
 
 		data->rd_msg_num = 0;
 		raw_read(sms, data->msg_list->msg[0].type,
-				GUINT32_FROM_LE(data->msg_list->msg[0].ndx));
+				L_LE32_TO_CPU(data->msg_list->msg[0].ndx));
 		return;
 	}
 
@@ -612,12 +612,12 @@ static void event_notify(struct qmi_result *result, void *user_data)
 			DBG("msg mode not found, use mode %d", data->msg_mode);
 
 		DBG("msg type %d ndx %d mode %d", notify->storage_type,
-			GUINT32_FROM_LE(notify->storage_index), data->msg_mode);
+			L_LE32_TO_CPU(notify->storage_index), data->msg_mode);
 
 		/* don't read if list is being processed, get this msg later */
 		if (!data->msg_list_chk)
 			raw_read(sms, notify->storage_type,
-					GUINT32_FROM_LE(notify->storage_index));
+					L_LE32_TO_CPU(notify->storage_index));
 	} else {
 		/* route is either transfer only or transfer and ACK */
 		const struct qmi_wms_result_message *message;
@@ -626,11 +626,11 @@ static void event_notify(struct qmi_result *result, void *user_data)
 		if (message) {
 			uint16_t plen;
 
-			plen = GUINT16_FROM_LE(message->msg_length);
+			plen = L_LE16_TO_CPU(message->msg_length);
 
 			DBG("ack_required %d transaction id %u",
 				message->ack_required,
-				GUINT32_FROM_LE(message->transaction_id));
+				L_LE32_TO_CPU(message->transaction_id));
 			DBG("msg format %d PDU length %d",
 				message->msg_format, plen);
 
@@ -688,7 +688,7 @@ static void get_routes_cb(struct qmi_result *result, void *user_data)
         if (!list)
 		goto done;
 
-	num = GUINT16_FROM_LE(list->count);
+	num = L_LE16_TO_CPU(list->count);
 
 	DBG("found %d routes", num);
 
@@ -705,7 +705,7 @@ static void get_routes_cb(struct qmi_result *result, void *user_data)
 	len = 2 + (1 * 4);
 	new_list = alloca(len);
 
-	new_list->count = GUINT16_TO_LE(1);
+	new_list->count = L_CPU_TO_LE16(1);
 	new_list->route[0].msg_type = QMI_WMS_MSG_TYPE_P2P;
 	new_list->route[0].msg_class = QMI_WMS_MSG_CLASS_NONE;
 	new_list->route[0].storage_type = QMI_WMS_STORAGE_TYPE_NV;

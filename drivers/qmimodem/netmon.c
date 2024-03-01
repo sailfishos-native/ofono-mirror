@@ -90,7 +90,7 @@ static void get_rssi_cb(struct qmi_result *result, void *user_data)
 	/* RSSI */
 	rssi = qmi_result_get(result, 0x11, &len);
 	if (rssi) {
-		num = GUINT16_FROM_LE(rssi->count);
+		num = L_LE16_TO_CPU(rssi->count);
 		for (i = 0; i < num; i++) {
 			DBG("RSSI: %hhu on RAT %hhd",
 				rssi->info[i].rssi,
@@ -127,14 +127,14 @@ static void get_rssi_cb(struct qmi_result *result, void *user_data)
 	/* Bit error rate */
 	ber = qmi_result_get(result, 0x15, &len);
 	if (ber) {
-		num = GUINT16_FROM_LE(ber->count);
+		num = L_LE16_TO_CPU(ber->count);
 		for (i = 0; i < ber->count; i++) {
 			DBG("Bit error rate: %hu on RAT %hhd",
-				GUINT16_FROM_LE(ber->info[i].rate),
+				L_LE16_TO_CPU(ber->info[i].rate),
 				ber->info[i].rat);
 		}
 
-		props.ber = GUINT16_FROM_LE(ber->info[0].rate);
+		props.ber = L_LE16_TO_CPU(ber->info[0].rate);
 		if (props.ber > 7)
 			props.ber = -1;
 	} else {
