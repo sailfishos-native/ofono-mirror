@@ -526,94 +526,49 @@ int qmi_error_to_ofono_cme(int qmi_error)
 	}
 }
 
-static void __debug_msg(const char dir, const void *buf, size_t len,
-				qmi_debug_func_t function, void *user_data)
+static void __debug_msg(char dir, const struct qmi_message_hdr *msg,
+			uint32_t service_type, uint8_t transaction_type,
+			uint16_t tid, uint8_t client, uint16_t overall_length,
+			qmi_debug_func_t function, void *user_data)
 {
-	const struct qmi_mux_hdr *hdr;
-	const struct qmi_message_hdr *msg;
 	const char *service;
-	const void *ptr;
+	const void *ptr = msg + 1;
 	uint16_t offset;
 	char strbuf[72 + 16], *str;
 	bool pending_print = false;
+	const char *transaction_type_string;
 
-	if (!function || !len)
+	if (!function)
 		return;
 
-	hdr = buf;
-
 	str = strbuf;
-	service = __service_type_to_string(hdr->service);
+	service = __service_type_to_string(service_type);
 	if (service)
 		str += sprintf(str, "%c   %s", dir, service);
 	else
-		str += sprintf(str, "%c   %d", dir, hdr->service);
+		str += sprintf(str, "%c   %d", dir, service_type);
 
-	if (hdr->service == QMI_SERVICE_CONTROL) {
-		const struct qmi_control_hdr *ctl;
-		const char *type;
-
-		ctl = buf + QMI_MUX_HDR_SIZE;
-		msg = buf + QMI_MUX_HDR_SIZE + QMI_CONTROL_HDR_SIZE;
-		ptr = buf + QMI_MUX_HDR_SIZE + QMI_CONTROL_HDR_SIZE +
-							QMI_MESSAGE_HDR_SIZE;
-
-		switch (ctl->type) {
-		case 0x00:
-			type = "_req";
-			break;
-		case 0x01:
-			type = "_resp";
-			break;
-		case 0x02:
-			type = "_ind";
-			break;
-		default:
-			type = "";
-			break;
-		}
-
-		str += sprintf(str, "%s msg=%d len=%d", type,
-					L_LE16_TO_CPU(msg->message),
-					L_LE16_TO_CPU(msg->length));
-
-		str += sprintf(str, " [client=%d,type=%d,tid=%d,len=%d]",
-					hdr->client, ctl->type,
-					ctl->transaction,
-					L_LE16_TO_CPU(hdr->length));
-	} else {
-		const struct qmi_service_hdr *srv;
-		const char *type;
-
-		srv = buf + QMI_MUX_HDR_SIZE;
-		msg = buf + QMI_MUX_HDR_SIZE + QMI_SERVICE_HDR_SIZE;
-		ptr = buf + QMI_MUX_HDR_SIZE + QMI_SERVICE_HDR_SIZE +
-							QMI_MESSAGE_HDR_SIZE;
-
-		switch (srv->type) {
-		case 0x00:
-			type = "_req";
-			break;
-		case 0x02:
-			type = "_resp";
-			break;
-		case 0x04:
-			type = "_ind";
-			break;
-		default:
-			type = "";
-			break;
-		}
-
-		str += sprintf(str, "%s msg=%d len=%d", type,
-					L_LE16_TO_CPU(msg->message),
-					L_LE16_TO_CPU(msg->length));
-
-		str += sprintf(str, " [client=%d,type=%d,tid=%d,len=%d]",
-					hdr->client, srv->type,
-					L_LE16_TO_CPU(srv->transaction),
-					L_LE16_TO_CPU(hdr->length));
+	switch (transaction_type) {
+	case 0x00:
+		transaction_type_string = "_req";
+		break;
+	case 0x01:
+		transaction_type_string = "_resp";
+		break;
+	case 0x02:
+		transaction_type_string = "_ind";
+		break;
+	default:
+		transaction_type_string = "";
+		break;
 	}
+
+	str += sprintf(str, "%s msg=%d len=%d", transaction_type_string,
+				L_LE16_TO_CPU(msg->message),
+				L_LE16_TO_CPU(msg->length));
+
+	str += sprintf(str, " [client=%d,type=%d,tid=%d,len=%d]",
+				client, transaction_type, tid, overall_length);
 
 	function(strbuf, user_data);
 
@@ -661,6 +616,41 @@ static void __debug_msg(const char dir, const void *buf, size_t len,
 
 	if (pending_print)
 		function(strbuf, user_data);
+}
+
+static void __qmux_debug_msg(const char dir, const void *buf, size_t len,
+				qmi_debug_func_t function, void *user_data)
+{
+	const struct qmi_mux_hdr *hdr;
+	const struct qmi_message_hdr *msg;
+	uint8_t transaction_type;
+	uint16_t tid;
+
+	if (!len)
+		return;
+
+	hdr = buf;
+
+	if (hdr->service == QMI_SERVICE_CONTROL) {
+		const struct qmi_control_hdr *ctl;
+
+		ctl = buf + QMI_MUX_HDR_SIZE;
+		msg = buf + QMI_MUX_HDR_SIZE + QMI_CONTROL_HDR_SIZE;
+
+		transaction_type = ctl->type;
+		tid = ctl->transaction;
+	} else {
+		const struct qmi_service_hdr *srv;
+
+		srv = buf + QMI_MUX_HDR_SIZE;
+		msg = buf + QMI_MUX_HDR_SIZE + QMI_SERVICE_HDR_SIZE;
+
+		transaction_type = srv->type;
+		tid = L_LE16_TO_CPU(srv->transaction);
+	}
+
+	__debug_msg(dir, msg, hdr->service, transaction_type, tid, hdr->client,
+			L_LE16_TO_CPU(hdr->length), function, user_data);
 }
 
 static void __debug_device(struct qmi_device *device,
@@ -1283,7 +1273,7 @@ static int qmi_device_qmux_write(struct qmi_device *device,
 	l_util_hexdump(false, req->data, bytes_written,
 			device->debug_func, device->debug_data);
 
-	__debug_msg(' ', req->data, bytes_written,
+	__qmux_debug_msg(' ', req->data, bytes_written,
 				device->debug_func, device->debug_data);
 
 	hdr = (struct qmi_mux_hdr *) req->data;
@@ -1370,7 +1360,7 @@ static bool received_qmux_data(struct l_io *io, void *user_data)
 		if (bytes_read - offset < len)
 			break;
 
-		__debug_msg(' ', buf + offset, len,
+		__qmux_debug_msg(' ', buf + offset, len,
 				qmux->super.debug_func, qmux->super.debug_data);
 
 		msg = buf + offset + QMI_MUX_HDR_SIZE;
