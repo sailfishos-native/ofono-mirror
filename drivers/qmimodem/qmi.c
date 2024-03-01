@@ -63,6 +63,7 @@ struct qmi_request {
 	uint16_t tid;
 	unsigned int group_id;		/* Always 0 for control */
 	uint8_t client;
+	struct qmi_service_info info;	/* Not used for control requests */
 	qmi_message_func_t callback;
 	void *user_data;
 	uint16_t len;
@@ -256,6 +257,29 @@ static struct qmi_request *__request_alloc(uint8_t service,
 
 	req->callback = func;
 	req->user_data = user_data;
+
+	return req;
+}
+
+static struct qmi_request *__control_request_alloc(uint16_t message,
+				const void *data, uint16_t length,
+				qmi_message_func_t func, void *user_data)
+{
+	return __request_alloc(QMI_SERVICE_CONTROL, 0x00, message,
+					data, length, func, user_data);
+}
+
+static struct qmi_request *__service_request_alloc(
+				struct qmi_service_info *info,
+				uint8_t client, uint16_t message,
+				const void *data, uint16_t length,
+				qmi_message_func_t func, void *user_data)
+{
+	struct qmi_request *req;
+
+	req = __request_alloc(info->service_type, client, message,
+						data, length, func, user_data);
+	memcpy(&req->info, info, sizeof(req->info));
 
 	return req;
 }
@@ -1495,9 +1519,8 @@ static bool qmi_device_qmux_sync(struct qmi_device_qmux *qmux,
 
 	__debug_device(&qmux->super, "Sending sync to reset QMI");
 
-	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
-				QMI_CTL_SYNC, NULL, 0,
-				qmux_sync_callback, data);
+	req = __control_request_alloc(QMI_CTL_SYNC, NULL, 0,
+					qmux_sync_callback, data);
 
 	__ctl_request_submit(qmux, req);
 
@@ -1623,9 +1646,8 @@ static int qmi_device_qmux_discover(struct qmi_device *device,
 	data->user_data = user_data;
 	data->destroy = destroy;
 
-	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
-			QMI_CTL_GET_VERSION_INFO,
-			NULL, 0, qmux_discover_callback, data);
+	req = __control_request_alloc(QMI_CTL_GET_VERSION_INFO, NULL, 0,
+						qmux_discover_callback, data);
 
 	data->tid = __ctl_request_submit(qmux, req);
 	data->timeout = l_timeout_create(5, qmux_discover_reply_timeout,
@@ -1769,10 +1791,9 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 	qmi_device_get_service_version(device, data->type,
 						&data->major, &data->minor);
 
-	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
-			QMI_CTL_GET_CLIENT_ID,
-			client_req, sizeof(client_req),
-			qmux_client_create_callback, data);
+	req = __control_request_alloc(QMI_CTL_GET_CLIENT_ID,
+					client_req, sizeof(client_req),
+					qmux_client_create_callback, data);
 
 	data->tid = __ctl_request_submit(qmux, req);
 	data->timeout = l_timeout_create(8, qmux_client_create_reply,
@@ -1806,10 +1827,9 @@ static void qmi_device_qmux_client_release(struct qmi_device *device,
 
 	qmux->release_users++;
 
-	req = __request_alloc(QMI_SERVICE_CONTROL, 0x00,
-			QMI_CTL_RELEASE_CLIENT_ID,
-			release_req, sizeof(release_req),
-			qmux_client_release_callback, qmux);
+	req = __control_request_alloc(QMI_CTL_RELEASE_CLIENT_ID,
+					release_req, sizeof(release_req),
+					qmux_client_release_callback, qmux);
 
 	__ctl_request_submit(qmux, req);
 }
@@ -2691,11 +2711,11 @@ uint16_t qmi_service_send(struct qmi_service *service,
 	data->user_data = user_data;
 	data->destroy = destroy;
 
-	req = __request_alloc(service->info.service_type,
-				service->client_id, message,
-				param ? param->data : NULL,
-				param ? param->length : 0,
-				service_send_callback, data);
+	req = __service_request_alloc(&service->info,
+					service->client_id, message,
+					param ? param->data : NULL,
+					param ? param->length : 0,
+					service_send_callback, data);
 
 	qmi_param_free(param);
 
