@@ -29,8 +29,6 @@
 #include <string.h>
 #include <errno.h>
 
-#include <glib.h>
-
 #include <ofono/log.h>
 #include <ofono/modem.h>
 #include <ofono/netmon.h>
@@ -203,12 +201,12 @@ static void qmi_netmon_request_update(struct ofono_netmon *netmon,
 	qmi_param_append_uint16(param, 0x10, 255);
 
 	if (qmi_service_send(data->nas, QMI_NAS_GET_SIGNAL_STRENGTH, param,
-					get_rssi_cb, cbd, g_free) > 0)
+					get_rssi_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void create_nas_cb(struct qmi_service *service, void *user_data)
@@ -237,7 +235,7 @@ static int qmi_netmon_probe(struct ofono_netmon *netmon,
 
 	DBG("");
 
-	nmd = g_new0(struct netmon_data, 1);
+	nmd = l_new(struct netmon_data, 1);
 
 	ofono_netmon_set_data(netmon, nmd);
 
@@ -257,7 +255,7 @@ static void qmi_netmon_remove(struct ofono_netmon *netmon)
 
 	qmi_service_unref(nmd->nas);
 
-	g_free(nmd);
+	l_free(nmd);
 }
 
 static const struct ofono_netmon_driver driver = {

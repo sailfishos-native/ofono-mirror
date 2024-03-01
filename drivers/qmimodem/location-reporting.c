@@ -137,12 +137,12 @@ static void qmi_location_reporting_enable(struct ofono_location_reporting *lr,
 	param = qmi_param_new_uint8(QMI_PDS_PARAM_AUTO_TRACKING, 0x01);
 
 	if (qmi_service_send(data->pds, QMI_PDS_SET_AUTOTRACK, param,
-					autotrack_enable_cb, cbd, g_free) > 0)
+					autotrack_enable_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void autotrack_disable_cb(struct qmi_result *result, void *user_data)
@@ -177,12 +177,12 @@ static void qmi_location_reporting_disable(struct ofono_location_reporting *lr,
 	param = qmi_param_new_uint8(QMI_PDS_PARAM_AUTO_TRACKING, 0x00);
 
 	if (qmi_service_send(data->pds, QMI_PDS_SET_AUTOTRACK, param,
-					autotrack_disable_cb, cbd, g_free) > 0)
+					autotrack_disable_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void set_event_cb(struct qmi_result *result, void *user_data)
@@ -238,7 +238,7 @@ static int qmi_location_reporting_probe(struct ofono_location_reporting *lr,
 
 	DBG("");
 
-	data = g_new0(struct location_data, 1);
+	data = l_new(struct location_data, 1);
 
 	data->fd = -1;
 
@@ -261,7 +261,7 @@ static void qmi_location_reporting_remove(struct ofono_location_reporting *lr)
 
 	qmi_service_unref(data->pds);
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_location_reporting_driver driver = {

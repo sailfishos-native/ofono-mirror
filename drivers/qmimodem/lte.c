@@ -91,12 +91,12 @@ static void qmimodem_lte_set_default_attach_info(const struct ofono_lte *lte,
 
 	/* Modify profile */
 	if (qmi_service_send(ldd->wds, 0x28, param,
-					modify_profile_cb, cbd, g_free) > 0)
+					modify_profile_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void reset_profile_cb(struct qmi_result *result, void *user_data)
@@ -210,9 +210,7 @@ static int qmimodem_lte_probe(struct ofono_lte *lte,
 
 	DBG("qmimodem lte probe");
 
-	ldd = g_try_new0(struct lte_data, 1);
-	if (!ldd)
-		return -ENOMEM;
+	ldd = l_new(struct lte_data, 1);
 
 	ofono_lte_set_data(lte, ldd);
 
@@ -232,7 +230,7 @@ static void qmimodem_lte_remove(struct ofono_lte *lte)
 
 	qmi_service_unref(ldd->wds);
 
-	g_free(ldd);
+	l_free(ldd);
 }
 
 static const struct ofono_lte_driver driver = {

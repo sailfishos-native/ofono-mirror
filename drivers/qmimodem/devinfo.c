@@ -71,12 +71,12 @@ static void qmi_query_manufacturer(struct ofono_devinfo *devinfo,
 	DBG("");
 
 	if (qmi_service_send(data->dms, QMI_DMS_GET_MANUFACTURER, NULL,
-						string_cb, cbd, g_free) > 0)
+						string_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void qmi_query_model(struct ofono_devinfo *devinfo,
@@ -88,12 +88,12 @@ static void qmi_query_model(struct ofono_devinfo *devinfo,
 	DBG("");
 
 	if (qmi_service_send(data->dms, QMI_DMS_GET_MODEL_ID, NULL,
-					string_cb, cbd, g_free) > 0)
+					string_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void qmi_query_revision(struct ofono_devinfo *devinfo,
@@ -105,12 +105,12 @@ static void qmi_query_revision(struct ofono_devinfo *devinfo,
 	DBG("");
 
 	if (qmi_service_send(data->dms, QMI_DMS_GET_REV_ID, NULL,
-					string_cb, cbd, g_free) > 0)
+					string_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void get_ids_cb(struct qmi_result *result, void *user_data)
@@ -166,12 +166,12 @@ static void qmi_query_serial(struct ofono_devinfo *devinfo,
 	cbd->user = devinfo;
 
 	if (qmi_service_send(data->dms, QMI_DMS_GET_IDS, NULL,
-					get_ids_cb, cbd, g_free) > 0)
+					get_ids_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void get_caps_cb(struct qmi_result *result, void *user_data)
@@ -246,7 +246,7 @@ static int qmi_devinfo_probe(struct ofono_devinfo *devinfo,
 
 	DBG("");
 
-	data = g_new0(struct devinfo_data, 1);
+	data = l_new(struct devinfo_data, 1);
 
 	ofono_devinfo_set_data(devinfo, data);
 
@@ -266,7 +266,7 @@ static void qmi_devinfo_remove(struct ofono_devinfo *devinfo)
 
 	qmi_service_unref(data->dms);
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_devinfo_driver driver = {

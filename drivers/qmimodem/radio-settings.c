@@ -86,7 +86,7 @@ static void qmi_query_rat_mode(struct ofono_radio_settings *rs,
 
 	if (qmi_service_send(data->nas,
 				QMI_NAS_GET_SYSTEM_SELECTION_PREFERENCE, NULL,
-				get_system_selection_pref_cb, cbd, g_free) > 0)
+				get_system_selection_pref_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, -1, data);
@@ -144,12 +144,12 @@ static void qmi_set_rat_mode(struct ofono_radio_settings *rs, unsigned int mode,
 
 	if (qmi_service_send(data->nas,
 				QMI_NAS_SET_SYSTEM_SELECTION_PREFERENCE, param,
-				set_system_selection_pref_cb, cbd, g_free) > 0)
+				set_system_selection_pref_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, user_data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void get_caps_cb(struct qmi_result *result, void *user_data)
@@ -204,11 +204,11 @@ static void qmi_query_available_rats(struct ofono_radio_settings *rs,
 		goto error;
 
 	if (qmi_service_send(rsd->dms, QMI_DMS_GET_CAPS, NULL,
-					get_caps_cb, cbd, g_free) > 0)
+					get_caps_cb, cbd, l_free) > 0)
 		return;
 
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, -1, data);
 }
 
@@ -257,7 +257,7 @@ static int qmi_radio_settings_probe(struct ofono_radio_settings *rs,
 
 	DBG("");
 
-	data = g_new0(struct settings_data, 1);
+	data = l_new(struct settings_data, 1);
 
 	ofono_radio_settings_set_data(rs, data);
 
@@ -280,7 +280,7 @@ static void qmi_radio_settings_remove(struct ofono_radio_settings *rs)
 	qmi_service_unref(data->dms);
 	qmi_service_unref(data->nas);
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_radio_settings_driver driver = {

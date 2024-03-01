@@ -188,7 +188,7 @@ static void qmi_read_attributes(struct ofono_sim *sim, int fileid,
 	qmi_param_append(param, 0x02, fileid_len, fileid_data);
 
 	if (qmi_service_send(data->uim, QMI_UIM_GET_FILE_ATTRIBUTES, param,
-				get_file_attributes_cb, cbd, g_free) > 0)
+				get_file_attributes_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
@@ -196,7 +196,7 @@ static void qmi_read_attributes(struct ofono_sim *sim, int fileid,
 error:
 	CALLBACK_WITH_FAILURE(cb, -1, -1, -1, NULL,
 					EF_STATUS_INVALIDATED, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void read_generic_cb(struct qmi_result *result, void *user_data)
@@ -255,14 +255,14 @@ static void qmi_read_transparent(struct ofono_sim *sim,
 	qmi_param_append(param, 0x03, sizeof(read_data), read_data);
 
 	if (qmi_service_send(data->uim, QMI_UIM_READ_TRANSPARENT, param,
-					read_generic_cb, cbd, g_free) > 0)
+					read_generic_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 
 error:
 	CALLBACK_WITH_FAILURE(cb, NULL, 0, user_data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void qmi_read_record(struct ofono_sim *sim,
@@ -298,14 +298,14 @@ static void qmi_read_record(struct ofono_sim *sim,
 	qmi_param_append(param, 0x03, sizeof(read_data), read_data);
 
 	if (qmi_service_send(data->uim, QMI_UIM_READ_RECORD, param,
-					read_generic_cb, cbd, g_free) > 0)
+					read_generic_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 
 error:
 	CALLBACK_WITH_FAILURE(cb, NULL, 0, user_data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void write_generic_cb(struct qmi_result *result, void *user_data)
@@ -380,14 +380,14 @@ static void write_generic(struct ofono_sim *sim,
 	qmi_param_append(param, 0x03, 4 + length, write_data);
 
 	if (qmi_service_send(data->uim, qmi_message, param,
-					write_generic_cb, cbd, g_free) > 0)
+					write_generic_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 
 error:
 	CALLBACK_WITH_FAILURE(cb, user_data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void qmi_write_transparent(struct ofono_sim *sim,
@@ -456,12 +456,12 @@ static void qmi_read_imsi(struct ofono_sim *sim,
 	DBG("");
 
 	if (qmi_service_send(data->dms, QMI_DMS_GET_IMSI, NULL,
-					get_imsi_cb, cbd, g_free) > 0)
+					get_imsi_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 /* Return true if a retry could give another (better) result */
@@ -651,12 +651,12 @@ static void qmi_query_passwd_state(struct ofono_sim *sim,
 	cbd->user = sim;
 
 	if (qmi_service_send(data->uim, QMI_UIM_GET_CARD_STATUS, NULL,
-					query_passwd_state_cb, cbd, g_free) > 0)
+					query_passwd_state_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void query_pin_retries_cb(struct qmi_result *result, void *user_data)
@@ -689,12 +689,12 @@ static void qmi_query_pin_retries(struct ofono_sim *sim,
 	DBG("");
 
 	if (qmi_service_send(data->uim, QMI_UIM_GET_CARD_STATUS, NULL,
-					query_pin_retries_cb, cbd, g_free) > 0)
+					query_pin_retries_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void pin_send_cb(struct qmi_result *result, void *user_data)
@@ -748,14 +748,14 @@ static void qmi_pin_send(struct ofono_sim *sim, const char *passwd,
 					session_info_data);
 
 	if (qmi_service_send(data->uim, QMI_UIM_VERIFY_PIN, param,
-					pin_send_cb, cbd, g_free) > 0)
+					pin_send_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 
 error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void get_card_status_cb(struct qmi_result *result, void *user_data)
@@ -898,7 +898,7 @@ static int qmi_sim_probe(struct ofono_sim *sim,
 
 	DBG("");
 
-	data = g_new0(struct sim_data, 1);
+	data = l_new(struct sim_data, 1);
 
 	data->qmi_dev = device;
 
@@ -937,7 +937,7 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 		data->dms = NULL;
 	}
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_sim_driver driver = {

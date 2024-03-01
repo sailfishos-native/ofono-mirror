@@ -117,7 +117,7 @@ static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 		ofono_info("LTE attach IP type: %hhd", iptype);
 
 	ofono_gprs_cid_activated(gprs, data->last_auto_context_id, apn);
-	g_free(apn);
+	l_free(apn);
 
 	return;
 
@@ -286,12 +286,12 @@ static void qmi_set_attached(struct ofono_gprs *gprs, int attached,
 	param = qmi_param_new_uint8(QMI_NAS_PARAM_ATTACH_ACTION, action);
 
 	if (qmi_service_send(data->nas, QMI_NAS_ATTACH_DETACH, param,
-					attach_detach_cb, cbd, g_free) > 0)
+					attach_detach_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void get_ss_info_cb(struct qmi_result *result, void *user_data)
@@ -329,12 +329,12 @@ static void qmi_attached_status(struct ofono_gprs *gprs,
 
 	cbd->user = gprs;
 	if (qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
-					get_ss_info_cb, cbd, g_free) > 0)
+					get_ss_info_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void create_wds_cb(struct qmi_service *service, void *user_data)
@@ -396,7 +396,7 @@ static int qmi_gprs_probe(struct ofono_gprs *gprs,
 
 	DBG("");
 
-	data = g_new0(struct gprs_data, 1);
+	data = l_new(struct gprs_data, 1);
 
 	ofono_gprs_set_data(gprs, data);
 
@@ -426,7 +426,7 @@ static void qmi_gprs_remove(struct ofono_gprs *gprs)
 
 	qmi_service_unref(data->nas);
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_gprs_driver driver = {

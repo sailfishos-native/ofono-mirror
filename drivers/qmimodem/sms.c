@@ -97,12 +97,12 @@ static void qmi_sca_query(struct ofono_sms *sms,
 	DBG("");
 
 	if (qmi_service_send(data->wms, QMI_WMS_GET_SMSC_ADDR, NULL,
-					get_smsc_addr_cb, cbd, g_free) > 0)
+					get_smsc_addr_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void set_smsc_addr_cb(struct qmi_result *result, void *user_data)
@@ -152,14 +152,14 @@ static void qmi_sca_set(struct ofono_sms *sms,
 						strlen(type), type);
 
 	if (qmi_service_send(data->wms, QMI_WMS_SET_SMSC_ADDR, param,
-					set_smsc_addr_cb, cbd, g_free) > 0)
+					set_smsc_addr_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 
 error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void raw_send_cb(struct qmi_result *result, void *user_data)
@@ -205,12 +205,12 @@ static void qmi_submit(struct ofono_sms *sms,
 	qmi_param_append(param, QMI_WMS_PARAM_MESSAGE, 3 + pdu_len, message);
 
 	if (qmi_service_send(data->wms, QMI_WMS_RAW_SEND, param,
-					raw_send_cb, cbd, g_free) > 0)
+					raw_send_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static int domain_to_bearer(uint8_t domain)
@@ -281,13 +281,13 @@ static void qmi_bearer_query(struct ofono_sms *sms,
 		goto error;
 
 	if (qmi_service_send(data->wms, QMI_WMS_GET_DOMAIN_PREF, NULL,
-					get_domain_pref_cb, cbd, g_free) > 0)
+					get_domain_pref_cb, cbd, l_free) > 0)
 		return;
 
 error:
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void set_domain_pref_cb(struct qmi_result *result, void *user_data)
@@ -323,14 +323,14 @@ static void qmi_bearer_set(struct ofono_sms *sms, int bearer,
 	param = qmi_param_new_uint8(QMI_WMS_PARAM_DOMAIN, domain);
 
 	if (qmi_service_send(data->wms, QMI_WMS_SET_DOMAIN_PREF, param,
-					set_domain_pref_cb, cbd, g_free) > 0)
+					set_domain_pref_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 
 error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void delete_msg_cb(struct qmi_result *result, void *user_data)
@@ -492,7 +492,7 @@ static void get_msg_list_cb(struct qmi_result *result, void *user_data)
 
 	/* free list from last time */
 	if (data->msg_list) {
-		g_free(data->msg_list);
+		l_free(data->msg_list);
 		data->msg_list = NULL;
 	}
 
@@ -500,10 +500,7 @@ static void get_msg_list_cb(struct qmi_result *result, void *user_data)
 	if (cnt) {
 		int msg_size = cnt * sizeof(list->msg[0]);
 
-		data->msg_list = g_try_malloc0(sizeof(list->cnt) + msg_size);
-		if (data->msg_list == NULL)
-			goto done;
-
+		data->msg_list = l_malloc(sizeof(list->cnt) + msg_size);
 		data->msg_list->cnt = cnt;
 		memcpy(data->msg_list->msg, list->msg, msg_size);
 
@@ -785,7 +782,7 @@ static int qmi_sms_probe(struct ofono_sms *sms,
 
 	DBG("");
 
-	data = g_new0(struct sms_data, 1);
+	data = l_new(struct sms_data, 1);
 
 	ofono_sms_set_data(sms, data);
 
@@ -807,9 +804,9 @@ static void qmi_sms_remove(struct ofono_sms *sms)
 	qmi_service_unref(data->wms);
 
 	if (data->msg_list)
-		g_free(data->msg_list);
+		l_free(data->msg_list);
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_sms_driver driver = {

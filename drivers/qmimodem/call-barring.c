@@ -110,12 +110,12 @@ static void qmi_set(struct ofono_call_barring *barr, const char *lock,
 	qmi_param_append(param, 0x11, 4, passwd);
 
 	if (qmi_service_send(bd->voice, QMI_VOICE_SET_SUPS_SERVICE, param,
-				set_cb, cbd, g_free) > 0)
+				set_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, data);
 }
 
@@ -156,12 +156,12 @@ static void qmi_query(struct ofono_call_barring *barr, const char *lock,
 		qmi_param_append_uint8(param, 0x10, cls);
 
 	if (qmi_service_send(bd->voice, QMI_VOICE_GET_CALL_BARRING, param,
-				query_cb, cbd, g_free) > 0)
+				query_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, -1, data);
 }
 
@@ -194,12 +194,12 @@ static void qmi_set_passwd(struct ofono_call_barring *barr, const char *lock,
 	qmi_param_append(param, 0x01, sizeof(ssd), &ssd);
 
 	if (qmi_service_send(bd->voice, QMI_VOICE_SET_CALL_BARRING_PWD, param,
-				set_cb, cbd, g_free) > 0)
+				set_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, data);
 }
 
@@ -229,7 +229,7 @@ static int qmi_call_barring_probe(struct ofono_call_barring *barr,
 
 	DBG("");
 
-	bd = g_new0(struct call_barring_data, 1);
+	bd = l_new(struct call_barring_data, 1);
 
 	ofono_call_barring_set_data(barr, bd);
 
@@ -250,7 +250,7 @@ static void qmi_call_barring_remove(struct ofono_call_barring *barr)
 	if (bd->voice)
 		qmi_service_unref(bd->voice);
 
-	g_free(bd);
+	l_free(bd);
 }
 
 static const struct ofono_call_barring_driver driver = {

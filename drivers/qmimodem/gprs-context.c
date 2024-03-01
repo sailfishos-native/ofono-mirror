@@ -30,8 +30,6 @@
 #include <ofono/modem.h>
 #include <ofono/gprs-context.h>
 
-#include <ell/ell.h>
-
 #include "qmi.h"
 #include "wds.h"
 #include "util.h"
@@ -96,7 +94,7 @@ static void get_settings_cb(struct qmi_result *result, void *user_data)
 	apn = qmi_result_get_string(result, QMI_WDS_RESULT_APN);
 	if (apn) {
 		DBG("APN: %s", apn);
-		g_free(apn);
+		l_free(apn);
 	}
 
 	if (qmi_result_get_uint8(result, QMI_WDS_RESULT_PDP_TYPE, &pdp_type))
@@ -173,7 +171,7 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 	cbd->user = gc;
 
 	if (qmi_service_send(data->wds, QMI_WDS_GET_CURRENT_SETTINGS, NULL,
-					get_settings_cb, cbd, g_free) > 0)
+					get_settings_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_SUCCESS(cb, cbd->data);
@@ -207,14 +205,14 @@ static void qmi_gprs_read_settings(struct ofono_gprs_context* gc,
 	cbd->user = gc;
 
 	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, NULL,
-					start_net_cb, cbd, g_free) > 0)
+					start_net_cb, cbd, l_free) > 0)
 		return;
 
 	data->active_context = 0;
 
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static uint8_t auth_method_to_qmi_auth(enum ofono_gprs_auth_method method)
@@ -279,7 +277,7 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 					strlen(ctx->password), ctx->password);
 
 	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, param,
-					start_net_cb, cbd, g_free) > 0)
+					start_net_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
@@ -289,7 +287,7 @@ error:
 
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void stop_net_cb(struct qmi_result *result, void *user_data)
@@ -333,7 +331,7 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 						data->pkt_handle);
 
 	if (qmi_service_send(data->wds, QMI_WDS_STOP_NETWORK, param,
-					stop_net_cb, cbd, g_free) > 0)
+					stop_net_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
@@ -341,7 +339,7 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 	if (cb)
 		CALLBACK_WITH_FAILURE(cb, user_data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void qmi_gprs_context_detach_shutdown(struct ofono_gprs_context *gc,
@@ -459,7 +457,7 @@ static int qmi_gprs_context_probe(struct ofono_gprs_context *gc,
 
 	DBG("");
 
-	data = g_new0(struct gprs_context_data, 1);
+	data = l_new(struct gprs_context_data, 1);
 
 	ofono_gprs_context_set_data(gc, data);
 	data->dev = device;
@@ -483,7 +481,7 @@ static void qmi_gprs_context_remove(struct ofono_gprs_context *gc)
 		qmi_service_unref(data->wds);
 	}
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_gprs_context_driver driver = {

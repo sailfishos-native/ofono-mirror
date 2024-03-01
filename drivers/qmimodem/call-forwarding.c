@@ -110,7 +110,7 @@ static void query_cb(struct qmi_result *result, void *user_data)
 
 		num = *p++;
 
-		list = g_new0(struct ofono_call_forwarding_condition, num);
+		list = l_new(struct ofono_call_forwarding_condition, num);
 
 		for (i = 0; i < num; i++) {
 			struct call_forwarding_info_ext *info = (void *)p;
@@ -119,7 +119,7 @@ static void query_cb(struct qmi_result *result, void *user_data)
 			/* do not try to access beyond buffer end */
 			if (p + sizeof(*info) > end ||
 					p + sizeof(*info) + info->len > end) {
-				g_free(list);
+				l_free(list);
 				goto error;
 			}
 
@@ -135,7 +135,7 @@ static void query_cb(struct qmi_result *result, void *user_data)
 		}
 
 		CALLBACK_WITH_SUCCESS(cb, num, list, cbd->data);
-		g_free(list);
+		l_free(list);
 		return;
 	}
 
@@ -163,12 +163,12 @@ static void qmi_query(struct ofono_call_forwarding *cf, int type, int cls,
 		qmi_param_append_uint8(param, 0x10, cls);
 
 	if (qmi_service_send(cfd->voice, QMI_VOICE_GET_CALL_FWDING, param,
-				query_cb, cbd, g_free) > 0)
+				query_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, 0, NULL, data);
 }
 
@@ -224,12 +224,12 @@ static void qmi_register(struct ofono_call_forwarding *cf, int type, int cls,
 	qmi_param_append(param, 0x14, sizeof(tpd), &tpd);
 
 	if (qmi_service_send(cfd->voice, QMI_VOICE_SET_SUPS_SERVICE, param,
-				set_cb, cbd, g_free) > 0)
+				set_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, data);
 }
 
@@ -261,13 +261,13 @@ static void qmi_set(struct ofono_call_forwarding *cf, int type, int cls,
 		qmi_param_append_uint8(param, 0x10, cls);
 
 	if (qmi_service_send(cfd->voice, QMI_VOICE_SET_SUPS_SERVICE, param,
-				set_cb, cbd, g_free) > 0)
+				set_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, data);
 }
 
@@ -315,7 +315,7 @@ static int qmi_call_forwarding_probe(struct ofono_call_forwarding *cf,
 
 	DBG("");
 
-	cfd = g_new0(struct call_forwarding_data, 1);
+	cfd = l_new(struct call_forwarding_data, 1);
 
 	ofono_call_forwarding_set_data(cf, cfd);
 
@@ -336,7 +336,7 @@ static void qmi_call_forwarding_remove(struct ofono_call_forwarding *cf)
 	if (cfd->voice)
 		qmi_service_unref(cfd->voice);
 
-	g_free(cfd);
+	l_free(cfd);
 }
 
 static const struct ofono_call_forwarding_driver driver = {

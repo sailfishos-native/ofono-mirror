@@ -69,7 +69,7 @@ static int qmi_voicecall_probe(struct ofono_voicecall *vc,
 
 	DBG("");
 
-	data = g_new0(struct voicecall_data, 1);
+	data = l_new(struct voicecall_data, 1);
 
 	ofono_voicecall_set_data(vc, data);
 
@@ -92,7 +92,7 @@ static void qmi_voicecall_remove(struct ofono_voicecall *vc)
 
 	qmi_service_unref(data->voice);
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_voicecall_driver driver = {

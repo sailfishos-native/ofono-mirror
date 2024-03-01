@@ -20,6 +20,7 @@
  */
 
 #include <glib.h>
+#include <ell/ell.h>
 
 struct cb_data {
 	void *cb;
@@ -32,7 +33,7 @@ static inline struct cb_data *cb_data_new(void *cb, void *data)
 {
 	struct cb_data *ret;
 
-	ret = g_new0(struct cb_data, 1);
+	ret = l_new(struct cb_data, 1);
 	ret->cb = cb;
 	ret->data = data;
 	ret->user = NULL;
@@ -54,7 +55,7 @@ static inline void cb_data_unref(gpointer user_data)
 	if (--cbd->ref)
 		return;
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 #define CALLBACK_WITH_CME_ERROR(cb, err, args...)	\

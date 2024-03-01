@@ -110,14 +110,14 @@ static void qmi_read_file_transparent(struct ofono_sim *sim,
 	switch (fileid) {
 	case SIM_EF_ICCID_FILEID:
 		if (qmi_service_send(data->dms, QMI_DMS_GET_ICCID, NULL,
-						get_iccid_cb, cbd, g_free) > 0)
+						get_iccid_cb, cbd, l_free) > 0)
 			return;
 		break;
 	}
 
 	CALLBACK_WITH_FAILURE(cb, NULL, 0, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void get_imsi_cb(struct qmi_result *result, void *user_data)
@@ -153,12 +153,12 @@ static void qmi_read_imsi(struct ofono_sim *sim,
 	DBG("");
 
 	if (qmi_service_send(data->dms, QMI_DMS_GET_IMSI, NULL,
-					get_imsi_cb, cbd, g_free) > 0)
+					get_imsi_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void get_pin_status_cb(struct qmi_result *result, void *user_data)
@@ -226,12 +226,12 @@ static void qmi_query_passwd_state(struct ofono_sim *sim,
 	cbd->user = data;
 
 	if (qmi_service_send(data->dms, QMI_DMS_GET_PIN_STATUS, NULL,
-					get_pin_status_cb, cbd, g_free) > 0)
+					get_pin_status_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void qmi_query_pin_retries(struct ofono_sim *sim,
@@ -351,7 +351,7 @@ static int qmi_sim_probe(struct ofono_sim *sim,
 
 	DBG("");
 
-	data = g_new0(struct sim_data, 1);
+	data = l_new(struct sim_data, 1);
 
 	for (i = 0; i < OFONO_SIM_PASSWORD_INVALID; i++)
 		data->retries[i] = -1;
@@ -379,7 +379,7 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 
 	qmi_service_unref(data->dms);
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_sim_driver driver = {

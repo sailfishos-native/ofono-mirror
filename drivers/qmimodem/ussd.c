@@ -197,7 +197,7 @@ static int qmi_ussd_probe(struct ofono_ussd *ussd,
 
 	DBG("");
 
-	data = g_new0(struct ussd_data, 1);
+	data = l_new(struct ussd_data, 1);
 
 	ofono_ussd_set_data(ussd, data);
 
@@ -217,7 +217,7 @@ static void qmi_ussd_remove(struct ofono_ussd *ussd)
 
 	qmi_service_unref(data->voice);
 
-	g_free(data);
+	l_free(data);
 }
 
 static void qmi_ussd_cancel(struct ofono_ussd *ussd,
@@ -292,7 +292,7 @@ static void qmi_ussd_request(struct ofono_ussd *ussd, int dcs,
 	qmi_ussd->dcs = QMI_USSD_DCS_ASCII;
 	qmi_ussd->length = len;
 	memcpy(qmi_ussd->data, utf8, utf8_len);
-	g_free(utf8);
+	l_free(utf8);
 
 	param = qmi_param_new();
 	if (param == NULL)
@@ -302,12 +302,12 @@ static void qmi_ussd_request(struct ofono_ussd *ussd, int dcs,
 			sizeof(struct qmi_ussd_data) + utf8_len, qmi_ussd);
 
 	if (qmi_service_send(ud->voice, QMI_VOICE_ASYNC_ORIG_USSD, param,
-					qmi_ussd_request_cb, cbd, g_free) > 0)
+					qmi_ussd_request_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, data);
 }
 

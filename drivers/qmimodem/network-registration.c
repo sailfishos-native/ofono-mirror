@@ -32,8 +32,6 @@
 #include <ofono/modem.h>
 #include <ofono/netreg.h>
 
-#include <ell/ell.h>
-
 #include "qmi.h"
 #include "nas.h"
 #include "util.h"
@@ -268,12 +266,12 @@ static void qmi_registration_status(struct ofono_netreg *netreg,
 	cbd->user = data;
 
 	if (qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
-					get_ss_info_cb, cbd, g_free) > 0)
+					get_ss_info_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, -1, -1, -1, -1, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void qmi_current_operator(struct ofono_netreg *netreg,
@@ -312,16 +310,10 @@ static void scan_nets_cb(struct qmi_result *result, void *user_data)
 	netlist = ptr;
 
 	num = L_LE16_TO_CPU(netlist->count);
-
 	DBG("found %d operators", num);
-
-	list = g_try_new0(struct ofono_network_operator, num);
-	if (!list) {
-		CALLBACK_WITH_FAILURE(cb, 0, NULL, cbd->data);
-		return;
-	}
-
 	offset = 2;
+
+	list = l_new(struct ofono_network_operator, num);
 
 	for (i = 0; i < num; i++) {
 		const struct qmi_nas_network_info *netinfo = ptr + offset;
@@ -374,7 +366,7 @@ static void scan_nets_cb(struct qmi_result *result, void *user_data)
 done:
 	CALLBACK_WITH_SUCCESS(cb, num, list, cbd->data);
 
-	g_free(list);
+	l_free(list);
 }
 
 static void qmi_list_operators(struct ofono_netreg *netreg,
@@ -386,12 +378,12 @@ static void qmi_list_operators(struct ofono_netreg *netreg,
 	DBG("");
 
 	if (qmi_service_send(data->nas, QMI_NAS_NETWORK_SCAN, NULL,
-					scan_nets_cb, cbd, g_free) > 0)
+					scan_nets_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, 0, NULL, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void register_net_cb(struct qmi_result *result, void *user_data)
@@ -431,12 +423,12 @@ static void qmi_register_auto(struct ofono_netreg *netreg,
 					QMI_NAS_REGISTER_ACTION_AUTO);
 
 	if (qmi_service_send(data->nas, QMI_NAS_NETWORK_REGISTER, param,
-					register_net_cb, cbd, g_free) > 0)
+					register_net_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void qmi_register_manual(struct ofono_netreg *netreg,
@@ -461,12 +453,12 @@ static void qmi_register_manual(struct ofono_netreg *netreg,
 						sizeof(info), &info);
 
 	if (qmi_service_send(data->nas, QMI_NAS_NETWORK_REGISTER, param,
-					register_net_cb, cbd, g_free) > 0)
+					register_net_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static int dbm_to_strength(int8_t dbm)
@@ -524,12 +516,12 @@ static void qmi_signal_strength(struct ofono_netreg *netreg,
 	DBG("");
 
 	if (qmi_service_send(data->nas, QMI_NAS_GET_SIGNAL_STRENGTH, NULL,
-					get_rssi_cb, cbd, g_free) > 0)
+					get_rssi_cb, cbd, l_free) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
 
-	g_free(cbd);
+	l_free(cbd);
 }
 
 static void system_info_notify(struct qmi_result *result, void *user_data)
@@ -689,7 +681,7 @@ static int qmi_netreg_probe(struct ofono_netreg *netreg,
 
 	DBG("");
 
-	data = g_new0(struct netreg_data, 1);
+	data = l_new(struct netreg_data, 1);
 
 	data->operator.name[0] = '\0';
 	data->operator.mcc[0] = '\0';
@@ -743,7 +735,7 @@ static void qmi_netreg_remove(struct ofono_netreg *netreg)
 
 	qmi_service_unref(data->nas);
 
-	g_free(data);
+	l_free(data);
 }
 
 static const struct ofono_netreg_driver driver = {

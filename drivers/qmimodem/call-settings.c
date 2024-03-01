@@ -49,10 +49,10 @@ static void query_status(struct ofono_call_settings *cs, uint16_t message,
 	if (!csd)
 		goto error;
 
-	if (qmi_service_send(csd->voice, message, NULL, fn, cbd, g_free) > 0)
+	if (qmi_service_send(csd->voice, message, NULL, fn, cbd, l_free) > 0)
 		return;
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, -1, data);
 }
 
@@ -171,10 +171,10 @@ static void qmi_clir_query(struct ofono_call_settings *cs,
 		goto error;
 
 	if (qmi_service_send(csd->voice, QMI_VOICE_GET_CLIR, NULL,
-						clir_cb, cbd, g_free) > 0)
+						clir_cb, cbd, l_free) > 0)
 		return;
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, -1, -1, data);
 }
 
@@ -221,12 +221,12 @@ static void qmi_cw_set(struct ofono_call_settings *cs, int mode, int cls,
 		qmi_param_append_uint8(param, 0x10, cls);
 
 	if (qmi_service_send(csd->voice, QMI_VOICE_SET_SUPS_SERVICE, param,
-				cw_set_cb, cbd, g_free) > 0)
+				cw_set_cb, cbd, l_free) > 0)
 		return;
 
 	qmi_param_free(param);
 error:
-	g_free(cbd);
+	l_free(cbd);
 	CALLBACK_WITH_FAILURE(cb, data);
 }
 
@@ -304,7 +304,7 @@ static int qmi_call_settings_probe(struct ofono_call_settings *cs,
 
 	DBG("");
 
-	csd = g_new0(struct call_settings_data, 1);
+	csd = l_new(struct call_settings_data, 1);
 
 	ofono_call_settings_set_data(cs, csd);
 
@@ -327,7 +327,7 @@ static void qmi_call_settings_remove(struct ofono_call_settings *cs)
 		qmi_service_unref(csd->voice);
 	}
 
-	g_free(csd);
+	l_free(csd);
 }
 
 static const struct ofono_call_settings_driver driver = {
