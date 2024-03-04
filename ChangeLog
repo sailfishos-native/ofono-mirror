@@ -1,3 +1,8 @@
+ver 2.5:
+	Fix issue with LTE provisioning support.
+	Fix issue with SMS and address length checks.
+	Add support for QRTR services.
+
 ver 2.4:
 	Add support for new provision database format.
 	Add support for Quectel EG96 modem.
