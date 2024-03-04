@@ -19,7 +19,6 @@
  *
  */
 
-#include <glib.h>
 #include <ell/ell.h>
 
 struct cb_data {
@@ -48,7 +47,7 @@ static inline struct cb_data *cb_data_ref(struct cb_data *cbd)
 	return cbd;
 }
 
-static inline void cb_data_unref(gpointer user_data)
+static inline void cb_data_unref(void *user_data)
 {
 	struct cb_data *cbd = user_data;
 

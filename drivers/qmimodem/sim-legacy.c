@@ -30,6 +30,8 @@
 #include <ofono/modem.h>
 #include <ofono/sim.h>
 
+#include <glib.h>
+
 #include "qmi.h"
 #include "dms.h"
 #include "util.h"
