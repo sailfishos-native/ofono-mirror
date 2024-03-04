@@ -101,9 +101,7 @@ static int gobi_probe(struct ofono_modem *modem)
 
 	DBG("%p", modem);
 
-	data = g_try_new0(struct gobi_data, 1);
-	if (!data)
-		return -ENOMEM;
+	data = l_new(struct gobi_data, 1);
 
 	kernel_driver = ofono_modem_get_string(modem, "KernelDriver");
 	DBG("kernel_driver: %s", kernel_driver);
@@ -149,7 +147,7 @@ static void gobi_remove(struct ofono_modem *modem)
 
 	qmi_device_free(data->device);
 
-	g_free(data);
+	l_free(data);
 }
 
 static void shutdown_cb(void *user_data)
