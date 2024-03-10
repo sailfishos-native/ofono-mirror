@@ -619,3 +619,5 @@ ofono_bool_t __ofono_private_network_request(ofono_private_network_cb_t cb,
 #include <ofono/netmon.h>
 #include <ofono/lte.h>
 #include <ofono/ims.h>
+#include <ofono/storage.h>
+#include <ofono/sailfish_watch.h>

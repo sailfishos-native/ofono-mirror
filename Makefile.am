@@ -179,7 +179,7 @@ pkginclude_HEADERS = include/log.h include/plugin.h include/history.h \
 			include/dbus-clients.h include/cell-info.h
 
 if SAILFISH_SLOT
-pkginclude_HEADERS +=    include/sailfish_watch.h
+pkginclude_HEADERS +=    include/sailfish_watch.h include/slot.h
 endif
 nodist_pkginclude_HEADERS = include/version.h
 
@@ -700,11 +700,17 @@ src_ofonod_SOURCES = $(builtin_sources) $(gatchat_sources) src/ofono.ver \
 			src/hfp.h src/siri.c \
 			src/netmon.c src/lte.c src/ims.c \
 			src/netmonagent.c src/netmonagent.h \
-			src/cell-info.c src/cell-info-dbus.c \
-			src/cell-info-control.c \
 			src/module.c \
 			src/provisiondb.h src/provisiondb.c \
 			src/provision.c
+
+if SAILFISH_SLOT
+src_ofonod_SOURCES +=   src/cell-info.c src/cell-info-dbus.c \
+			src/sim-info.c src/sim-info-dbus.c \
+			src/cell-info-control.c \
+			src/sailfish_watch.c \
+			src/slot-manager.c src/slot-manager-dbus.c
+endif
 
 src_ofonod_LDADD = gdbus/libgdbus-internal.la $(builtin_libadd) $(ell_ldadd) \
 			@GLIB_LIBS@ @DBUS_LIBS@ -ldl
