@@ -209,8 +209,8 @@ void ofono_dbus_dict_append_dict(DBusMessageIter *dict, const char *key,
 	dbus_message_iter_close_container(dict, &entry);
 }
 
-int ofono_dbus_signal_property_changed(DBusConnection *conn,
-					const char *path,
+/* Since mer/1.23+git31 */
+DBusMessage *ofono_dbus_signal_new_property_changed(const char *path,
 					const char *interface,
 					const char *name,
 					int type, const void *value)
@@ -219,17 +219,32 @@ int ofono_dbus_signal_property_changed(DBusConnection *conn,
 	DBusMessageIter iter;
 
 	signal = dbus_message_new_signal(path, interface, "PropertyChanged");
-	if (signal == NULL) {
-		ofono_error("Unable to allocate new %s.PropertyChanged signal",
-				interface);
-		return -1;
-	}
+	if (signal == NULL)
+		return NULL;
 
 	dbus_message_iter_init_append(signal, &iter);
 
 	dbus_message_iter_append_basic(&iter, DBUS_TYPE_STRING, &name);
 
 	append_variant(&iter, type, value);
+
+	return signal;
+}
+
+int ofono_dbus_signal_property_changed(DBusConnection *conn,
+					const char *path,
+					const char *interface,
+					const char *name,
+					int type, const void *value)
+{
+	DBusMessage *signal = ofono_dbus_signal_new_property_changed(path,
+						interface, name, type, value);
+
+	if (signal == NULL) {
+		ofono_error("Unable to allocate new %s.PropertyChanged signal",
+				interface);
+		return -1;
+	}
 
 	return g_dbus_send_message(conn, signal);
 }

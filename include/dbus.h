@@ -101,6 +101,12 @@ int ofono_dbus_signal_dict_property_changed(DBusConnection *conn,
 						const char *name, int type,
 						const void *value);
 
+/* Since mer/1.23+git31 */
+DBusMessage *ofono_dbus_signal_new_property_changed(const char *path,
+					const char *interface,
+					const char *name,
+					int type, const void *value);
+
 #ifdef __cplusplus
 }
 #endif

@@ -175,7 +175,8 @@ pkginclude_HEADERS = include/log.h include/plugin.h include/history.h \
 			include/handsfree.h \
 			include/handsfree-audio.h include/siri.h \
 			include/netmon.h include/lte.h include/ims.h \
-			include/storage.h
+			include/storage.h include/dbus-access.h \
+			include/dbus-clients.h
 
 nodist_pkginclude_HEADERS = include/version.h
 
@@ -270,6 +271,11 @@ builtin_libadd += @UDEV_LIBS@
 
 builtin_modules += udevng
 builtin_sources += plugins/udevng.c
+endif
+
+if SAILFISH_ACCESS
+builtin_modules += sailfish_access
+builtin_sources += plugins/sailfish_access.c
 endif
 
 if RILMODEM
@@ -682,6 +688,7 @@ src_ofonod_SOURCES = $(builtin_sources) $(gatchat_sources) src/ofono.ver \
 			src/private-network.c \
 			src/handsfree.c \
 			src/handsfree-audio.c src/bluetooth.h \
+			src/dbus-clients.c src/dbus-queue.c src/dbus-access.c \
 			src/hfp.h src/siri.c \
 			src/netmon.c src/lte.c src/ims.c \
 			src/netmonagent.c src/netmonagent.h \
@@ -968,6 +975,38 @@ unit_test_provision_LDADD = $(ell_ldadd)
 unit_test_provision_DEPENDENCIES = $(ell_dependencies) \
 					unit/test-provision.db
 unit_objects += $(unit_test_provision_OBJECTS)
+
+unit_test_dbus_clients_SOURCES = unit/test-dbus-clients.c unit/test-dbus.c \
+				src/dbus-clients.c gdbus/object.c \
+				src/dbus.c src/log.c
+unit_test_dbus_clients_CFLAGS =  @DBUS_GLIB_CFLAGS@ $(COVERAGE_OPT) $(AM_CFLAGS)
+unit_test_dbus_clients_LDADD = @DBUS_GLIB_LIBS@ @GLIB_LIBS@ -ldl
+unit_objects += $(unit_test_dbus_clients_OBJECTS)
+unit_tests += unit/test-dbus-clients
+
+unit_test_dbus_queue_SOURCES = unit/test-dbus-queue.c unit/test-dbus.c \
+				src/dbus-queue.c gdbus/object.c \
+				src/dbus.c src/log.c
+unit_test_dbus_queue_CFLAGS =  @DBUS_GLIB_CFLAGS@ $(COVERAGE_OPT) $(AM_CFLAGS)
+unit_test_dbus_queue_LDADD = @DBUS_GLIB_LIBS@ @GLIB_LIBS@ -ldl
+unit_objects += $(unit_test_dbus_queue_OBJECTS)
+unit_tests += unit/test-dbus-queue
+
+if SAILFISH_ACCESS
+unit_test_sailfish_access_SOURCES = unit/test-sailfish_access.c \
+			plugins/sailfish_access.c src/dbus-access.c src/log.c
+unit_test_sailfish_access_CFLAGS = $(AM_CFLAGS) $(COVERAGE_OPT)
+unit_test_sailfish_access_LDADD = @GLIB_LIBS@ -ldl
+unit_objects += $(unit_test_sailfish_access_OBJECTS)
+unit_tests += unit/test-sailfish_access
+endif
+
+unit_test_dbus_access_SOURCES = unit/test-dbus-access.c src/dbus-access.c \
+			src/log.c
+unit_test_dbus_access_CFLAGS = $(AM_CFLAGS) $(COVERAGE_OPT)
+unit_test_dbus_access_LDADD = @GLIB_LIBS@ -ldl
+unit_objects += $(unit_test_dbus_access_OBJECTS)
+unit_tests += unit/test-dbus-access
 
 TESTS = $(unit_tests)
 

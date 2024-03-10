@@ -162,6 +162,16 @@ else
 fi
 AC_SUBST(DBUS_DATADIR)
 
+PKG_CHECK_MODULES(GLIBUTIL, libglibutil >= 1.0.51, dummy=yes,
+			AC_MSG_ERROR(libglibutil >= 1.0.51 is required))
+CFLAGS="$CFLAGS $GLIBUTIL_CFLAGS"
+LIBS="$LIBS $GLIBUTIL_LIBS"
+
+PKG_CHECK_MODULES(DBUS_GLIB, dbus-glib-1, dummy=yes,
+		AC_MSG_ERROR(dbus-glib is required by unit tests))
+		AC_SUBST(DBUS_GLIB_CFLAGS)
+		AC_SUBST(DBUS_GLIB_LIBS)
+
 AC_ARG_WITH([systemdunitdir], AS_HELP_STRING([--with-systemdunitdir=DIR],
 	[path to systemd service directory]), [path_systemdunit=${withval}],
 		[path_systemdunit="`$PKG_CONFIG --variable=systemdsystemunitdir systemd`"])
@@ -275,6 +285,19 @@ AC_ARG_ENABLE(datafiles, AS_HELP_STRING([--disable-datafiles],
 			[do not install configuration and data files]),
 					[enable_datafiles=${enableval}])
 AM_CONDITIONAL(DATAFILES, test "${enable_datafiles}" != "no")
+
+AC_ARG_ENABLE(sailfish-access, AS_HELP_STRING([--enable-sailfish-access],
+			[enable Sailfish OS access plugin]),
+			[enable_sailfish_access=${enableval}],
+			[enable_sailfish_access="no"])
+
+AM_CONDITIONAL(SAILFISH_ACCESS, test "${enable_sailfish_access}" != "no")
+if (test "${enable_sailfish_access}" == "yes"); then
+	PKG_CHECK_MODULES(DBUSACCESS, libdbusaccess, dummy=yes,
+				AC_MSG_ERROR(libdbusaccess is required))
+	CFLAGS="$CFLAGS $DBUSACCESS_CFLAGS"
+	LIBS="$LIBS $DBUSACCESS_LIBS"
+fi
 
 if (test "${prefix}" = "NONE"); then
 	dnl no prefix and no localstatedir, so default to /var
