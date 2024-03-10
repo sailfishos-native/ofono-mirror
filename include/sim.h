@@ -252,6 +252,22 @@ ofono_bool_t ofono_sim_add_spn_watch(struct ofono_sim *sim, unsigned int *id,
 
 ofono_bool_t ofono_sim_remove_spn_watch(struct ofono_sim *sim, unsigned int *id);
 
+typedef void (*ofono_sim_iccid_event_cb_t)(const char *iccid, void *data);
+
+unsigned int ofono_sim_add_iccid_watch(struct ofono_sim *sim,
+				ofono_sim_iccid_event_cb_t cb, void *data,
+				ofono_destroy_func destroy);
+
+void ofono_sim_remove_iccid_watch(struct ofono_sim *sim, unsigned int id);
+
+typedef void (*ofono_sim_imsi_event_cb_t)(const char *imsi, void *data);
+
+unsigned int ofono_sim_add_imsi_watch(struct ofono_sim *sim,
+				ofono_sim_imsi_event_cb_t cb, void *data,
+				ofono_destroy_func destroy);
+
+void ofono_sim_remove_imsi_watch(struct ofono_sim *sim, unsigned int id);
+
 /*
  * It is assumed that when ofono_sim_inserted_notify is called, the SIM is
  * ready to be queried for files that are always available even if SIM

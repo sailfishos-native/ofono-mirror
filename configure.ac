@@ -270,6 +270,12 @@ AC_ARG_ENABLE(sailfish-bt, AS_HELP_STRING([--enable-sailfish-bt],
 					[enable_sailfish_bt=${enableval}])
 AM_CONDITIONAL(SAILFISH_BT, test "${enable_sailfish_bt}" = "yes")
 
+
+AC_ARG_ENABLE(sailfish-slot, AS_HELP_STRING([--enable-sailfish-slot],
+			[enable Sailfish OS Slot Interface]),
+					[enable_sailfish_slot=${enableval}])
+AM_CONDITIONAL(SAILFISH_SLOT, test "${enable_sailfish_slot}" = "yes")
+
 AC_ARG_ENABLE(upower, AS_HELP_STRING([--disable-upower],
 			[disable UPower plugin]),
 					[enable_upower=${enableval}])

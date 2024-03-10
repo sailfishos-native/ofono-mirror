@@ -30,6 +30,20 @@ extern "C" {
 
 struct ofono_netreg;
 
+enum ofono_netreg_status { /* Since mer/1.24+git2 */
+	OFONO_NETREG_STATUS_NONE = -1,
+	/* 27.007 Section 7.2 <stat> */
+	OFONO_NETREG_STATUS_NOT_REGISTERED = 0,
+	OFONO_NETREG_STATUS_REGISTERED = 1,
+	OFONO_NETREG_STATUS_SEARCHING = 2,
+	OFONO_NETREG_STATUS_DENIED = 3,
+	OFONO_NETREG_STATUS_UNKNOWN = 4,
+	OFONO_NETREG_STATUS_ROAMING = 5,
+        /* Since mer/1.26+git1 */
+	OFONO_NETREG_STATUS_REGISTERED_SMS_EUTRAN = 6,
+	OFONO_NETREG_STATUS_ROAMING_SMS_EUTRAN = 7
+};
+
 /* Theoretical limit is 16, but each GSM char can be encoded into
  *  * 3 UTF8 characters resulting in 16*3=48 chars
  *   */
@@ -110,6 +124,13 @@ int ofono_netreg_get_status(struct ofono_netreg *netreg);
 int ofono_netreg_get_technology(struct ofono_netreg *netreg);
 const char *ofono_netreg_get_mcc(struct ofono_netreg *netreg);
 const char *ofono_netreg_get_mnc(struct ofono_netreg *netreg);
+
+const char *ofono_netreg_get_name(struct ofono_netreg *netreg);
+struct sim_spdi *ofono_netreg_get_spdi(struct ofono_netreg *netreg);
+
+/* Since mer/1.24+git2 */
+ofono_bool_t ofono_netreg_spdi_lookup(struct ofono_netreg *netreg,
+					const char *mcc, const char *mnc);
 
 #ifdef __cplusplus
 }

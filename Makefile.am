@@ -178,6 +178,9 @@ pkginclude_HEADERS = include/log.h include/plugin.h include/history.h \
 			include/storage.h include/dbus-access.h \
 			include/dbus-clients.h include/cell-info.h
 
+if SAILFISH_SLOT
+pkginclude_HEADERS +=    include/sailfish_watch.h
+endif
 nodist_pkginclude_HEADERS = include/version.h
 
 local_headers = $(foreach file,$(pkginclude_HEADERS) \

@@ -2077,3 +2077,31 @@ void *ofono_netreg_get_data(struct ofono_netreg *netreg)
 {
 	return netreg->driver_data;
 }
+
+const char *ofono_netreg_get_name(struct ofono_netreg *netreg)
+{
+	if (netreg == NULL)
+		return NULL;
+
+	if (netreg->current_operator == NULL)
+		return NULL;
+
+	return netreg->current_operator->name;
+}
+
+struct sim_spdi *ofono_netreg_get_spdi(struct ofono_netreg *netreg)
+{
+	if (netreg == NULL)
+		return NULL;
+
+	if (netreg->spdi == NULL)
+		return NULL;
+
+	return netreg->spdi;
+}
+
+ofono_bool_t ofono_netreg_spdi_lookup(struct ofono_netreg *netreg,
+					const char *mcc, const char *mnc)
+{
+	return mcc && mnc && netreg && sim_spdi_lookup(netreg->spdi, mcc, mnc);
+}
