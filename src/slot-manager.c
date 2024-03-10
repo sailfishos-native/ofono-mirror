@@ -1477,7 +1477,7 @@ static void ofono_slot_manager_object_class_init(OfonoSlotManagerObjectClass *c)
 
 static OfonoSlotManagerObject *slot_manager = NULL;
 
-void __ofono_slot_manager_init(void)
+int slot_manager_init(void)
 {
 	/*
 	 * Let's not assume what's called first, ofono_slot_driver_register()
@@ -1486,9 +1486,10 @@ void __ofono_slot_manager_init(void)
 	if (!slot_manager) {
 		slot_manager = ofono_slot_manager_new();
 	}
+	return 0;
 }
 
-void __ofono_slot_manager_cleanup(void)
+void slot_manager_cleanup(void)
 {
 	if (slot_manager) {
 		OfonoSlotManagerObject *mgr = slot_manager;
@@ -1506,6 +1507,8 @@ void __ofono_slot_manager_cleanup(void)
 		g_object_unref(mgr);
 	}
 }
+
+OFONO_MODULE(slot_manager, slot_manager_init, slot_manager_cleanup)
 
 /*==========================================================================*
  * Driver registration

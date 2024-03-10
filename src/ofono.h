@@ -614,6 +614,14 @@ void __ofono_private_network_release(int id);
 ofono_bool_t __ofono_private_network_request(ofono_private_network_cb_t cb,
 						int *id, void *data);
 
+
+#include <ofono/dbus-access.h>
+#include <ofono/slot.h>
+
+void __ofono_slot_manager_init(void);
+void __ofono_slot_manager_cleanup(void);
+
+
 #include <ofono/cell-info.h>
 #include <ofono/dbus-access.h>
 #include <ofono/netmon.h>

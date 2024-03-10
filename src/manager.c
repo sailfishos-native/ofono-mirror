@@ -100,6 +100,8 @@ static int manager_init(void)
 	DBusConnection *conn = ofono_dbus_get_connection();
 	gboolean ret;
 
+	DBG("manager_init");
+
 	ret = g_dbus_register_interface(conn, OFONO_MANAGER_PATH,
 					OFONO_MANAGER_INTERFACE,
 					manager_methods, manager_signals,
