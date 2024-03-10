@@ -118,6 +118,12 @@ void __ofono_modules_cleanup(void);
 int __ofono_plugin_init(const char *pattern, const char *exclude);
 void __ofono_plugin_cleanup(void);
 
+void __ofono_plugin_foreach(void (*fn) (struct ofono_plugin_desc *desc,
+			int flags, void *user_data), void *user_data);
+
+#define OFONO_PLUGIN_FLAG_BUILTIN (0x01)
+#define OFONO_PLUGIN_FLAG_ACTIVE  (0x02)
+
 #include <ofono/modem.h>
 
 typedef void (*ofono_modem_foreach_func)(struct ofono_modem *modem,
