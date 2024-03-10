@@ -658,6 +658,11 @@ builtin_sources += plugins/smart-messaging.c
 builtin_modules += push_notification
 builtin_sources += plugins/push-notification.c
 
+if SAILFISH_PUSHFORWARDER
+builtin_modules += pushforwarder
+builtin_sources += plugins/sailfish_pushforwarder.c
+endif
+
 builtin_modules += allowed_apns
 builtin_sources += plugins/allowed-apns.c
 

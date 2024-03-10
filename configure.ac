@@ -291,6 +291,18 @@ AC_ARG_ENABLE(datafiles, AS_HELP_STRING([--disable-datafiles],
 					[enable_datafiles=${enableval}])
 AM_CONDITIONAL(DATAFILES, test "${enable_datafiles}" != "no")
 
+AC_ARG_ENABLE(sailfish-pushforwarder, AC_HELP_STRING([--enable-sailfish-pushforwarder],
+			[enable Sailfish OS push forwarder plugin]),
+			[enable_sailfish_pushforwarder=${enableval}],
+			[enable_sailfish_pushforwarder="no"])
+AM_CONDITIONAL(SAILFISH_PUSHFORWARDER, test "${enable_sailfish_pushforwarder}" != "no")
+if (test "${enable_sailfish_pushforwarder}" != "no"); then
+	PKG_CHECK_MODULES(WSPCODEC, libwspcodec >= 2.0, dummy=yes,
+			AC_MSG_ERROR(WSP decoder is required))
+	CFLAGS="$CFLAGS $WSPCODEC_CFLAGS"
+	LIBS="$LIBS $WSPCODEC_LIBS"
+fi
+
 AC_ARG_ENABLE(sailfish-access, AS_HELP_STRING([--enable-sailfish-access],
 			[enable Sailfish OS access plugin]),
 			[enable_sailfish_access=${enableval}],
