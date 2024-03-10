@@ -176,7 +176,7 @@ pkginclude_HEADERS = include/log.h include/plugin.h include/history.h \
 			include/handsfree-audio.h include/siri.h \
 			include/netmon.h include/lte.h include/ims.h \
 			include/storage.h include/dbus-access.h \
-			include/dbus-clients.h
+			include/dbus-clients.h include/cell-info.h
 
 nodist_pkginclude_HEADERS = include/version.h
 
@@ -692,6 +692,8 @@ src_ofonod_SOURCES = $(builtin_sources) $(gatchat_sources) src/ofono.ver \
 			src/hfp.h src/siri.c \
 			src/netmon.c src/lte.c src/ims.c \
 			src/netmonagent.c src/netmonagent.h \
+			src/cell-info.c src/cell-info-dbus.c \
+			src/cell-info-control.c \
 			src/module.c \
 			src/provisiondb.h src/provisiondb.c \
 			src/provision.c
@@ -882,6 +884,31 @@ noinst_PROGRAMS = $(unit_tests) \
 unit_test_common_SOURCES = unit/test-common.c src/common.c src/util.c
 unit_test_common_LDADD = @GLIB_LIBS@ $(ell_ldadd)
 unit_objects += $(unit_test_common_OBJECTS)
+
+unit_test_cell_info_SOURCES = unit/test-cell-info.c src/cell-info.c src/log.c
+unit_test_cell_info_CFLAGS = $(AM_CFLAGS) $(COVERAGE_OPT)
+unit_test_cell_info_LDADD = @GLIB_LIBS@ -ldl
+unit_objects += $(unit_test_cell_info_OBJECTS)
+unit_tests += unit/test-cell-info
+
+unit_test_cell_info_control_SOURCES = unit/test-cell-info-control.c \
+			unit/fake_cell_info.c src/cell-info.c \
+			src/cell-info-control.c src/log.c
+unit_test_cell_info_control_CFLAGS = $(AM_CFLAGS) $(COVERAGE_OPT)
+unit_test_cell_info_control_LDADD = @GLIB_LIBS@ -ldl
+unit_objects += $(unit_test_cell_info_control_OBJECTS)
+unit_tests += unit/test-cell-info-control
+
+unit_test_cell_info_dbus_SOURCES = unit/test-dbus.c \
+			unit/test-cell-info-dbus.c unit/fake_cell_info.c \
+			src/cell-info.c src/cell-info-dbus.c \
+			src/cell-info-control.c gdbus/object.c \
+			src/dbus-clients.c src/dbus.c src/log.c
+unit_test_cell_info_dbus_CFLAGS = $(AM_CFLAGS) $(COVERAGE_OPT) \
+			@DBUS_GLIB_CFLAGS@
+unit_test_cell_info_dbus_LDADD = @DBUS_GLIB_LIBS@ @GLIB_LIBS@ -ldl
+unit_objects += $(unit_test_cell_info_dbus_OBJECTS)
+unit_tests += unit/test-cell-info-dbus
 
 unit_test_util_SOURCES = unit/test-util.c src/util.c
 unit_test_util_LDADD = @GLIB_LIBS@ $(ell_ldadd)
