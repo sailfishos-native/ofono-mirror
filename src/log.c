@@ -282,7 +282,13 @@ void __ofono_log_enable(struct ofono_debug_desc *start,
 
 	for (desc = start; desc < stop; desc++) {
 		if (is_enabled(desc) == TRUE)
-			desc->flags |= OFONO_DEBUG_FLAG_PRINT;
+			if (is_enabled(desc) &&
+				!(desc->flags & OFONO_DEBUG_FLAG_PRINT)) {
+ 			desc->flags |= OFONO_DEBUG_FLAG_PRINT;
+			if (desc->notify) {
+				desc->notify(desc);
+			}
+		}
 	}
 }
 
