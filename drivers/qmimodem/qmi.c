@@ -647,7 +647,7 @@ static void __qmux_debug_msg(const char dir, const void *buf, size_t len,
 		srv = buf + QMI_MUX_HDR_SIZE;
 		msg = buf + QMI_MUX_HDR_SIZE + QMI_SERVICE_HDR_SIZE;
 
-		transaction_type = srv->type;
+		transaction_type = srv->type >> 1;
 		tid = L_LE16_TO_CPU(srv->transaction);
 	}
 
@@ -671,7 +671,7 @@ static void __qrtr_debug_msg(const char dir, const void *buf, size_t len,
 
 	tid = L_LE16_TO_CPU(srv->transaction);
 
-	__debug_msg(dir, msg, service_type, srv->type, tid, 0, len,
+	__debug_msg(dir, msg, service_type, srv->type >> 1, tid, 0, len,
 						function, user_data);
 }
 
