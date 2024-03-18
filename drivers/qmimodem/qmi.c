@@ -2581,7 +2581,8 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 			service = service_create(device, info, 0);
 			l_hashmap_insert(device->service_list,
 					L_UINT_TO_PTR(type_val), service);
-		}
+		} else
+			service = qmi_service_ref(service);
 
 		data = l_new(struct service_create_shared_data, 1);
 
@@ -2590,8 +2591,8 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		data->func = func;
 		data->user_data = user_data;
 		data->destroy = destroy;
+		data->service = service;
 
-		data->service = qmi_service_ref(service);
 		data->idle = l_idle_create(service_create_shared_reply,
 							data, NULL);
 
