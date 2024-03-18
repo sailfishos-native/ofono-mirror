@@ -43,6 +43,8 @@
 #include "qmi.h"
 #include "ctl.h"
 
+#define DISCOVER_TIMEOUT 5
+
 typedef void (*qmi_message_func_t)(uint16_t message, uint16_t length,
 					const void *buffer, void *user_data);
 
@@ -1660,8 +1662,9 @@ static int qmi_device_qmux_discover(struct qmi_device *device,
 						qmux_discover_callback, data);
 
 	data->tid = __ctl_request_submit(qmux, req);
-	data->timeout = l_timeout_create(5, qmux_discover_reply_timeout,
-								data, NULL);
+	data->timeout = l_timeout_create(DISCOVER_TIMEOUT,
+						qmux_discover_reply_timeout,
+						data, NULL);
 
 	__qmi_device_discovery_started(device, &data->super);
 
@@ -2017,6 +2020,8 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 						const void *buf, size_t len)
 {
 	const struct qrtr_ctrl_pkt *packet = buf;
+	struct discover_data *data;
+	struct qmi_service_info info;
 	uint32_t cmd;
 	uint32_t type;
 	uint32_t instance;
@@ -2038,14 +2043,16 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 		return;
 	}
 
+	data = l_queue_peek_head(device->discovery_queue);
+
 	if (!packet->server.service && !packet->server.instance &&
 			!packet->server.node && !packet->server.port) {
-		struct discover_data *data;
-
 		DBG("Initial service discovery has completed");
 
-		data = l_queue_peek_head(device->discovery_queue);
-		DISCOVERY_DONE(data, data->user_data);
+		if (data)
+			DISCOVERY_DONE(data, data->user_data);
+		else
+			DBG("discovery_queue is empty"); /* likely a timeout */
 
 		return;
 	}
@@ -2057,21 +2064,24 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 	node = L_LE32_TO_CPU(packet->server.node);
 	port = L_LE32_TO_CPU(packet->server.port);
 
-	if (cmd == QRTR_TYPE_NEW_SERVER) {
-		struct qmi_service_info info;
+	DBG("New server: Type: %d Version: %d Instance: %d Node: %d Port: %d",
+		type, version, instance, node, port);
 
-		DBG("New server: Type: %d Version: %d Instance: %d Node: %d Port: %d",
-			type, version, instance, node, port);
+	memset(&info, 0, sizeof(info));
+	info.service_type = type;
+	info.qrtr_port = port;
+	info.qrtr_node = node;
+	info.major = version;
+	info.instance = instance;
 
-		memset(&info, 0, sizeof(info));
-		info.service_type = type;
-		info.qrtr_port = port;
-		info.qrtr_node = node;
-		info.major = version;
-		info.instance = instance;
+	__qmi_service_appeared(device, &info);
 
-		__qmi_service_appeared(device, &info);
+	if (!data) {
+		DBG("discovery_queue is empty"); /* likely a timeout */
+		return;
 	}
+
+	l_timeout_modify(data->timeout, DISCOVER_TIMEOUT);
 }
 
 static void qrtr_received_service_message(struct qmi_device *device,
@@ -2206,8 +2216,9 @@ static int qmi_device_qrtr_discover(struct qmi_device *device,
 	l_util_hexdump(false, &packet, bytes_written,
 			device->debug_func, device->debug_data);
 
-	data->timeout = l_timeout_create(5, qrtr_discover_reply_timeout,
-								data, NULL);
+	data->timeout = l_timeout_create(DISCOVER_TIMEOUT,
+						qrtr_discover_reply_timeout,
+						data, NULL);
 
 	__qmi_device_discovery_started(device, &data->super);
 
