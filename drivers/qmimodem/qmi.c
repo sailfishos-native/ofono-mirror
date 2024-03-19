@@ -238,6 +238,7 @@ static struct qmi_request *__request_alloc(uint32_t service_type,
 	msglen = hdrlen + QMI_MESSAGE_HDR_SIZE + length;
 	req = l_malloc(sizeof(struct qmi_request) + msglen);
 	req->tid = 0;
+	req->group_id = 0;
 	req->len = msglen;
 	req->client = client;
 
