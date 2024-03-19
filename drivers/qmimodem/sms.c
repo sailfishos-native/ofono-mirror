@@ -556,21 +556,23 @@ static void get_msg_protocol_cb(struct qmi_result *result, void *user_data)
 
 	DBG("");
 
-	if (qmi_result_set_error(result, &err) &&
-			(err != QMI_ERR_OP_DEVICE_UNSUPPORTED)) {
-		DBG("Err: protocol %d - %s", err, qmi_result_get_error(result));
-		return;
-	}
+	if (qmi_result_set_error(result, &err)) {
+		if (err != QMI_ERR_OP_DEVICE_UNSUPPORTED) {
+			DBG("Err: protocol %d - %s",
+					err, qmi_result_get_error(result));
+			return;
+		}
 
-	if (err != QMI_ERR_OP_DEVICE_UNSUPPORTED) {
-		/* modem supports only 1 protocol */
-		qmi_result_get_uint8(result, QMI_WMS_PARAM_PROTOCOL,
-					&data->msg_mode);
-	} else {
-		/* check both, start with 1 then switch to other */
-		DBG("device supports CDMA and WCDMA msg protocol");
+		/* Get Message Protocol operation is not supported */
+		DBG("query both CDMA and WCDMA");
 		data->msg_mode_all = true;
 		data->msg_mode = QMI_WMS_MESSAGE_MODE_CDMA;
+	} else {
+		/* Query of current protocol succeeded, use that */
+		qmi_result_get_uint8(result, QMI_WMS_PARAM_PROTOCOL,
+					&data->msg_mode);
+
+		DBG("msg_mode: %s", data->msg_mode ? "WCDMA" : "CDMA");
 	}
 
 	/* check for messages */
