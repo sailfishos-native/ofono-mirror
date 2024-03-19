@@ -64,12 +64,9 @@ struct sim_data {
 	uint32_t event_mask;
 	uint8_t app_type;
 	uint32_t retry_count;
-	guint poll_source;
+	struct l_timeout *retry_timer;
 	uint16_t card_status_indication_id;
 };
-
-static void qmi_query_passwd_state(struct ofono_sim *sim,
-				ofono_sim_passwd_cb_t cb, void *user_data);
 
 static int create_fileid_data(uint8_t app_type, int fileid,
 					const unsigned char *path,
@@ -574,22 +571,28 @@ static enum get_card_status_result handle_get_card_status_result(
 	return handle_get_card_status_data(result, sim_stat);
 }
 
-static gboolean query_passwd_state_retry(gpointer userdata)
+static void query_passwd_state_cb(struct qmi_result *result, void *user_data);
+
+static void query_passwd_state_retry(struct l_timeout *timeout, void *user)
 {
-	struct cb_data *cbd = userdata;
+	struct cb_data *cbd = user;
 	ofono_sim_passwd_cb_t cb = cbd->cb;
 	struct ofono_sim *sim = cbd->user;
 	struct sim_data *data = ofono_sim_get_data(sim);
 
-	data->poll_source = 0;
+	if (qmi_service_send(data->uim, QMI_UIM_GET_CARD_STATUS, NULL,
+				query_passwd_state_cb, cbd, cb_data_unref) > 0) {
+		cb_data_ref(cbd);
+		return;
+	}
 
-	qmi_query_passwd_state(sim, cb, cbd->data);
+	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
 
-	return FALSE;
+	l_timeout_remove(data->retry_timer);
+	data->retry_timer = NULL;
 }
 
-static void query_passwd_state_cb(struct qmi_result *result,
-					void *user_data)
+static void query_passwd_state_cb(struct qmi_result *result, void *user_data)
 {
 	struct cb_data *cbd = user_data;
 	ofono_sim_passwd_cb_t cb = cbd->cb;
@@ -597,49 +600,54 @@ static void query_passwd_state_cb(struct qmi_result *result,
 	struct sim_data *data = ofono_sim_get_data(sim);
 	struct sim_status sim_stat;
 	enum get_card_status_result res;
-	struct cb_data *retry_cbd;
 	unsigned int i;
 
 	for (i = 0; i < OFONO_SIM_PASSWORD_INVALID; i++)
 		sim_stat.retries[i] = -1;
 
 	res = handle_get_card_status_result(result, &sim_stat);
+	if (res == GET_CARD_STATUS_RESULT_TEMP_ERROR &&
+			++data->retry_count <= MAX_RETRY_COUNT) {
+		DBG("Retry command");
+
+		if (!data->retry_timer) {
+			cb_data_ref(cbd);
+			data->retry_timer = l_timeout_create_ms(20,
+					query_passwd_state_retry,
+					cbd, cb_data_unref);
+		} else
+			l_timeout_modify_ms(data->retry_timer, 20);
+
+		return;
+	}
+
+	l_timeout_remove(data->retry_timer);
+	data->retry_timer = NULL;
+	data->retry_count = 0;
+
 	switch (res) {
 	case GET_CARD_STATUS_RESULT_OK:
 		DBG("passwd state %d", sim_stat.passwd_state);
-		data->retry_count = 0;
-		if (sim_stat.passwd_state == OFONO_SIM_PASSWORD_INVALID) {
-			CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-			ofono_sim_inserted_notify(sim, false);
-		} else
+
+		if (sim_stat.passwd_state != OFONO_SIM_PASSWORD_INVALID) {
 			CALLBACK_WITH_SUCCESS(cb, sim_stat.passwd_state,
 								cbd->data);
+			return;
+		}
+
 		break;
 	case GET_CARD_STATUS_RESULT_TEMP_ERROR:
-		data->retry_count++;
-		if (data->retry_count > MAX_RETRY_COUNT) {
-			DBG("Failed after %d attempts. Card state:%d",
-							data->retry_count,
-							sim_stat.card_state);
-			data->retry_count = 0;
-			CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-			ofono_sim_inserted_notify(sim, false);
-		} else {
-			DBG("Retry command");
-			retry_cbd = cb_data_new(cb, cbd->data);
-			retry_cbd->user = sim;
-			data->poll_source = g_timeout_add(20,
-						query_passwd_state_retry,
-						retry_cbd);
-		}
+		DBG("Failed after %d attempts. Card state:%d",
+						data->retry_count,
+						sim_stat.card_state);
 		break;
 	case GET_CARD_STATUS_RESULT_ERROR:
 		DBG("Command failed");
-		data->retry_count = 0;
-		CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-		ofono_sim_inserted_notify(sim, false);
 		break;
 	}
+
+	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
+	ofono_sim_inserted_notify(sim, false);
 }
 
 static void qmi_query_passwd_state(struct ofono_sim *sim,
@@ -653,7 +661,7 @@ static void qmi_query_passwd_state(struct ofono_sim *sim,
 	cbd->user = sim;
 
 	if (qmi_service_send(data->uim, QMI_UIM_GET_CARD_STATUS, NULL,
-					query_passwd_state_cb, cbd, l_free) > 0)
+				query_passwd_state_cb, cbd, cb_data_unref) > 0)
 		return;
 
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
@@ -920,8 +928,8 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 
 	ofono_sim_set_data(sim, NULL);
 
-	if (data->poll_source > 0)
-		g_source_remove(data->poll_source);
+	l_timeout_remove(data->retry_timer);
+	data->retry_timer = NULL;
 
 	if (data->uim) {
 		if (data->card_status_indication_id) {
