@@ -15,6 +15,8 @@
  *
  */
 
+#include <stdint.h>
+
 #define QMI_VOICE_PARAM_USS_DATA 0x01
 
 #define QMI_VOICE_PARAM_ASYNC_USSD_ERROR 0x10
@@ -24,6 +26,9 @@
 #define QMI_VOICE_PARAM_USSD_IND_USER_ACTION 0x01
 #define QMI_VOICE_PARAM_USSD_IND_DATA 0x10
 #define QMI_VOICE_PARAM_USSD_IND_UCS2 0x11
+
+#define QMI_VOICE_IND_ALL_STATUS 0x2e
+#define QMI_VOICE_GET_ALL_STATUS 0x2f
 
 /* according to GSM TS 23.038 section 5
  * coding group 1111, No message class, 8 bit data
@@ -48,6 +53,7 @@ enum qmi_ussd_user_required {
 
 /* QMI service voice. Using an enum to prevent doublicated entries */
 enum voice_commands {
+	QMI_VOICE_DIAL_CALL =			0x20,
 	QMI_VOICE_SUPS_NOTIFICATION_IND =	0x32,
 	QMI_VOICE_SET_SUPS_SERVICE =		0x33,
 	QMI_VOICE_GET_CALL_WAITING =		0x34,
@@ -64,6 +70,50 @@ enum voice_commands {
 	QMI_VOICE_GET_COLP =			0x4b,
 	QMI_VOICE_GET_COLR =			0x4c,
 	QMI_VOICE_GET_CNAP =			0x4d
+};
+
+enum qmi_voice_call_state {
+	QMI_VOICE_CALL_STATE_IDLE = 0x0,
+	QMI_VOICE_CALL_STATE_ORIG,
+	QMI_VOICE_CALL_STATE_INCOMING,
+	QMI_VOICE_CALL_STATE_CONV,
+	QMI_VOICE_CALL_STATE_CC_IN_PROG,
+	QMI_VOICE_CALL_STATE_ALERTING,
+	QMI_VOICE_CALL_STATE_HOLD,
+	QMI_VOICE_CALL_STATE_WAITING,
+	QMI_VOICE_CALL_STATE_DISCONNECTING,
+	QMI_VOICE_CALL_STATE_END,
+	QMI_VOICE_CALL_STATE_SETUP
+};
+
+enum qmi_voice_call_dial_param {
+	QMI_VOICE_DIAL_CALL_NUMBER = 0x01,
+	QMI_VOICE_DIAL_CALL_TYPE = 0x10
+};
+
+enum qmi_voice_call_dial_return {
+	QMI_VOICE_DIAL_RETURN_CALL_ID = 0x10
+};
+
+enum qmi_voice_all_call_status_commands {
+	QMI_VOICE_ALL_CALL_STATUS_CALL_INFORMATION = 0x01,
+	QMI_VOICE_ALL_CALL_STATUS_REMOTE_NUMBER = 0x10
+};
+
+enum qmi_voice_all_call_info_commands {
+	QMI_VOICE_ALL_CALL_INFO_CALL_INFORMATION = 0x10,
+	QMI_VOICE_ALL_CALL_INFO_REMOTE_NUMBER = 0x11
+};
+
+enum qmi_voice_call_type {
+	QMI_VOICE_CALL_TYPE_VOICE = 0x0,
+	QMI_VOICE_CALL_TYPE_VOICE_FORCE,
+};
+
+enum parse_error {
+	NONE = 0,
+	MISSING_MANDATORY = 1,
+	INVALID_LENGTH = 2,
 };
 
 struct qmi_ussd_data {
@@ -98,3 +148,4 @@ enum qmi_ss_reason {
 	QMI_VOICE_SS_RSN_CLIP =			0x10,
 	QMI_VOICE_SS_RSN_CLIR =			0x11
 };
+
