@@ -40,6 +40,10 @@ enum ofono_modem_type {
 	OFONO_MODEM_TYPE_TEST,
 };
 
+enum ofono_modem_capability {
+	OFONO_MODEM_CAPABILITY_LTE = 0x1,
+};
+
 typedef void (*ofono_modem_online_cb_t)(const struct ofono_error *error,
 					void *data);
 
@@ -133,6 +137,16 @@ ofono_bool_t ofono_modem_get_emergency_mode(struct ofono_modem *modem);
 
 void ofono_modem_set_name(struct ofono_modem *modem, const char *name);
 void ofono_modem_set_driver(struct ofono_modem *modem, const char *type);
+
+/*
+ * Set the capabilities of the modem.  This method should be called in
+ * the driver probe() method if the capability information can be obtained
+ * early, for example using the model information, or vid/pid of the device.
+ *
+ * Otherwise, it should be called prior to setting the device powered.
+ */
+void ofono_modem_set_capabilities(struct ofono_modem *modem,
+						unsigned int capabilities);
 
 int ofono_modem_set_string(struct ofono_modem *modem,
 				const char *key, const char *value);

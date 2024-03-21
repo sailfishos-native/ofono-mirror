@@ -88,6 +88,7 @@ struct ofono_modem {
 	void			*driver_data;
 	char			*driver_type;
 	char			*name;
+	unsigned int		capabilities;
 };
 
 struct ofono_devinfo {
@@ -160,6 +161,23 @@ static char **get_interfaces(struct ofono_modem *modem)
 		interfaces[i] = l->data;
 
 	return interfaces;
+}
+
+static char **get_capabilities(struct ofono_modem *modem)
+{
+	char **capabilities;
+	unsigned int i = 0;
+
+	if (!modem->capabilities)
+		return NULL;
+
+	capabilities = l_new(char *,
+			__builtin_popcount(modem->capabilities) + 1);
+
+	if (modem->capabilities & OFONO_MODEM_CAPABILITY_LTE)
+		capabilities[i++] = "lte";
+
+	return capabilities;
 }
 
 unsigned int __ofono_modem_callid_next(struct ofono_modem *modem)
@@ -849,6 +867,7 @@ void __ofono_modem_append_properties(struct ofono_modem *modem,
 	dbus_bool_t emergency = ofono_modem_get_emergency_mode(modem);
 	const char *strtype;
 	const char *system_path;
+	char **capabilities;
 
 	ofono_dbus_dict_append(dict, "Online", DBUS_TYPE_BOOLEAN,
 				&modem->online);
@@ -910,6 +929,13 @@ void __ofono_modem_append_properties(struct ofono_modem *modem,
 
 	strtype = modem_type_to_string(modem->driver->modem_type);
 	ofono_dbus_dict_append(dict, "Type", DBUS_TYPE_STRING, &strtype);
+
+	capabilities = get_capabilities(modem);
+	if (capabilities) {
+		ofono_dbus_dict_append_array(dict, "Capabilities",
+						DBUS_TYPE_STRING, &capabilities);
+		l_free(capabilities);
+	}
 }
 
 static DBusMessage *modem_get_properties(DBusConnection *conn,
@@ -1235,6 +1261,19 @@ void ofono_modem_set_powered(struct ofono_modem *modem, ofono_bool_t powered)
 	if (modem->timeout > 0) {
 		g_source_remove(modem->timeout);
 		modem->timeout = 0;
+	}
+
+	if (powered && powered != modem->powered) {
+		char **capabilities = get_capabilities(modem);
+
+		if (capabilities) {
+			ofono_dbus_signal_array_property_changed(conn,
+						modem->path,
+						OFONO_MODEM_INTERFACE,
+						"Capabilities", DBUS_TYPE_STRING,
+						&capabilities);
+			l_free(capabilities);
+		}
 	}
 
 	if (modem->powered_pending != modem->powered &&
@@ -1872,6 +1911,17 @@ void ofono_modem_set_driver(struct ofono_modem *modem, const char *type)
 
 	l_free(modem->driver_type);
 	modem->driver_type = l_strdup(type);
+}
+
+void ofono_modem_set_capabilities(struct ofono_modem *modem,
+						unsigned int capabilities)
+{
+	if (!modem)
+		return;
+
+	DBG("%u", capabilities);
+
+	modem->capabilities = capabilities;
 }
 
 struct ofono_modem *ofono_modem_create(const char *name, const char *type)
