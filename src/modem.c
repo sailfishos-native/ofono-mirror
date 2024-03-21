@@ -149,6 +149,19 @@ static char **get_features(struct ofono_modem *modem)
 	return features;
 }
 
+static char **get_interfaces(struct ofono_modem *modem)
+{
+	char **interfaces = l_new(char *,
+				g_slist_length(modem->interface_list) + 1);
+	unsigned int i;
+	GSList *l;
+
+	for (i = 0, l = modem->interface_list; l; l = l->next, i++)
+		interfaces[i] = l->data;
+
+	return interfaces;
+}
+
 unsigned int __ofono_modem_callid_next(struct ofono_modem *modem)
 {
 	unsigned int i;
@@ -832,8 +845,6 @@ void __ofono_modem_append_properties(struct ofono_modem *modem,
 {
 	char **interfaces;
 	char **features;
-	int i;
-	GSList *l;
 	struct ofono_devinfo *info;
 	dbus_bool_t emergency = ofono_modem_get_emergency_mode(modem);
 	const char *strtype;
@@ -883,12 +894,10 @@ void __ofono_modem_append_properties(struct ofono_modem *modem,
 		ofono_dbus_dict_append(dict, "SystemPath", DBUS_TYPE_STRING,
 					&system_path);
 
-	interfaces = g_new0(char *, g_slist_length(modem->interface_list) + 1);
-	for (i = 0, l = modem->interface_list; l; l = l->next, i++)
-		interfaces[i] = l->data;
+	interfaces = get_interfaces(modem);
 	ofono_dbus_dict_append_array(dict, "Interfaces", DBUS_TYPE_STRING,
 					&interfaces);
-	g_free(interfaces);
+	l_free(interfaces);
 
 	features = get_features(modem);
 	ofono_dbus_dict_append_array(dict, "Features", DBUS_TYPE_STRING,
@@ -1301,17 +1310,13 @@ static gboolean trigger_interface_update(void *data)
 	DBusConnection *conn = ofono_dbus_get_connection();
 	char **interfaces;
 	char **features;
-	GSList *l;
-	int i;
 
-	interfaces = g_new0(char *, g_slist_length(modem->interface_list) + 1);
-	for (i = 0, l = modem->interface_list; l; l = l->next, i++)
-		interfaces[i] = l->data;
+	interfaces = get_interfaces(modem);
 	ofono_dbus_signal_array_property_changed(conn, modem->path,
 						OFONO_MODEM_INTERFACE,
 						"Interfaces", DBUS_TYPE_STRING,
 						&interfaces);
-	g_free(interfaces);
+	l_free(interfaces);
 
 	features = get_features(modem);
 	ofono_dbus_signal_array_property_changed(conn, modem->path,
