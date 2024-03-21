@@ -512,13 +512,27 @@ static void usimstate_notify(GAtResult *result, gpointer user_data)
 	ofono_sim_inserted_notify(data->sim, inserted);
 }
 
-static void cfun_set_on_cb(gboolean ok, GAtResult *result, gpointer user_data)
+static void emulator_battery_cb(struct ofono_atom *atom, void *data)
 {
-	struct ofono_modem *modem = user_data;
+	struct ofono_emulator *em = __ofono_atom_get_data(atom);
+	int val = 0;
 
-	DBG("");
+	if (GPOINTER_TO_INT(data) > 0)
+		val = (GPOINTER_TO_INT(data) - 1) / 20 + 1;
 
-	ofono_modem_set_powered(modem, ok);
+	ofono_emulator_set_indicator(em, OFONO_EMULATOR_IND_BATTERY, val);
+}
+
+static void emulator_hfp_watch(struct ofono_atom *atom,
+				enum ofono_atom_watch_condition cond,
+				void *user_data)
+{
+	struct phonesim_data *data = user_data;
+
+	if (cond != OFONO_ATOM_WATCH_CONDITION_REGISTERED)
+		return;
+
+	emulator_battery_cb(atom, GUINT_TO_POINTER(data->batt_level));
 }
 
 static gboolean phonesim_reset(void *user_data)
@@ -545,17 +559,6 @@ static void crst_notify(GAtResult *result, gpointer user_data)
 	g_idle_add(phonesim_reset, user_data);
 }
 
-static void emulator_battery_cb(struct ofono_atom *atom, void *data)
-{
-	struct ofono_emulator *em = __ofono_atom_get_data(atom);
-	int val = 0;
-
-	if (GPOINTER_TO_INT(data) > 0)
-		val = (GPOINTER_TO_INT(data) - 1) / 20 + 1;
-
-	ofono_emulator_set_indicator(em, OFONO_EMULATOR_IND_BATTERY, val);
-}
-
 static void cbc_notify(GAtResult *result, gpointer user_data)
 {
 	struct ofono_modem *modem = user_data;
@@ -580,6 +583,43 @@ static void cbc_notify(GAtResult *result, gpointer user_data)
 						OFONO_ATOM_TYPE_EMULATOR_HFP,
 						emulator_battery_cb,
 						GUINT_TO_POINTER(level));
+}
+
+static void finish_powerup(struct ofono_modem *modem)
+{
+	struct phonesim_data *data = ofono_modem_get_data(modem);
+
+	g_at_chat_send(data->chat, "AT+CSCS=\"GSM\"", none_prefix,
+			NULL, NULL, NULL);
+
+	g_at_chat_register(data->chat, "+CRST:",
+				crst_notify, FALSE, modem, NULL);
+
+	g_at_chat_register(data->chat, "+CBC:",
+				cbc_notify, FALSE, modem, NULL);
+
+	g_at_chat_send(data->chat, "AT+CBC", none_prefix, NULL, NULL, NULL);
+
+	g_at_chat_send(data->chat, "AT+SIMSTATE?", simstate_prefix,
+					simstate_query, modem, NULL);
+	g_at_chat_register(data->chat, "+USIMSTATE:", usimstate_notify,
+						FALSE, modem, NULL);
+
+	data->hfp_watch = __ofono_modem_add_atom_watch(modem,
+					OFONO_ATOM_TYPE_EMULATOR_HFP,
+					emulator_hfp_watch, data, NULL);
+}
+
+static void cfun_set_on_cb(gboolean ok, GAtResult *result, gpointer user_data)
+{
+	struct ofono_modem *modem = user_data;
+
+	DBG("");
+
+	ofono_modem_set_powered(modem, ok);
+
+	if (ok)
+		finish_powerup(modem);
 }
 
 static void phonesim_disconnected(gpointer user_data)
@@ -642,18 +682,6 @@ static void mux_setup(GAtMux *mux, gpointer user_data)
 
 	g_at_chat_send(data->chat, "AT+CFUN=1", none_prefix,
 					cfun_set_on_cb, modem, NULL);
-}
-
-static void emulator_hfp_watch(struct ofono_atom *atom,
-				enum ofono_atom_watch_condition cond,
-				void *user_data)
-{
-	struct phonesim_data *data = user_data;
-
-	if (cond != OFONO_ATOM_WATCH_CONDITION_REGISTERED)
-		return;
-
-	emulator_battery_cb(atom, GUINT_TO_POINTER(data->batt_level));
 }
 
 static int connect_socket(const char *address, int port)
@@ -755,25 +783,7 @@ static int phonesim_enable(struct ofono_modem *modem)
 		return -EINPROGRESS;
 	}
 
-	g_at_chat_send(data->chat, "AT+CSCS=\"GSM\"", none_prefix,
-			NULL, NULL, NULL);
-
-	g_at_chat_register(data->chat, "+CRST:",
-				crst_notify, FALSE, modem, NULL);
-
-	g_at_chat_register(data->chat, "+CBC:",
-				cbc_notify, FALSE, modem, NULL);
-
-	g_at_chat_send(data->chat, "AT+CBC", none_prefix, NULL, NULL, NULL);
-
-	g_at_chat_send(data->chat, "AT+SIMSTATE?", simstate_prefix,
-					simstate_query, modem, NULL);
-	g_at_chat_register(data->chat, "+USIMSTATE:", usimstate_notify,
-						FALSE, modem, NULL);
-
-	data->hfp_watch = __ofono_modem_add_atom_watch(modem,
-					OFONO_ATOM_TYPE_EMULATOR_HFP,
-					emulator_hfp_watch, data, NULL);
+	finish_powerup(modem);
 
 	return 0;
 }
