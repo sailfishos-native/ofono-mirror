@@ -137,6 +137,18 @@ static const char *modem_type_to_string(enum ofono_modem_type type)
 	return "unknown";
 }
 
+static char **get_features(struct ofono_modem *modem)
+{
+	char **features = l_new(char *, g_slist_length(modem->feature_list) + 1);
+	unsigned int i;
+	GSList *l;
+
+	for (i = 0, l = modem->feature_list; l; l = l->next, i++)
+		features[i] = l->data;
+
+	return features;
+}
+
 unsigned int __ofono_modem_callid_next(struct ofono_modem *modem)
 {
 	unsigned int i;
@@ -878,12 +890,10 @@ void __ofono_modem_append_properties(struct ofono_modem *modem,
 					&interfaces);
 	g_free(interfaces);
 
-	features = g_new0(char *, g_slist_length(modem->feature_list) + 1);
-	for (i = 0, l = modem->feature_list; l; l = l->next, i++)
-		features[i] = l->data;
+	features = get_features(modem);
 	ofono_dbus_dict_append_array(dict, "Features", DBUS_TYPE_STRING,
 					&features);
-	g_free(features);
+	l_free(features);
 
 	if (modem->name)
 		ofono_dbus_dict_append(dict, "Name", DBUS_TYPE_STRING,
@@ -1303,14 +1313,12 @@ static gboolean trigger_interface_update(void *data)
 						&interfaces);
 	g_free(interfaces);
 
-	features = g_new0(char *, g_slist_length(modem->feature_list) + 1);
-	for (i = 0, l = modem->feature_list; l; l = l->next, i++)
-		features[i] = l->data;
+	features = get_features(modem);
 	ofono_dbus_signal_array_property_changed(conn, modem->path,
 						OFONO_MODEM_INTERFACE,
 						"Features", DBUS_TYPE_STRING,
 						&features);
-	g_free(features);
+	l_free(features);
 
 	modem->interface_update = 0;
 
