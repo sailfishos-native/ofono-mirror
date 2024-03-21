@@ -648,6 +648,10 @@ static void qinistat_cb(gboolean ok, GAtResult *result, gpointer user_data)
 	}
 
 	data->sim_ready = true;
+
+	if (quectel_model_supports_lte(data->model))
+		ofono_modem_set_capabilities(modem, OFONO_MODEM_CAPABILITY_LTE);
+
 	ofono_modem_set_powered(modem, TRUE);
 }
 
