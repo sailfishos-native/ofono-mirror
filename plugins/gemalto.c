@@ -217,11 +217,17 @@ static void sim_state_cb(gboolean present, gpointer user_data)
 {
 	struct ofono_modem *modem = user_data;
 	struct gemalto_data *data = ofono_modem_get_data(modem);
+	const char *model = ofono_modem_get_string(modem, "Model");
 
 	at_util_sim_state_query_free(data->sim_state_query);
 	data->sim_state_query = NULL;
 
 	data->have_sim = present;
+
+	if (!g_strcmp0(model, GEMALTO_MODEL_ALS3_PLS8x) ||
+			!g_strcmp0(model, GEMALTO_MODEL_ELS81x))
+		ofono_modem_set_capabilities(modem, OFONO_MODEM_CAPABILITY_LTE);
+
 	ofono_modem_set_powered(modem, TRUE);
 
 	/* Register for specific sim status reports */
@@ -609,7 +615,7 @@ static void gemalto_post_sim(struct ofono_modem *modem)
 		ofono_gprs_add_context(gprs, gc);
 
 	if (!g_strcmp0(model, GEMALTO_MODEL_ALS3_PLS8x) ||
-	    !g_strcmp0(model, GEMALTO_MODEL_ELS81x))
+			!g_strcmp0(model, GEMALTO_MODEL_ELS81x))
 		ofono_lte_create(modem, OFONO_VENDOR_GEMALTO,
 						"atmodem", data->app);
 }
