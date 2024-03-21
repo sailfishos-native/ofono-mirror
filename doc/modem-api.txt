@@ -182,3 +182,9 @@ Properties	boolean Powered [readwrite]
 			supported by this modem.
 
 			Possible values are "test", "hfp", "sap" and "hardware".
+
+		array{string} Capabilities [readonly, optional]
+
+			Contains the capabilities of this modem.
+
+			Possible values are "lte".
