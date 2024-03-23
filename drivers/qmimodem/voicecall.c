@@ -93,6 +93,14 @@ static bool ofono_call_compare_by_id(const void *a, const void *b)
 	return (call->id == id);
 }
 
+static bool ofono_call_compare_by_status(const void *a, const void *b)
+{
+	const struct ofono_call *call = a;
+	int status = L_PTR_TO_INT(b);
+
+	return status == call->status;
+}
+
 static void ofono_call_list_dial_callback(struct ofono_voicecall *vc,
 						int call_id)
 {
@@ -465,6 +473,67 @@ error:
 	l_free(param);
 }
 
+static void answer_cb(struct qmi_result *result, void *user_data)
+{
+	struct cb_data *cbd = user_data;
+	ofono_voicecall_cb_t cb = cbd->cb;
+	uint16_t error;
+	uint8_t call_id;
+
+	static const uint8_t QMI_VOICE_ANSWER_RETURN_CALL_ID = 0x10;
+
+	DBG("");
+
+	if (qmi_result_set_error(result, &error)) {
+		DBG("QMI Error %d", error);
+		CALLBACK_WITH_FAILURE(cb, cbd->data);
+		return;
+	}
+
+	if (qmi_result_get_uint8(result, QMI_VOICE_ANSWER_RETURN_CALL_ID, &call_id))
+		DBG("Received answer result with call id %d", call_id);
+
+	CALLBACK_WITH_SUCCESS(cb, cbd->data);
+}
+
+static void answer(struct ofono_voicecall *vc, ofono_voicecall_cb_t cb, void *data)
+{
+	struct voicecall_data *vd = ofono_voicecall_get_data(vc);
+	struct cb_data *cbd;
+	struct ofono_call *call;
+	struct qmi_param *param = NULL;
+
+	static const uint8_t QMI_VOICE_ANSWER_CALL_ID = 0x01;
+
+	DBG("");
+
+	call = l_queue_find(vd->call_list,
+					ofono_call_compare_by_status,
+					L_UINT_TO_PTR(CALL_STATUS_INCOMING));
+
+	if (call == NULL) {
+		DBG("Can not find a call to pick up");
+		return;
+	}
+
+	param = qmi_param_new();
+	cbd = cb_data_new(cb, data);
+	cbd->user = vc;
+
+	if (!qmi_param_append_uint8(param, QMI_VOICE_ANSWER_CALL_ID,
+			call->id))
+		goto error;
+
+	if (qmi_service_send(vd->voice, QMI_VOICE_ANSWER_CALL, param,
+			answer_cb, cbd, l_free) > 0)
+		return;
+
+error:
+	CALLBACK_WITH_FAILURE(cb, data);
+	l_free(cbd);
+	l_free(param);
+}
+
 static void create_voice_cb(struct qmi_service *service, void *user_data)
 {
 	struct ofono_voicecall *vc = user_data;
@@ -531,6 +600,7 @@ static const struct ofono_voicecall_driver driver = {
 	.probe		= qmi_voicecall_probe,
 	.remove		= qmi_voicecall_remove,
 	.dial		= dial,
+	.answer		= answer,
 };
 
 OFONO_ATOM_DRIVER_BUILTIN(voicecall, qmimodem, &driver)
