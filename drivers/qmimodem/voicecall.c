@@ -97,6 +97,16 @@ struct qmi_voice_dial_call_result {
 	uint8_t call_id;
 };
 
+struct qmi_voice_answer_call_arg {
+	bool call_id_set;
+	uint8_t call_id;
+};
+
+struct qmi_voice_answer_call_result {
+	bool call_id_set;
+	uint8_t call_id;
+};
+
 int ofono_call_compare(const void *a, const void *b, void *data)
 {
 	const struct ofono_call *ca = a;
@@ -533,6 +543,94 @@ error:
 	l_free(param);
 }
 
+enum parse_error qmi_voice_answer_call_parse(
+	struct qmi_result *qmi_result,
+	struct qmi_voice_answer_call_result *result)
+{
+	int err = NONE;
+
+	/* optional */
+	if (qmi_result_get_uint8(qmi_result, QMI_VOICE_ANSWER_RETURN_CALL_ID, &result->call_id))
+		result->call_id_set = 1;
+
+	return err;
+}
+
+static void answer_cb(struct qmi_result *result, void *user_data)
+{
+	struct cb_data *cbd = user_data;
+	ofono_voicecall_cb_t cb = cbd->cb;
+	uint16_t error;
+	struct qmi_voice_answer_call_result answer_result;
+
+	DBG("");
+
+	if (qmi_result_set_error(result, &error)) {
+		DBG("QMI Error %d", error);
+		CALLBACK_WITH_FAILURE(cb, cbd->data);
+		return;
+	}
+
+	/* TODO: what happens when calling it with no active call or wrong caller id? */
+	if (qmi_voice_answer_call_parse(result, &answer_result) != NONE) {
+		DBG("Received invalid Result");
+		CALLBACK_WITH_FAILURE(cb, cbd->data);
+		return;
+	}
+
+	CALLBACK_WITH_SUCCESS(cb, cbd->data);
+}
+
+static void answer(struct ofono_voicecall *vc, ofono_voicecall_cb_t cb, void *data)
+{
+	struct voicecall_data *vd = ofono_voicecall_get_data(vc);
+	struct cb_data *cbd = cb_data_new(cb, data);
+	struct qmi_voice_answer_call_arg arg;
+	struct ofono_call *call;
+	struct qmi_param *param = NULL;
+
+	DBG("");
+
+	cbd->user = vc;
+
+	call = l_queue_find(vd->call_list,
+					ofono_call_compare_by_status,
+					L_UINT_TO_PTR(CALL_STATUS_INCOMING));
+
+	if (call == NULL) {
+		DBG("Can not find a call to answer");
+		goto error;
+	}
+
+	arg.call_id_set = true;
+	arg.call_id = call->id;
+
+	param = qmi_param_new();
+	if (!param)
+		goto error;
+
+	if (arg.call_id_set) {
+		if (!qmi_param_append_uint8(
+			param,
+			QMI_VOICE_ANSWER_CALL_ID,
+			arg.call_id))
+			goto error;
+	}
+
+	if (qmi_service_send(vd->voice,
+		QMI_VOICE_ANSWER_CALL,
+		param,
+		answer_cb,
+		cbd,
+		l_free) > 0)
+		return;
+
+error:
+	CALLBACK_WITH_FAILURE(cb, data);
+	l_free(cbd);
+	l_free(param);
+}
+
 static void create_voice_cb(struct qmi_service *service, void *user_data)
 {
 	struct ofono_voicecall *vc = user_data;
@@ -577,7 +675,6 @@ static int qmi_voicecall_probe(struct ofono_voicecall *vc,
 					create_voice_cb, vc, NULL);
 
 	return 0;
-
 }
 
 static void qmi_voicecall_remove(struct ofono_voicecall *vc)
@@ -599,6 +696,7 @@ static const struct ofono_voicecall_driver driver = {
 	.probe		= qmi_voicecall_probe,
 	.remove		= qmi_voicecall_remove,
 	.dial		= dial,
+	.answer		= answer,
 };
 
 OFONO_ATOM_DRIVER_BUILTIN(voicecall, qmimodem, &driver)
