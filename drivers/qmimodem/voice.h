@@ -54,6 +54,7 @@ enum qmi_ussd_user_required {
 /* QMI service voice. Using an enum to prevent doublicated entries */
 enum voice_commands {
 	QMI_VOICE_DIAL_CALL =			0x20,
+	QMI_VOICE_END_CALL =			0x21,
 	QMI_VOICE_ANSWER_CALL =			0x22,
 	QMI_VOICE_SUPS_NOTIFICATION_IND =	0x32,
 	QMI_VOICE_SET_SUPS_SERVICE =		0x33,
@@ -117,6 +118,14 @@ enum qmi_voice_call_answer_param {
 
 enum qmi_voice_call_answer_return {
 	QMI_VOICE_ANSWER_RETURN_CALL_ID = 0x10,
+};
+
+enum qmi_voice_call_end_param {
+	QMI_VOICE_END_CALL_ID = 0x01,
+};
+
+enum qmi_voice_call_end_return {
+	QMI_VOICE_END_RETURN_CALL_ID = 0x10,
 };
 
 enum parse_error {
