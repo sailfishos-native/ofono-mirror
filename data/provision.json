@@ -14372,6 +14372,7 @@
     "ids": [
       "310240"
     ],
+    "spn": "Ting",
     "apns": [
       {
         "name": "Ting Data",
@@ -14430,6 +14431,7 @@
     "ids": [
       "310410"
     ],
+    "spn": "Tracfone",
     "apns": [
       {
         "apn": "att.mvno",
@@ -14450,6 +14452,7 @@
     "ids": [
       "310260"
     ],
+    "spn": "SpeedTalk",
     "apns": [
       {
         "name": "Cellular (MMS)",
@@ -14480,6 +14483,7 @@
     "ids": [
       "310260"
     ],
+    "spn": "Mint",
     "apns": [
       {
         "name": "mint",
@@ -14495,6 +14499,7 @@
     "ids": [
       "310260"
     ],
+    "spn": "US Mobile",
     "apns": [
       {
         "name": "US Mobile",
