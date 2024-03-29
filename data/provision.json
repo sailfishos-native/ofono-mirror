@@ -14426,30 +14426,6 @@
     ]
   },
   {
-    "name": "AweSIM",
-    "ids": [
-      "310410"
-    ],
-    "apns": [
-      {
-        "name": "AweSIM Internet",
-        "apn": "NXTGENPHONE",
-        "type": [
-          "internet"
-        ]
-      },
-      {
-        "name": "AweSIM MMS",
-        "apn": "NXTGENPHONE",
-        "type": [
-          "mms"
-        ],
-        "mmsc": "http://mmsc.mobile.att.net",
-        "mmsproxy": "proxy.mobile.att.net:80"
-      }
-    ]
-  },
-  {
     "name": "Straight Talk",
     "ids": [
       "310410"
