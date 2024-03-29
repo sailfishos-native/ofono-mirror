@@ -26,7 +26,7 @@
 static const char *option_file;
 
 static int lookup_apn(const char *match_mcc, const char *match_mnc,
-							const char *match_spn)
+			const char *match_spn, char **tags_filter)
 {
 	struct provision_db *pdb;
 	struct provision_db_entry *contexts;
@@ -50,7 +50,8 @@ static int lookup_apn(const char *match_mcc, const char *match_mnc,
 	fprintf(stdout, "Searching for info for network: %s%s, spn: %s\n",
 			match_mcc, match_mnc, match_spn ? match_spn : "<None>");
 
-	r = provision_db_lookup(pdb, match_mcc, match_mnc, match_spn, NULL,
+	r = provision_db_lookup(pdb, match_mcc, match_mnc,
+					match_spn, tags_filter,
 					&contexts, &n_contexts);
 	if (r < 0) {
 		fprintf(stderr, "Unable to lookup: %s\n", strerror(-r));
@@ -78,6 +79,8 @@ static int lookup_apn(const char *match_mcc, const char *match_mnc,
 			fprintf(stdout, "Message Center: %s\n",
 							ap->message_center);
 		}
+
+		fprintf(stdout, "Tags: %s\n", ap->tags);
 	}
 
 	l_free(contexts);
@@ -92,22 +95,26 @@ static void usage(void)
 	printf("lookup-apn\nUsage:\n");
 	printf("lookup-apn [options] <mcc> <mnc> [spn]\n");
 	printf("Options:\n"
-			"\t-v, --version	Show version\n"
-			"\t-f, --file		Provision DB file to use\n"
-			"\t-h, --help		Show help options\n");
+		"\t-v, --version	Show version\n"
+		"\t-f, --file		Provision DB file to use\n"
+		"\t-t, --tags		Comma separated tag filter\n"
+		"\t-h, --help		Show help options\n");
 }
 
 static const struct option options[] = {
 	{ "version",	no_argument,		NULL, 'v' },
 	{ "help",	no_argument,		NULL, 'h' },
 	{ "file",	required_argument,	NULL, 'f' },
+	{ "tags",	required_argument,	NULL, 't' },
 	{ },
 };
 
 int main(int argc, char **argv)
 {
+	_auto_(l_strv_free) char **tags_filter = NULL;
+
 	for (;;) {
-		int opt = getopt_long(argc, argv, "f:vh", options, NULL);
+		int opt = getopt_long(argc, argv, "f:t:vh", options, NULL);
 
 		if (opt < 0)
 			break;
@@ -115,6 +122,9 @@ int main(int argc, char **argv)
 		switch (opt) {
 		case 'f':
 			option_file = optarg;
+			break;
+		case 't':
+			tags_filter = l_strsplit(optarg, ',');
 			break;
 		case 'v':
 			printf("%s\n", VERSION);
@@ -138,5 +148,6 @@ int main(int argc, char **argv)
 	}
 
 	return lookup_apn(argv[optind], argv[optind + 1],
-			argc - optind == 3 ? argv[optind + 2] : NULL);
+				argc - optind == 3 ? argv[optind + 2] : NULL,
+				tags_filter);
 }
