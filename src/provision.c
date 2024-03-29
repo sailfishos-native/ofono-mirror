@@ -32,7 +32,8 @@ bool __ofono_provision_get_settings(const char *mcc,
 	if (mcc == NULL || strlen(mcc) == 0 || mnc == NULL || strlen(mnc) == 0)
 		return false;
 
-	r = provision_db_lookup(pdb, mcc, mnc, spn, &contexts, &n_contexts);
+	r = provision_db_lookup(pdb, mcc, mnc, spn, NULL,
+					&contexts, &n_contexts);
 	if (r < 0)
 		return false;
 

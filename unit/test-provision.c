@@ -27,7 +27,8 @@ static void null_provision_db(const void *data)
 	size_t n_items;
 	int r;
 
-	r = provision_db_lookup(NULL, "123", "345", NULL, &items, &n_items);
+	r = provision_db_lookup(NULL, "123", "345", NULL, NULL,
+				&items, &n_items);
 	assert(r == -EBADF);
 }
 
@@ -37,16 +38,18 @@ static void invalid_mcc_mnc(const void *data)
 	size_t n_items;
 	int r;
 
-	r = provision_db_lookup(pdb, "3444", "33", NULL, &items, &n_items);
+	r = provision_db_lookup(pdb, "3444", "33", NULL, NULL,
+				&items, &n_items);
 	assert(r == -EINVAL);
 
-	r = provision_db_lookup(pdb, "3ab", "33", NULL, &items, &n_items);
+	r = provision_db_lookup(pdb, "3ab", "33", NULL, NULL, &items, &n_items);
 	assert(r == -EINVAL);
 
-	r = provision_db_lookup(pdb, "333", "3", NULL, &items, &n_items);
+	r = provision_db_lookup(pdb, "333", "3", NULL, NULL, &items, &n_items);
 	assert(r == -EINVAL);
 
-	r = provision_db_lookup(pdb, "333", "3334", NULL, &items, &n_items);
+	r = provision_db_lookup(pdb, "333", "3334", NULL, NULL,
+			&items, &n_items);
 	assert(r == -EINVAL);
 }
 
@@ -225,7 +228,7 @@ static void provision_lookup(const void *data)
 	size_t i;
 	int r;
 
-	r = provision_db_lookup(pdb, test->mcc, test->mnc, test->spn,
+	r = provision_db_lookup(pdb, test->mcc, test->mnc, test->spn, NULL,
 					&items, &n_items);
 	assert(r == test->result);
 

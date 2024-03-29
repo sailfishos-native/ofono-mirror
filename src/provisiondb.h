@@ -19,6 +19,7 @@ struct provision_db_entry {
 	enum ofono_gprs_auth_method auth_method;
 	const char *message_proxy;
 	const char *message_center;
+	const char *tags;
 };
 
 struct provision_db *provision_db_new(const char *pathname);
@@ -27,5 +28,6 @@ void provision_db_free(struct provision_db *pdb);
 
 int provision_db_lookup(struct provision_db *pdb,
 			const char *mcc, const char *mnc, const char *spn,
+			char **tags_filter,
 			struct provision_db_entry **items,
 			size_t *n_items);

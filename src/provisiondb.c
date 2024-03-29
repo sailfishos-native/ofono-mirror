@@ -69,6 +69,7 @@ struct context {
 	__le64 password_offset;
 	__le64 mmsproxy_offset;
 	__le64 mmsc_offset;
+	__le64 tags_offset;
 } __attribute__((packed));
 
 struct provision_db {
@@ -218,7 +219,25 @@ static int __get_string(struct provision_db *pdb, uint64_t offset,
 	return 0;
 }
 
+static bool tags_match(char **tags_filter, const char *tags)
+{
+	_auto_(l_strv_free) char **split_tags = 0;
+	unsigned int i;
+
+	if (!tags_filter || !tags)
+		return true;
+
+	split_tags = l_strsplit(tags, ',');
+
+	for (i = 0; tags_filter[i]; i++)
+		if (l_strv_contains(split_tags, tags_filter[i]))
+			return true;
+
+	return false;
+}
+
 static int __get_contexts(struct provision_db *pdb, uint64_t offset,
+				char **tags_filter,
 				struct provision_db_entry **contexts,
 				size_t *n_contexts)
 {
@@ -227,6 +246,7 @@ static int __get_contexts(struct provision_db *pdb, uint64_t offset,
 	uint64_t i;
 	struct provision_db_entry *ret;
 	int r;
+	uint64_t n_matched = 0;
 
 	if (offset + sizeof(__le64) >= pdb->contexts_size)
 		return -EPROTO;
@@ -242,43 +262,54 @@ static int __get_contexts(struct provision_db *pdb, uint64_t offset,
 	for (i = 0; i < num; i++, offset += sizeof(struct context)) {
 		struct context *context = start + offset;
 
-		ret[i].type = L_LE32_TO_CPU(context->type);
-		ret[i].proto = L_LE32_TO_CPU(context->protocol);
-		ret[i].auth_method = L_LE32_TO_CPU(context->authentication);
+		r = __get_string(pdb, L_LE64_TO_CPU(context->tags_offset),
+					&ret[n_matched].tags);
+		if (r < 0)
+			goto fail;
+
+		if (!tags_match(tags_filter, ret[n_matched].tags))
+			continue;
+
+		ret[n_matched].type = L_LE32_TO_CPU(context->type);
+		ret[n_matched].proto = L_LE32_TO_CPU(context->protocol);
+		ret[n_matched].auth_method =
+			L_LE32_TO_CPU(context->authentication);
 
 		r = __get_string(pdb, L_LE64_TO_CPU(context->name_offset),
-					&ret[i].name);
+					&ret[n_matched].name);
 		if (r < 0)
 			goto fail;
 
 		r = __get_string(pdb, L_LE64_TO_CPU(context->apn_offset),
-					&ret[i].apn);
+					&ret[n_matched].apn);
 		if (r < 0)
 			goto fail;
 
 		r = __get_string(pdb, L_LE64_TO_CPU(context->username_offset),
-					&ret[i].username);
+					&ret[n_matched].username);
 		if (r < 0)
 			goto fail;
 
 		r = __get_string(pdb, L_LE64_TO_CPU(context->password_offset),
-					&ret[i].password);
+					&ret[n_matched].password);
 		if (r < 0)
 			goto fail;
 
 		r = __get_string(pdb, L_LE64_TO_CPU(context->mmsproxy_offset),
-					&ret[i].message_proxy);
+					&ret[n_matched].message_proxy);
 		if (r < 0)
 			goto fail;
 
 		r = __get_string(pdb, L_LE64_TO_CPU(context->mmsc_offset),
-					&ret[i].message_center);
+					&ret[n_matched].message_center);
 		if (r < 0)
 			goto fail;
+
+		n_matched += 1;
 	}
 
 	*contexts = ret;
-	*n_contexts = num;
+	*n_contexts = n_matched;
 	return 0;
 
 fail:
@@ -374,6 +405,7 @@ static int key_from_mcc_mnc(const char *mcc, const char *mnc, uint32_t *key)
 
 int provision_db_lookup(struct provision_db *pdb,
 			const char *mcc, const char *mnc, const char *match_spn,
+			char **tags_filter,
 			struct provision_db_entry **items, size_t *n_items)
 {
 	int r;
@@ -436,5 +468,5 @@ int provision_db_lookup(struct provision_db *pdb,
 		return -ENOENT;
 
 	return __get_contexts(pdb, L_LE64_TO_CPU(found->context_offset),
-				items, n_items);
+				tags_filter, items, n_items);
 }
