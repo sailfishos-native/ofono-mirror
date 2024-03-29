@@ -14230,41 +14230,6 @@
         ]
       },
       {
-        "name": "Internet/WebConnect",
-        "apn": "epc.tmobile.com",
-        "type": [
-          "internet"
-        ]
-      },
-      {
-        "name": "Web2Go/t-zones",
-        "apn": "wap.voicestream.com",
-        "type": [
-          "internet"
-        ]
-      },
-      {
-        "name": "Internet (old)",
-        "apn": "internet2.voicestream.com",
-        "type": [
-          "internet"
-        ]
-      },
-      {
-        "name": "Internet with VPN (old)",
-        "apn": "internet3.voicestream.com",
-        "type": [
-          "internet"
-        ]
-      },
-      {
-        "name": "Broadband",
-        "apn": "mobilenet",
-        "type": [
-          "internet"
-        ]
-      },
-      {
         "name": "IoT",
         "apn": "iot.t-mobile.com",
         "type": [
