@@ -393,7 +393,6 @@ static void test_eons(void)
 	g_assert(!sim_eons_pnn_is_empty(eons_info));
 
 	sim_eons_add_opl_record(eons_info, valid_efopl, sizeof(valid_efopl));
-	sim_eons_optimize(eons_info);
 
 	op_info = sim_eons_lookup(eons_info, "246", "82");
 	g_assert(op_info == NULL);

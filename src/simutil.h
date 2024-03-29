@@ -20,6 +20,7 @@
  */
 
 #include <stdbool.h>
+#include <stdint.h>
 
 #define SIM_EFSPN_DC_HOME_PLMN_BIT 0x1
 #define SIM_EFSPN_DC_ROAMING_SPN_BIT 0x2
@@ -299,9 +300,9 @@ enum ber_tlv_data_encoding_type {
 
 struct sim_eons_operator_info {
 	char *longname;
-	gboolean long_ci;
+	bool long_ci;
 	char *shortname;
-	gboolean short_ci;
+	bool short_ci;
 	char *info;
 };
 
@@ -460,18 +461,18 @@ gboolean ber_tlv_builder_recurse_comprehension(struct ber_tlv_builder *builder,
 void ber_tlv_builder_optimize(struct ber_tlv_builder *builder,
 				unsigned char **pdu, unsigned int *len);
 
-struct sim_eons *sim_eons_new(int pnn_records);
-void sim_eons_add_pnn_record(struct sim_eons *eons, int record,
-				const guint8 *tlv, int length);
+struct sim_eons *sim_eons_new(uint32_t pnn_records);
+void sim_eons_add_pnn_record(struct sim_eons *eons, uint32_t record,
+				const uint8_t *tlv, uint16_t length);
 gboolean sim_eons_pnn_is_empty(struct sim_eons *eons);
 void sim_eons_add_opl_record(struct sim_eons *eons,
-				const guint8 *contents, int length);
+				const uint8_t *contents, uint16_t length);
 void sim_eons_optimize(struct sim_eons *eons);
 const struct sim_eons_operator_info *sim_eons_lookup_with_lac(
 						struct sim_eons *eons,
 						const char *mcc,
 						const char *mnc,
-						guint16 lac);
+						uint16_t lac);
 const struct sim_eons_operator_info *sim_eons_lookup(struct sim_eons *eons,
 						const char *mcc,
 						const char *mnc);

@@ -1581,8 +1581,6 @@ static void sim_opl_read_cb(int ok, int length, int record,
 		return;
 
 optimize:
-	sim_eons_optimize(netreg->eons);
-
 	for (l = netreg->operator_list; l; l = l->next) {
 		struct network_operator_data *opd = l->data;
 		const struct sim_eons_operator_info *eons_info;

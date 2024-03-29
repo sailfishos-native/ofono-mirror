@@ -36,10 +36,10 @@
 #include "missing.h"
 
 struct sim_eons {
-	struct sim_eons_operator_info *pnn_list;
-	GSList *opl_list;
-	gboolean pnn_valid;
-	int pnn_max;
+	struct l_queue *opl_list;
+	bool pnn_valid;
+	uint32_t pnn_max;
+	struct sim_eons_operator_info pnn_list[];
 };
 
 struct spdi_operator {
@@ -782,12 +782,12 @@ bool validate_utf8_tlv(const unsigned char *tlv)
 }
 
 static char *sim_network_name_parse(const unsigned char *buffer, int length,
-					gboolean *add_ci)
+					bool *add_ci)
 {
 	char *ret = NULL;
 	unsigned char dcs;
 	int i;
-	gboolean ci = FALSE;
+	bool ci = FALSE;
 	unsigned char *unpacked_buf;
 	long num_char, written;
 	int spare_bits;
@@ -999,22 +999,18 @@ void sim_spdi_free(struct sim_spdi *spdi)
 	g_free(spdi);
 }
 
-static void pnn_operator_free(struct sim_eons_operator_info *oper)
+struct sim_eons *sim_eons_new(uint32_t pnn_records)
 {
-	if (oper == NULL)
-		return;
+	struct sim_eons *eons = l_malloc(sizeof(struct sim_eons) +
+			sizeof(struct sim_eons_operator_info) * pnn_records);
 
-	l_free(oper->info);
-	l_free(oper->shortname);
-	l_free(oper->longname);
-}
-
-struct sim_eons *sim_eons_new(int pnn_records)
-{
-	struct sim_eons *eons = g_new0(struct sim_eons, 1);
-
-	eons->pnn_list = g_new0(struct sim_eons_operator_info, pnn_records);
+	eons->pnn_valid = false;
 	eons->pnn_max = pnn_records;
+
+	memset(eons->pnn_list, 0,
+			sizeof(struct sim_eons_operator_info) * pnn_records);
+
+	eons->opl_list = l_queue_new();
 
 	return eons;
 }
@@ -1024,8 +1020,8 @@ gboolean sim_eons_pnn_is_empty(struct sim_eons *eons)
 	return !eons->pnn_valid;
 }
 
-void sim_eons_add_pnn_record(struct sim_eons *eons, int record,
-				const guint8 *tlv, int length)
+void sim_eons_add_pnn_record(struct sim_eons *eons, uint32_t record,
+				const uint8_t *tlv, uint16_t length)
 {
 	const unsigned char *name;
 	int namelength;
@@ -1053,9 +1049,9 @@ void sim_eons_add_pnn_record(struct sim_eons *eons, int record,
 	eons->pnn_valid = TRUE;
 }
 
-static struct opl_operator *opl_operator_alloc(const guint8 *record)
+static struct opl_operator *opl_operator_alloc(const uint8_t *record)
 {
-	struct opl_operator *oper = g_new0(struct opl_operator, 1);
+	struct opl_operator *oper = l_new(struct opl_operator, 1);
 
 	sim_parse_mcc_mnc(record, oper->mcc, oper->mnc);
 	record += 3;
@@ -1071,40 +1067,52 @@ static struct opl_operator *opl_operator_alloc(const guint8 *record)
 }
 
 void sim_eons_add_opl_record(struct sim_eons *eons,
-				const guint8 *contents, int length)
+				const uint8_t *contents, uint16_t length)
 {
 	struct opl_operator *oper;
 
+	if (length < 8)
+		return;
+
 	oper = opl_operator_alloc(contents);
 
-	if (oper->id > eons->pnn_max) {
-		g_free(oper);
+	if (!oper->id || oper->id > eons->pnn_max) {
+		l_free(oper);
 		return;
 	}
 
-	eons->opl_list = g_slist_prepend(eons->opl_list, oper);
-}
-
-void sim_eons_optimize(struct sim_eons *eons)
-{
-	eons->opl_list = g_slist_reverse(eons->opl_list);
+	l_queue_push_tail(eons->opl_list, oper);
 }
 
 void sim_eons_free(struct sim_eons *eons)
 {
-	int i;
+	uint32_t i;
 
 	if (eons == NULL)
 		return;
 
-	for (i = 0; i < eons->pnn_max; i++)
-		pnn_operator_free(eons->pnn_list + i);
+	for (i = 0; i < eons->pnn_max; i++) {
+		struct sim_eons_operator_info *oper = eons->pnn_list + i;
 
-	g_free(eons->pnn_list);
+		l_free(oper->info);
+		l_free(oper->shortname);
+		l_free(oper->longname);
+	}
 
-	g_slist_free_full(eons->opl_list, g_free);
+	l_queue_destroy(eons->opl_list, l_free);
 
-	g_free(eons);
+	l_free(eons);
+}
+
+static bool opl_match_mcc_mnc(const char *opl, const char *s, size_t max)
+{
+	unsigned int i;
+
+	for (i = 0; i < max; i++)
+		if (s[i] != opl[i] && !(opl[i] == 'b' && s[i]))
+			return false;
+
+	return true;
 }
 
 static const struct sim_eons_operator_info *
@@ -1112,46 +1120,32 @@ static const struct sim_eons_operator_info *
 				const char *mcc, const char *mnc,
 				gboolean have_lac, guint16 lac)
 {
-	GSList *l;
+	const struct l_queue_entry *entry;
 	const struct opl_operator *opl;
-	int i;
 
-	for (l = eons->opl_list; l; l = l->next) {
-		opl = l->data;
+	for (entry = l_queue_get_entries(eons->opl_list);
+						entry; entry = entry->next) {
+		opl = entry->data;
 
-		for (i = 0; i < OFONO_MAX_MCC_LENGTH; i++)
-			if (mcc[i] != opl->mcc[i] &&
-					!(opl->mcc[i] == 'b' && mcc[i]))
-				break;
-		if (i < OFONO_MAX_MCC_LENGTH)
+		if (!opl_match_mcc_mnc(opl->mcc, mcc, OFONO_MAX_MCC_LENGTH))
 			continue;
 
-		for (i = 0; i < OFONO_MAX_MNC_LENGTH; i++)
-			if (mnc[i] != opl->mnc[i] &&
-					!(opl->mnc[i] == 'b' && mnc[i]))
-				break;
-		if (i < OFONO_MAX_MNC_LENGTH)
+		if (!opl_match_mcc_mnc(opl->mnc, mnc, OFONO_MAX_MNC_LENGTH))
 			continue;
 
 		if (opl->lac_tac_low == 0 && opl->lac_tac_high == 0xfffe)
-			break;
+			goto found;
 
 		if (have_lac == FALSE)
 			continue;
 
 		if ((lac >= opl->lac_tac_low) && (lac <= opl->lac_tac_high))
-			break;
+			goto found;
 	}
 
-	if (l == NULL)
-		return NULL;
+	return NULL;
 
-	opl = l->data;
-
-	/* 0 is not a valid record id */
-	if (opl->id == 0)
-		return NULL;
-
+found:
 	return &eons->pnn_list[opl->id - 1];
 }
 
