@@ -24,7 +24,8 @@ class ProviderInfo:
                                   'mmsproxy',
                                   'authentication',
                                   'username',
-                                  'password'] ) }
+                                  'password',
+                                  'tags'] ) }
 
     @classmethod
     def rawimport(cls, entry):
@@ -228,12 +229,13 @@ class ProvisionContext(ctypes.LittleEndianStructure):
         ('username_offset', ctypes.c_uint64),
         ('password_offset', ctypes.c_uint64),
         ('mmsproxy_offset', ctypes.c_uint64),
-        ('mmsc_offset', ctypes.c_uint64)
+        ('mmsc_offset', ctypes.c_uint64),
+        ('tags_offset', ctypes.c_uint64),
     ]
 
     authentication_dict = { 'chap' : 0, 'pap' : 1, 'none' : 2 }
     protocol_dict = { 'ipv4' : 0, 'ipv6' : 1, 'ipv4v6' : 2 }
-    attrs = ['name', 'apn', 'username', 'password', 'mmsproxy', 'mmsc']
+    attrs = ['name', 'apn', 'username', 'password', 'mmsproxy', 'mmsc', 'tags']
 
     @classmethod
     def type_to_context_type(cls, types):
@@ -515,7 +517,7 @@ class ProvisionDatabase(ctypes.LittleEndianStructure):
         visitor.visit(self.tree.root)
         self.tree.traverse(visitor)
 
-        self.version = 1
+        self.version = 2
         self.header_size = ctypes.sizeof(ProvisionDatabase)
         self.file_size = self.header_size
         self.node_struct_size = ctypes.sizeof(ProvisionNode)
