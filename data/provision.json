@@ -14169,7 +14169,8 @@
           "mms"
         ],
         "mmsc": "http://mmsc.mobile.att.net",
-        "mmsproxy": "proxy.mobile.att.net:80"
+        "mmsproxy": "proxy.mobile.att.net:80",
+        "tags": "lte"
       },
       {
         "name": "ENHANCEDPHONE",
@@ -14179,7 +14180,8 @@
           "mms"
         ],
         "mmsc": "http://mmsc.mobile.att.net",
-        "mmsproxy": "proxy.mobile.att.net:80"
+        "mmsproxy": "proxy.mobile.att.net:80",
+        "tags": "5g"
       },
       {
         "name": "AT&T M2M",
@@ -14187,7 +14189,8 @@
         "type": [
           "internet",
           "ia"
-        ]
+        ],
+        "tags": "m2m"
       }
     ]
   },
@@ -14216,8 +14219,10 @@
         "name": "T-Mobile LTE",
         "apn": "fast.t-mobile.com",
         "type": [
-          "internet"
-        ]
+          "internet",
+          "ia"
+        ],
+        "tags": "lte,5g"
       },
       {
         "name": "IoT",
@@ -14225,7 +14230,8 @@
         "type": [
           "internet",
           "ia"
-        ]
+        ],
+        "tags": "iot"
       }
     ]
   },
