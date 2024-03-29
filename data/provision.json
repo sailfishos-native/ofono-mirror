@@ -14182,16 +14182,6 @@
         "mmsproxy": "proxy.mobile.att.net:80"
       },
       {
-        "name": "RESELLER",
-        "apn": "RESELLER",
-        "type": [
-          "internet",
-          "mms"
-        ],
-        "mmsc": "http://mmsc.mobile.att.net",
-        "mmsproxy": "proxy.mobile.att.net:80"
-      },
-      {
         "name": "AT&T M2M",
         "apn": "m2m005246.attz",
         "type": [
