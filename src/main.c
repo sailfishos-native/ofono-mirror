@@ -39,6 +39,12 @@
 #define SHUTDOWN_GRACE_SECONDS 10
 
 static GMainLoop *event_loop;
+static struct l_settings *ofono_config;
+
+const struct l_settings *__ofono_get_config(void)
+{
+	return ofono_config;
+}
 
 void __ofono_exit(void)
 {
@@ -204,6 +210,9 @@ int main(int argc, char **argv)
 	DBusError error;
 	guint signal;
 	struct ell_event_source *source;
+	const char *config_dir;
+	char **config_dirs;
+	unsigned int i;
 
 	context = g_option_context_new(NULL);
 	g_option_context_add_main_entries(context, options, NULL);
@@ -254,6 +263,27 @@ int main(int argc, char **argv)
 
 	__ofono_log_init(argv[0], option_debug, option_detach);
 
+	config_dir = getenv("CONFIGURATION_DIRECTORY");
+	if (!config_dir)
+		config_dir = CONFIGDIR;
+
+	l_debug("Using configuration directory: %s", config_dir);
+	config_dirs = l_strsplit(config_dir, ':');
+	ofono_config = l_settings_new();
+
+	for (i = 0; config_dirs[i]; i++) {
+		_auto_(l_free) char *path = l_strdup_printf("%s/main.conf",
+								config_dirs[i]);
+
+		if (!l_settings_load_from_file(ofono_config, path))
+			continue;
+
+		l_info("Loaded configuration from %s", path);
+		break;
+	}
+
+	l_strv_free(config_dirs);
+
 	dbus_error_init(&error);
 
 	conn = g_dbus_setup_bus(DBUS_BUS_SYSTEM, OFONO_SERVICE, &error);
@@ -292,6 +322,8 @@ fail_module_init:
 	dbus_connection_unref(conn);
 
 cleanup:
+	l_settings_free(ofono_config);
+
 	g_source_remove(signal);
 
 	g_source_destroy((GSource *) source);

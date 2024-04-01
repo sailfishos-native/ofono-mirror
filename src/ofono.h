@@ -26,6 +26,7 @@
 
 #include <ofono/types.h>
 
+const struct l_settings *__ofono_get_config(void);
 void __ofono_exit(void);
 
 int __ofono_handsfree_audio_manager_init(void);
