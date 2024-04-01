@@ -28,12 +28,17 @@ bool __ofono_provision_get_settings(const char *mcc,
 	int r;
 	size_t i;
 	uint32_t type;
+	_auto_(l_strv_free) char **tags_filter = NULL;
 
 	if (mcc == NULL || strlen(mcc) == 0 || mnc == NULL || strlen(mnc) == 0)
 		return false;
 
-	r = provision_db_lookup(pdb, mcc, mnc, spn, NULL,
-					&contexts, &n_contexts);
+	tags_filter = l_settings_get_string_list(__ofono_get_config(),
+							"Provision",
+							"TagsFilter", ',');
+
+	r = provision_db_lookup(pdb, mcc, mnc, spn, tags_filter,
+						&contexts, &n_contexts);
 	if (r < 0)
 		return false;
 
