@@ -44,8 +44,48 @@
 #define HFP_PORT 12347
 
 static unsigned int modemwatch_id;
-guint server_watch;
-static GList *modems;
+static guint dun_watch;
+static guint hfp_watch;
+static struct l_queue *modem_infos;
+static unsigned int n_powered;
+
+struct modem_info {
+	struct ofono_modem *modem;
+	unsigned int watch_id;
+};
+
+static bool modem_matches(const void *data, const void *user_data)
+{
+	const struct modem_info *info = data;
+
+	return info->modem == user_data;
+}
+
+static void modem_info_free(struct modem_info *info)
+{
+	if (!info)
+		return;
+
+	if (info->watch_id)
+		__ofono_modem_remove_powered_watch(info->modem, info->watch_id);
+
+	l_free(info);
+}
+
+static struct ofono_modem *find_first_powered(void)
+{
+	const struct l_queue_entry *entry;
+
+	for (entry = l_queue_get_entries(modem_infos); entry;
+							entry = entry->next) {
+		struct ofono_modem *modem = entry->data;
+
+		if (ofono_modem_get_powered(modem))
+			return modem;
+	}
+
+	return NULL;
+}
 
 static gboolean on_socket_connected(GIOChannel *chan, GIOCondition cond,
 							gpointer user)
@@ -64,28 +104,35 @@ static gboolean on_socket_connected(GIOChannel *chan, GIOCondition cond,
 		return FALSE;
 
 	/* Pick the first powered modem */
-	modem = modems->data;
+	modem = find_first_powered();
+	if (!modem)
+		goto error;
+
 	DBG("Picked modem %p for emulator", modem);
 
 	em = ofono_emulator_create(modem, GPOINTER_TO_INT(user));
-	if (em == NULL)
-		close(fd);
-	else
-		ofono_emulator_register(em, fd);
+	if (!em)
+		goto error;
 
+	ofono_emulator_register(em, fd);
+	return TRUE;
+
+error:
+	close(fd);
 	return TRUE;
 }
 
-static gboolean create_tcp(short port, enum ofono_emulator_type type)
+static guint create_tcp(short port, enum ofono_emulator_type type)
 {
 	struct sockaddr_in addr;
 	int sk;
 	int reuseaddr = 1;
 	GIOChannel *server;
+	guint server_watch;
 
 	sk = socket(PF_INET, SOCK_STREAM, 0);
 	if (sk < 0)
-		return FALSE;
+		return 0;
 
 	memset(&addr, 0, sizeof(addr));
 
@@ -108,62 +155,77 @@ static gboolean create_tcp(short port, enum ofono_emulator_type type)
 				G_IO_IN | G_IO_HUP | G_IO_ERR | G_IO_NVAL,
 				on_socket_connected, GINT_TO_POINTER(type),
 				NULL);
-
 	g_io_channel_unref(server);
 
 	DBG("Created server_watch: %u", server_watch);
-
-	return TRUE;
+	return server_watch;
 
 err:
 	close(sk);
-	return FALSE;
+	return 0;
+}
+
+static void powered_watch_destroy(void *user)
+{
+	struct modem_info *info = user;
+
+	DBG("");
+
+	info->watch_id = 0;
 }
 
 static void powered_watch(struct ofono_modem *modem, gboolean powered,
 				void *user)
 {
+	DBG("powered: %d", powered);
+
 	if (powered == FALSE) {
-		DBG("Removing modem %p from the list", modem);
-		modems = g_list_remove(modems, modem);
+		n_powered -= 1;
 
-		if (modems == NULL && server_watch > 0) {
-			DBG("Removing server watch: %u", server_watch);
-			g_source_remove(server_watch);
-			server_watch = 0;
-		}
-	} else {
-		DBG("Adding modem %p to the list", modem);
-		modems = g_list_append(modems, modem);
+		if (n_powered)
+			return;
 
-		if (modems->next == NULL) {
-			create_tcp(DUN_PORT, OFONO_EMULATOR_TYPE_DUN);
-			create_tcp(HFP_PORT, OFONO_EMULATOR_TYPE_HFP);
-		}
+		g_source_remove(dun_watch);
+		dun_watch = 0;
+
+		g_source_remove(hfp_watch);
+		hfp_watch = 0;
+
+		return;
 	}
+
+	n_powered += 1;
+
+	if (!dun_watch)
+		dun_watch = create_tcp(DUN_PORT, OFONO_EMULATOR_TYPE_DUN);
+
+	if (!hfp_watch)
+		hfp_watch = create_tcp(HFP_PORT, OFONO_EMULATOR_TYPE_HFP);
 }
 
 static void modem_watch(struct ofono_modem *modem, gboolean added, void *user)
 {
+	struct modem_info *info;
+
 	DBG("modem: %p, added: %d", modem, added);
 
 	if (added == FALSE) {
-		DBG("Removing modem %p from the list", modem);
-		modems = g_list_remove(modems, modem);
+		info = l_queue_remove_if(modem_infos, modem_matches, modem);
+		DBG("Removing modem %p, info %p, from the list", modem, info);
+		modem_info_free(info);
 		return;
 	}
 
-	if (ofono_modem_get_powered(modem) == TRUE) {
-		DBG("Adding modem %p to the list", modem);
-		modems = g_list_append(modems, modem);
+	info = l_new(struct modem_info, 1);
+	info->modem = modem;
+	info->watch_id = __ofono_modem_add_powered_watch(modem, powered_watch,
+							info,
+							powered_watch_destroy);
 
-		if (modems->next == NULL) {
-			create_tcp(DUN_PORT, OFONO_EMULATOR_TYPE_DUN);
-			create_tcp(HFP_PORT, OFONO_EMULATOR_TYPE_HFP);
-		}
-	}
+	l_queue_push_tail(modem_infos, info);
 
-	__ofono_modem_add_powered_watch(modem, powered_watch, NULL, NULL);
+	if (ofono_modem_get_powered(modem) == TRUE)
+		powered_watch(modem, TRUE, NULL);
 }
 
 static void call_modemwatch(struct ofono_modem *modem, void *user)
@@ -175,6 +237,7 @@ static int example_emulator_init(void)
 {
 	DBG("");
 
+	modem_infos = l_queue_new();
 	modemwatch_id = __ofono_modemwatch_add(modem_watch, NULL, NULL);
 
 	__ofono_modem_foreach(call_modemwatch, NULL);
@@ -187,11 +250,13 @@ static void example_emulator_exit(void)
 	DBG("");
 
 	__ofono_modemwatch_remove(modemwatch_id);
+	l_queue_destroy(modem_infos, (l_queue_destroy_func_t) modem_info_free);
 
-	g_list_free(modems);
+	if (dun_watch)
+		g_source_remove(dun_watch);
 
-	if (server_watch)
-		g_source_remove(server_watch);
+	if (hfp_watch)
+		g_source_remove(hfp_watch);
 }
 
 OFONO_PLUGIN_DEFINE(example_emulator, "Example AT Modem Emulator Plugin",
