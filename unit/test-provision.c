@@ -57,6 +57,7 @@ struct provision_test {
 	const char *mcc;
 	const char *mnc;
 	const char *spn;
+	const char *tags;
 	int result;
 	size_t n_items;
 	const struct provision_db_entry *items;
@@ -114,12 +115,22 @@ static const struct provision_db_entry charlie_contexts[] = {
 	},
 };
 
-static const struct provision_db_entry xyz_contexts[] = {
+static const struct provision_db_entry xyz_lte_contexts[] = {
 	{
 		.type = OFONO_GPRS_CONTEXT_TYPE_INTERNET |
 			OFONO_GPRS_CONTEXT_TYPE_IA,
 		.proto = OFONO_GPRS_PROTO_IPV4V6,
 		.apn = "xyz",
+		.auth_method = OFONO_GPRS_AUTH_METHOD_CHAP,
+	}
+};
+
+static const struct provision_db_entry xyz_5g_contexts[] = {
+	{
+		.type = OFONO_GPRS_CONTEXT_TYPE_INTERNET |
+			OFONO_GPRS_CONTEXT_TYPE_IA,
+		.proto = OFONO_GPRS_PROTO_IPV4V6,
+		.apn = "xyz.5g",
 		.auth_method = OFONO_GPRS_AUTH_METHOD_CHAP,
 	}
 };
@@ -204,13 +215,25 @@ static const struct provision_test lookup_charlie = {
 };
 
 /* Successful lookup of XYZ (MVNO on Charlie) */
-static const struct provision_test lookup_xyz = {
+static const struct provision_test lookup_lte_xyz = {
 	.mcc = "999",
 	.mnc = "11",
 	.spn = "XYZ",
+	.tags = "lte,unused",
 	.result = 0,
-	.n_items = L_ARRAY_SIZE(xyz_contexts),
-	.items = xyz_contexts,
+	.n_items = L_ARRAY_SIZE(xyz_lte_contexts),
+	.items = xyz_lte_contexts,
+};
+
+/* Successful lookup of XYZ (MVNO on Charlie) */
+static const struct provision_test lookup_5g_xyz = {
+	.mcc = "999",
+	.mnc = "11",
+	.spn = "XYZ",
+	.tags = "5g",
+	.result = 0,
+	.n_items = L_ARRAY_SIZE(xyz_5g_contexts),
+	.items = xyz_5g_contexts,
 };
 
 /* No match with for an MCC/MNC present in the DB, but no wildcard entry */
@@ -224,11 +247,12 @@ static void provision_lookup(const void *data)
 {
 	const struct provision_test *test = data;
 	struct provision_db_entry *items;
+	_auto_(l_strv_free) char **tags = l_strsplit(test->tags, ',');
 	size_t n_items;
 	size_t i;
 	int r;
 
-	r = provision_db_lookup(pdb, test->mcc, test->mnc, test->spn, NULL,
+	r = provision_db_lookup(pdb, test->mcc, test->mnc, test->spn, tags,
 					&items, &n_items);
 	assert(r == test->result);
 
@@ -270,7 +294,8 @@ int main(int argc, char **argv)
 	l_test_add("Successful lookup (Alpha)", provision_lookup, &lookup_alpha);
 	l_test_add("Successful lookup (ZYX)", provision_lookup, &lookup_zyx);
 	l_test_add("Exact match (Charlie)", provision_lookup, &lookup_charlie);
-	l_test_add("Exact match (XYZ)", provision_lookup, &lookup_xyz);
+	l_test_add("Exact match (XYZ)", provision_lookup, &lookup_lte_xyz);
+	l_test_add("Exact match (XYZ 5G)", provision_lookup, &lookup_5g_xyz);
 	l_test_add("Exact math (no match)", provision_lookup, &lookup_no_match);
 
 	pdb = provision_db_new(UNITDIR "test-provision.db");

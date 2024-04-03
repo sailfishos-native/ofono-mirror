@@ -85,7 +85,15 @@
         "apn": "xyz",
         "type": [
           "internet", "ia"
-        ]
+        ],
+	"tags": "lte"
+      },
+      {
+        "apn": "xyz.5g",
+        "type": [
+          "internet", "ia"
+        ],
+	"tags": "5g"
       }
     ]
   }
