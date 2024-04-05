@@ -858,6 +858,7 @@ unit_tests = unit/test-common unit/test-util \
 				unit/test-simutil unit/test-stkutil \
 				unit/test-sms \
 				unit/test-mbim \
+				unit/test-qmimodem-qmi \
 				unit/test-rilmodem-cs \
 				unit/test-rilmodem-sms \
 				unit/test-rilmodem-cb \
@@ -952,6 +953,12 @@ unit_test_mbim_SOURCES = unit/test-mbim.c \
 			 drivers/mbimmodem/mbim.c
 unit_test_mbim_LDADD = $(ell_ldadd)
 unit_objects += $(unit_test_mbim_OBJECTS)
+
+unit_test_qmimodem_qmi_SOURCES = unit/test-qmimodem-qmi.c src/common.c \
+			src/util.c src/log.c \
+			drivers/qmimodem/qmi.c
+unit_test_qmimodem_qmi_LDADD = @GLIB_LIBS@ $(ell_ldadd)
+unit_objects += $(unit_test_qmimodem_qmi_OBJECTS)
 
 unit/test-provision.db: unit/test-provision.json
 	$(AM_V_GEN)$(srcdir)/tools/provisiontool generate \
