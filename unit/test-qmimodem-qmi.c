@@ -28,7 +28,14 @@ struct test_info {
 	struct qmi_device *device;
 	struct l_timeout *timeout;
 	struct l_queue *services;
-	bool discovery_callback_called : 1;
+
+	/* Data sent to our test service */
+	struct sockaddr_qrtr sender;
+	size_t received_len;
+	void *received;
+
+	bool discovery_callback_called		: 1;
+	bool service_send_callback_called	: 1;
 };
 
 static uint32_t unique_service_type(uint32_t index)
@@ -147,6 +154,7 @@ static void test_cleanup(struct test_info *info)
 {
 	int i;
 
+	l_free(info->received);
 	l_timeout_remove(info->timeout);
 	l_queue_destroy(info->services,
 				(l_queue_destroy_func_t) qmi_service_unref);
@@ -250,6 +258,161 @@ static void test_create_services(const void *data)
 	test_cleanup(info);
 }
 
+static bool received_data(struct l_io *io, void *user_data)
+{
+	struct test_info *info = user_data;
+	struct sockaddr_qrtr addr;
+	unsigned char buf[2048];
+	ssize_t bytes_read;
+	socklen_t addr_size;
+
+	addr_size = sizeof(addr);
+	bytes_read = recvfrom(l_io_get_fd(io), buf, sizeof(buf), 0,
+				(struct sockaddr *) &addr, &addr_size);
+	memcpy(&info->sender, &addr, sizeof(addr));
+
+	assert(!info->received); /* Only expect one message */
+	info->received_len = bytes_read;
+	info->received = l_memdup(buf, bytes_read);
+
+	return true;
+}
+
+#define TEST_TLV_TYPE		21	/* Its data value is 1 byte */
+#define TEST_DATA_VALUE		0x89
+
+static void send_test_data_cb(struct qmi_result *result, void *user_data)
+{
+	struct test_info *info = user_data;
+
+	uint8_t data;
+
+	assert(!qmi_result_set_error(result, NULL));
+	assert(qmi_result_get_uint8(result, TEST_TLV_TYPE, &data));
+	assert(data == TEST_DATA_VALUE);
+
+	info->service_send_callback_called = true;
+}
+
+/*
+ * We know exactly how the qmi data should be packed so we can hard code the
+ * structure layout to simplify the tests.
+ */
+
+#define TEST_REQ_MESSAGE_ID	42
+#define TEST_RESP_MESSAGE_ID	43
+#define QMI_HDR_SIZE		7
+
+struct qmi_test_service_request {
+	uint8_t  type;
+	uint16_t transaction;
+	uint16_t message;
+	uint16_t length;	/* Message size without header */
+	uint8_t  data_type;
+	uint16_t data_length;
+	uint8_t  data_value;
+} __attribute__ ((packed));
+
+struct qmi_test_service_response {
+	uint8_t  type;
+	uint16_t transaction;
+	uint16_t message;
+	uint16_t length;	/* Message size without header */
+	uint8_t  error_type;
+	uint16_t error_length;
+	uint16_t error_result;
+	uint16_t error_error;
+	uint8_t  data_type;
+	uint16_t data_length;
+	uint8_t  data_value;
+} __attribute__ ((packed));
+
+static void send_request_via_qmi(struct test_info *info,
+						struct qmi_service *service)
+{
+	struct qmi_param *param;
+
+	param = qmi_param_new();
+	qmi_param_append_uint8(param, TEST_TLV_TYPE, TEST_DATA_VALUE);
+	assert(qmi_service_send(service, TEST_REQ_MESSAGE_ID, param,
+					send_test_data_cb, info, NULL));
+
+	while (!info->received)
+		l_main_iterate(-1);
+}
+
+static void send_response_via_socket(struct test_info *info, struct l_io *io)
+{
+	const struct qmi_test_service_request *request;
+	struct qmi_test_service_response response;
+
+	/* First validate that the qrtr code sent the qmi request properly. */
+	assert(info->received_len == sizeof(*request));
+	request = info->received;
+	assert(request->type == 0x00);
+	assert(request->message == L_CPU_TO_LE16(TEST_REQ_MESSAGE_ID));
+	assert(request->length == L_CPU_TO_LE16(
+					sizeof(*request) - QMI_HDR_SIZE));
+	assert(request->data_type == TEST_TLV_TYPE);
+	assert(request->data_length == L_CPU_TO_LE16(1));
+	assert(request->data_value == TEST_DATA_VALUE);
+
+	/*
+	 * Now echo it back to the qrtr client. The qmi_service send callback
+	 * will validate that the client processed this response correctly.
+	 */
+	memset(&response, 0, sizeof(response));
+	response.type = 0x02;
+	response.transaction = request->transaction;
+	response.message = L_CPU_TO_LE16(TEST_RESP_MESSAGE_ID);
+	response.length = L_CPU_TO_LE16(sizeof(response) - QMI_HDR_SIZE);
+	response.error_type = 2;
+	response.error_length = L_CPU_TO_LE16(4);
+	response.data_type = request->data_type;
+	response.data_length = request->data_length;
+	response.data_value = request->data_value;
+
+	sendto(l_io_get_fd(io), &response, sizeof(response), 0,
+					(struct sockaddr *) &info->sender,
+					sizeof(info->sender));
+
+	while (!info->service_send_callback_called)
+		l_main_iterate(-1);
+}
+
+/*
+ * Initiates a send of the TLV data payload to the test service. The test
+ * service will respond with the same data payload.
+ */
+static void test_send_data(const void *data)
+{
+	struct test_info *info = test_setup();
+	struct l_io *io;
+	uint32_t service_type;
+	struct qmi_service *service;
+
+	perform_discovery(info);
+
+	service_type = unique_service_type(0); /* Use the first service */
+	assert(qmi_service_create(info->device, service_type,
+					create_service_cb, info, NULL));
+	perform_all_pending_work();
+	service = l_queue_pop_head(info->services);
+	assert(service);
+
+	io = l_io_new(info->service_fds[0]);
+	assert(io);
+	l_io_set_read_handler(io, received_data, info, NULL);
+
+	send_request_via_qmi(info, service);
+	send_response_via_socket(info, io);
+
+	l_io_destroy(io);
+	qmi_service_unref(service);
+
+	test_cleanup(info);
+}
+
 static void exit_if_qrtr_not_supported(void)
 {
 	int fd;
@@ -278,6 +441,7 @@ int main(int argc, char **argv)
 	l_test_add("QRTR device creation", test_create_qrtr_device, NULL);
 	l_test_add("QRTR discovery", test_discovery, NULL);
 	l_test_add("QRTR services may be created", test_create_services, NULL);
+	l_test_add("QRTR service sends/responses", test_send_data, NULL);
 	result = l_test_run();
 
 	__ofono_log_cleanup();
