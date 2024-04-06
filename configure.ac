@@ -233,19 +233,8 @@ AC_ARG_ENABLE(mbimmodem, AS_HELP_STRING([--disable-mbimmodem],
 AM_CONDITIONAL(MBIMMODEM, test "${enable_mbimmodem}" != "no")
 
 AC_ARG_ENABLE(bluetooth, AS_HELP_STRING([--disable-bluetooth],
-				[disable BlueZ 4 and BlueZ 5 plugins support]),
+				[disable BlueZ 5 plugins support]),
 					[enable_bluetooth=${enableval}])
-
-AC_ARG_ENABLE(bluez4, AS_HELP_STRING([--enable-bluez4],
-				[enable BlueZ 4 plugins support prior to BlueZ 5]),
-					[enable_bluez4=${enableval}])
-
-if (test "${enable_bluez4}" = "yes"); then
-	PKG_CHECK_MODULES(BLUEZ, bluez >= 4.99 bluez < 5, dummy=yes,
-			  AC_MSG_ERROR(Bluetooth library >= 4.99 and < 5 is required))
-	AC_SUBST(BLUEZ_CFLAGS)
-	AC_SUBST(BLUEZ_LIBS)
-fi
 
 AM_CONDITIONAL(BLUETOOTH, test "${enable_bluetooth}" != "no")
 
