@@ -247,7 +247,6 @@ if (test "${enable_bluez4}" = "yes"); then
 	AC_SUBST(BLUEZ_LIBS)
 fi
 
-AM_CONDITIONAL(BLUEZ4, test "${enable_bluetooth}" != "no" && test "${enable_bluez4}" = "yes")
 AM_CONDITIONAL(BLUETOOTH, test "${enable_bluetooth}" != "no")
 
 AC_ARG_ENABLE(upower, AS_HELP_STRING([--disable-upower],

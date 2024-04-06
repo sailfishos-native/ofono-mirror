@@ -262,8 +262,6 @@ gril_sources = gril/gril.h gril/gril.c \
 				gril/parcel.c gril/parcel.h \
 				gril/ril_constants.h
 
-btio_sources = btio/btio.h btio/btio.c
-
 if UDEV
 builtin_cflags += @UDEV_CFLAGS@
 builtin_libadd += @UDEV_LIBS@
@@ -577,16 +575,6 @@ builtin_modules += connman
 builtin_sources += plugins/connman.c
 
 if BLUETOOTH
-if BLUEZ4
-builtin_modules += sap
-builtin_sources += plugins/sap.c plugins/bluez4.h
-
-builtin_modules += hfp_bluez4
-builtin_sources += plugins/hfp_hf_bluez4.c plugins/bluez4.h
-
-builtin_modules += dun_gw_bluez4
-builtin_sources += plugins/dun_gw_bluez4.c plugins/bluez4.h
-else
 builtin_modules += hfp_bluez5
 builtin_sources += plugins/hfp_hf_bluez5.c plugins/bluez5.h
 
@@ -594,26 +582,13 @@ builtin_modules += dun_gw_bluez5
 builtin_sources += plugins/dun_gw_bluez5.c plugins/bluez5.h
 endif
 endif
-endif
 
 if BLUETOOTH
-if BLUEZ4
-builtin_modules += bluez4
-builtin_sources += plugins/bluez4.c plugins/bluez4.h
-
-builtin_modules += hfp_ag_bluez4
-builtin_sources += plugins/hfp_ag_bluez4.c plugins/bluez4.h
-
-builtin_sources += $(btio_sources)
-builtin_cflags += @BLUEZ_CFLAGS@
-builtin_libadd += @BLUEZ_LIBS@
-else
 builtin_modules += bluez5
 builtin_sources += plugins/bluez5.c plugins/bluez5.h
 
 builtin_modules += hfp_ag_bluez5
 builtin_sources += plugins/hfp_ag_bluez5.c plugins/bluez5.h
-endif
 
 if UPOWER
 builtin_modules += upower
@@ -709,7 +684,7 @@ AM_CFLAGS = @DBUS_CFLAGS@ @GLIB_CFLAGS@ $(ell_cflags) $(builtin_cflags) \
 
 AM_CPPFLAGS = -I$(builddir)/include -I$(builddir)/src -I$(srcdir)/src \
 			-I$(srcdir)/gdbus -I$(srcdir)/gisi -I$(srcdir)/gatchat \
-			-I$(srcdir)/btio -I$(srcdir)/gril
+			-I$(srcdir)/gril
 
 doc_files = doc/overview.txt doc/ofono-paper.txt doc/release-faq.txt \
 		doc/manager-api.txt doc/modem-api.txt doc/network-api.txt \
@@ -1022,13 +997,8 @@ systemdunit_DATA += dundee/dundee.service
 endif
 endif
 
-if BLUEZ4
-dundee_dundee_SOURCES = $(dundee_common_sources) $(btio_sources) \
-			plugins/bluez4.c dundee/bluez4.c
-else
 dundee_dundee_SOURCES = $(dundee_common_sources) plugins/bluez5.c \
 			dundee/bluez5.c
-endif
 endif
 endif
 
