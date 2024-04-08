@@ -53,10 +53,73 @@
 
 #define HFP_AG_DRIVER		"hfp-ag-driver"
 
-static guint modemwatch_id;
-static GList *modems;
-static GHashTable *sim_hash = NULL;
+static unsigned int modemwatch_id;
+struct l_queue *modem_infos;
 static GHashTable *connection_hash;
+static bool profile_registered;
+
+struct modem_info {
+	struct ofono_modem *modem;
+	unsigned int sim_watch;
+	unsigned int voicecall_watch;
+	unsigned int sim_state_watch;
+	struct ofono_sim *sim;
+};
+
+static void modem_info_free(struct modem_info *info)
+{
+	if (!info)
+		return;
+
+	if (info->sim_state_watch)
+		ofono_sim_remove_state_watch(info->sim, info->sim_state_watch);
+
+	if (info->voicecall_watch)
+		__ofono_modem_remove_atom_watch(info->modem,
+							info->voicecall_watch);
+
+	if (info->sim_watch)
+		__ofono_modem_remove_atom_watch(info->modem, info->sim_watch);
+
+	l_free(info);
+}
+
+static bool modem_matches(const void *data, const void *user_data)
+{
+	const struct modem_info *info = data;
+
+	return info->modem == user_data;
+}
+
+static unsigned int num_active(struct ofono_modem **first_active)
+{
+	const struct l_queue_entry *entry;
+	unsigned int n_active = 0;
+
+	for (entry = l_queue_get_entries(modem_infos);
+						entry; entry = entry->next) {
+		struct modem_info *info = entry->data;
+
+		if (!info->sim)
+			continue;
+
+		if (ofono_sim_get_state(info->sim) != OFONO_SIM_STATE_READY)
+			continue;
+
+		if (!__ofono_modem_find_atom(info->modem,
+						OFONO_ATOM_TYPE_VOICECALL))
+			continue;
+
+		n_active += 1;
+
+		if (first_active) {
+			*first_active = info->modem;
+			first_active = NULL;
+		}
+	}
+
+	return n_active;
+}
 
 static int hfp_card_probe(struct ofono_handsfree_card *card,
 					unsigned int vendor, void *data)
@@ -200,14 +263,12 @@ static DBusMessage *profile_new_connection(DBusConnection *conn,
 	}
 
 	/* Pick the first voicecall capable modem */
-	if (modems == NULL) {
+	if (!num_active(&modem)) {
 		close(fd);
 		return g_dbus_create_error(msg, BLUEZ_ERROR_INTERFACE
 						".Rejected",
 						"No voice call capable modem");
 	}
-
-	modem = modems->data;
 
 	DBG("Picked modem %p for emulator", modem);
 
@@ -341,114 +402,107 @@ static const GDBusMethodTable profile_methods[] = {
 	{ }
 };
 
-static void sim_state_watch(enum ofono_sim_state new_state, void *data)
+static void update_profile_registration(void)
 {
-	struct ofono_modem *modem = data;
 	DBusConnection *conn = ofono_dbus_get_connection();
+	unsigned int n_active = num_active(NULL);
 
-	if (new_state != OFONO_SIM_STATE_READY) {
-		if (modems == NULL)
-			return;
-
-		modems = g_list_remove(modems, modem);
-		if (modems != NULL)
-			return;
-
+	if (!n_active && profile_registered) {
+		DBG("Unregistering HFP AG profile");
 		bt_unregister_profile(conn, HFP_AG_EXT_PROFILE_PATH);
-
-		return;
-	}
-
-	if (__ofono_modem_find_atom(modem, OFONO_ATOM_TYPE_VOICECALL) == NULL)
-		return;
-
-	modems = g_list_append(modems, modem);
-
-	if (modems->next != NULL)
-		return;
-
-	bt_register_profile(conn, HFP_AG_UUID, HFP_VERSION_1_7, "hfp_ag",
+		profile_registered = false;
+	} else if (n_active == 1 && !profile_registered) {
+		DBG("Registering HFP AG profile");
+		bt_register_profile(conn, HFP_AG_UUID, HFP_VERSION_1_7, "hfp_ag",
 					HFP_AG_EXT_PROFILE_PATH, NULL, 0);
+		profile_registered = true;
+	}
 }
 
-static gboolean sim_watch_remove(gpointer key, gpointer value,
-				gpointer user_data)
+static void sim_state_watch_destroy(void *data)
 {
-	struct ofono_sim *sim = key;
+	struct modem_info *info = data;
 
-	ofono_sim_remove_state_watch(sim, GPOINTER_TO_UINT(value));
+	info->sim_state_watch = 0;
+	info->sim = NULL;
+}
 
-	return TRUE;
+static void sim_state_watch(enum ofono_sim_state new_state, void *data)
+{
+	update_profile_registration();
+}
+
+static void sim_watch_destroy(void *data)
+{
+	struct modem_info *info = data;
+
+	info->sim_watch = 0;
 }
 
 static void sim_watch(struct ofono_atom *atom,
 				enum ofono_atom_watch_condition cond,
 				void *data)
 {
+	struct modem_info *info = data;
 	struct ofono_sim *sim = __ofono_atom_get_data(atom);
-	struct ofono_modem *modem = data;
-	int watch;
+
+	DBG("");
 
 	if (cond == OFONO_ATOM_WATCH_CONDITION_UNREGISTERED) {
-		sim_state_watch(OFONO_SIM_STATE_NOT_PRESENT, modem);
-
-		sim_watch_remove(sim, g_hash_table_lookup(sim_hash, sim), NULL);
-		g_hash_table_remove(sim_hash, sim);
-
+		sim_state_watch(OFONO_SIM_STATE_NOT_PRESENT, info);
+		info->sim = NULL;
 		return;
 	}
 
-	watch = ofono_sim_add_state_watch(sim, sim_state_watch, modem, NULL);
-	g_hash_table_insert(sim_hash, sim, GUINT_TO_POINTER(watch));
-	sim_state_watch(ofono_sim_get_state(sim), modem);
+	info->sim = sim;
+	info->sim_state_watch =
+		ofono_sim_add_state_watch(sim, sim_state_watch, info,
+						sim_state_watch_destroy);
+	sim_state_watch(ofono_sim_get_state(sim), info);
+}
+
+static void voicecall_watch_destroy(void *user)
+{
+	struct modem_info *info = user;
+
+	info->voicecall_watch = 0;
 }
 
 static void voicecall_watch(struct ofono_atom *atom,
 				enum ofono_atom_watch_condition cond,
 				void *data)
 {
-	struct ofono_atom *sim_atom;
-	struct ofono_sim *sim;
-	struct ofono_modem *modem;
-	DBusConnection *conn = ofono_dbus_get_connection();
-
-	if (cond == OFONO_ATOM_WATCH_CONDITION_UNREGISTERED)
-		return;
-
-	/*
-	 * This logic is only intended to handle voicecall atoms
-	 * registered in post_sim state or later
-	 */
-	modem = __ofono_atom_get_modem(atom);
-
-	sim_atom = __ofono_modem_find_atom(modem, OFONO_ATOM_TYPE_SIM);
-	if (sim_atom == NULL)
-		return;
-
-	sim = __ofono_atom_get_data(sim_atom);
-	if (ofono_sim_get_state(sim) != OFONO_SIM_STATE_READY)
-		return;
-
-	modems = g_list_append(modems, modem);
-
-	if (modems->next != NULL)
-		return;
-
-	bt_register_profile(conn, HFP_AG_UUID, HFP_VERSION_1_7, "hfp_ag",
-					HFP_AG_EXT_PROFILE_PATH, NULL, 0);
+	DBG("");
+	update_profile_registration();
 }
 
 static void modem_watch(struct ofono_modem *modem, gboolean added, void *user)
 {
+	struct modem_info *info;
+
 	DBG("modem: %p, added: %d", modem, added);
 
-	if (added == FALSE)
+	if (added == FALSE) {
+		info = l_queue_remove_if(modem_infos, modem_matches, modem);
+		DBG("Removing modem %p, info: %p", modem, info);
+		modem_info_free(info);
 		return;
+	}
 
-	__ofono_modem_add_atom_watch(modem, OFONO_ATOM_TYPE_SIM,
-					sim_watch, modem, NULL);
-	__ofono_modem_add_atom_watch(modem, OFONO_ATOM_TYPE_VOICECALL,
-					voicecall_watch, modem, NULL);
+	info = l_new(struct modem_info, 1);
+	info->modem = modem;
+
+	info->sim_watch =
+		__ofono_modem_add_atom_watch(modem, OFONO_ATOM_TYPE_SIM,
+						sim_watch, info,
+						sim_watch_destroy);
+	info->voicecall_watch =
+		__ofono_modem_add_atom_watch(modem, OFONO_ATOM_TYPE_VOICECALL,
+						voicecall_watch, info,
+						voicecall_watch_destroy);
+
+	DBG("Adding modem %p, info: %p", modem, info);
+	l_queue_push_tail(modem_infos, info);
 }
 
 static void call_modemwatch(struct ofono_modem *modem, void *user)
@@ -460,6 +514,8 @@ static int hfp_ag_init(void)
 {
 	DBusConnection *conn = ofono_dbus_get_connection();
 	int err;
+
+	DBG("");
 
 	if (DBUS_TYPE_UNIX_FD < 0)
 		return -EBADF;
@@ -481,7 +537,7 @@ static int hfp_ag_init(void)
 		return err;
 	}
 
-	sim_hash = g_hash_table_new(g_direct_hash, g_direct_equal);
+	modem_infos = l_queue_new();
 
 	modemwatch_id = __ofono_modemwatch_add(modem_watch, NULL, NULL);
 	__ofono_modem_foreach(call_modemwatch, NULL);
@@ -498,6 +554,8 @@ static void hfp_ag_exit(void)
 {
 	DBusConnection *conn = ofono_dbus_get_connection();
 
+	DBG("");
+
 	__ofono_modemwatch_remove(modemwatch_id);
 	g_dbus_unregister_interface(conn, HFP_AG_EXT_PROFILE_PATH,
 						BLUEZ_PROFILE_INTERFACE);
@@ -506,9 +564,7 @@ static void hfp_ag_exit(void)
 
 	g_hash_table_destroy(connection_hash);
 
-	g_list_free(modems);
-	g_hash_table_foreach_remove(sim_hash, sim_watch_remove, NULL);
-	g_hash_table_destroy(sim_hash);
+	l_queue_destroy(modem_infos, (l_queue_destroy_func_t) modem_info_free);
 
 	ofono_handsfree_audio_unref();
 }
