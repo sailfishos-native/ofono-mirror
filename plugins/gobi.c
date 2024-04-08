@@ -420,16 +420,27 @@ static void discover_cb(void *user_data)
 static int gobi_enable(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
-	const char *device;
+	const char *kernel_driver;
 	int r;
 
 	DBG("%p", modem);
 
-	device = ofono_modem_get_string(modem, "Device");
-	if (!device)
+	kernel_driver = ofono_modem_get_string(modem, "KernelDriver");
+	if (!kernel_driver)
 		return -EINVAL;
 
-	data->device = qmi_device_new_qmux(device);
+	if (!strcmp(kernel_driver, "qrtr"))
+		data->device = qmi_device_new_qrtr();
+	else {
+		const char *device;
+
+		device = ofono_modem_get_string(modem, "Device");
+		if (!device)
+			return -EINVAL;
+
+		data->device = qmi_device_new_qmux(device);
+	}
+
 	if (!data->device)
 		return -EIO;
 
