@@ -269,6 +269,11 @@ static bool received_data(struct l_io *io, void *user_data)
 	addr_size = sizeof(addr);
 	bytes_read = recvfrom(l_io_get_fd(io), buf, sizeof(buf), 0,
 				(struct sockaddr *) &addr, &addr_size);
+
+	/* Ignore control messages */
+	if (addr.sq_port == QRTR_PORT_CTRL)
+		return true;
+
 	memcpy(&info->sender, &addr, sizeof(addr));
 
 	assert(!info->received); /* Only expect one message */
