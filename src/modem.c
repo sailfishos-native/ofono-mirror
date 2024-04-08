@@ -480,13 +480,6 @@ static void flush_atoms(struct ofono_modem *modem, enum modem_state new_state)
 			continue;
 		}
 
-		__ofono_atom_unregister(atom);
-
-		if (atom->destruct)
-			atom->destruct(atom);
-
-		g_free(atom);
-
 		if (prev)
 			prev->next = cur->next;
 		else
@@ -495,6 +488,13 @@ static void flush_atoms(struct ofono_modem *modem, enum modem_state new_state)
 		tmp = cur;
 		cur = cur->next;
 		g_slist_free_1(tmp);
+
+		__ofono_atom_unregister(atom);
+
+		if (atom->destruct)
+			atom->destruct(atom);
+
+		g_free(atom);
 	}
 }
 
