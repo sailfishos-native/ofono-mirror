@@ -37,6 +37,8 @@ mounts_common = [
     MountInfo('sysfs', 'sysfs', '/sys', '', MS_NOSUID|MS_NOEXEC|MS_NODEV),
     MountInfo('proc', 'proc', '/proc', '', MS_NOSUID|MS_NOEXEC|MS_NODEV),
     MountInfo('devpts', 'devpts', '/dev/pts', 'mode=0620', MS_NOSUID|MS_NOEXEC),
+    MountInfo('cgroup2', 'cgroup2', '/sys/fs/cgroup', '',
+              MS_NOSUID|MS_NODEV|MS_NOEXEC|MS_STRICTATIME),
     MountInfo('tmpfs', 'tmpfs', '/dev/shm', 'mode=1777',
               MS_NOSUID|MS_NODEV|MS_STRICTATIME),
     MountInfo('tmpfs', 'tmpfs', '/run', 'mode=0755',
@@ -74,6 +76,7 @@ busconfig.dtd\">
 <busconfig>
 <type>system</type>
 <limit name=\"reply_timeout\">2147483647</limit>
+<auth>EXTERNAL</auth>
 <auth>ANONYMOUS</auth>
 <allow_anonymous/>
 <policy context=\"default\">
@@ -151,6 +154,9 @@ class Init:
             sys.stdout = open(os.devnull, 'w')
 
         fcntl.ioctl(STDIN_FILENO, TIOCSTTY, 1)
+
+        with open('/etc/passwd', 'w+') as f:
+            f.write(f'root:x:0:0::/root:/bin/bash')
 
         os.system('ip link set dev lo up')
 
