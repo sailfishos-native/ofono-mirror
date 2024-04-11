@@ -63,6 +63,13 @@ struct qmi_wds_notify_conn_status {
 #define QMI_WDS_PDP_TYPE_IPV6			0x02
 #define QMI_WDS_PDP_TYPE_IPV4V6			0x03
 
+enum qmi_wds_ip_family {
+	QMI_WDS_IP_FAMILY_UNKNOWN = 0,
+	QMI_WDS_IP_FAMILY_IPV4 = 4,
+	QMI_WDS_IP_FAMILY_IPV6 = 6,
+	QMI_WDS_IP_FAMILY_UNSPECIFIED = 8,
+};
+
 enum qmi_wds_client_type {
 	QMI_WDS_CLIENT_TYPE_TETHERED = 0x01,
 };

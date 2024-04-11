@@ -247,10 +247,10 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 
 	switch (ctx->proto) {
 	case OFONO_GPRS_PROTO_IP:
-		ip_family = 4;
+		ip_family = QMI_WDS_IP_FAMILY_IPV4;
 		break;
 	case OFONO_GPRS_PROTO_IPV6:
-		ip_family = 6;
+		ip_family = QMI_WDS_IP_FAMILY_IPV6;
 		break;
 	default:
 		goto error;
