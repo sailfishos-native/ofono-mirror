@@ -166,17 +166,12 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 
 	data->pkt_handle = handle;
 
-	/* Duplicate cbd, the old one will be freed when this method returns */
-	cbd = cb_data_new(cb, cbd->data);
-	cbd->user = gc;
 
 	if (qmi_service_send(data->wds, QMI_WDS_GET_CURRENT_SETTINGS, NULL,
-					get_settings_cb, cbd, l_free) > 0)
+				get_settings_cb, cbd, cb_data_unref) > 0) {
+		cb_data_ref(cbd);
 		return;
-
-	CALLBACK_WITH_SUCCESS(cb, cbd->data);
-
-	return;
+	}
 
 error:
 	data->active_context = 0;
@@ -205,7 +200,7 @@ static void qmi_gprs_read_settings(struct ofono_gprs_context* gc,
 	cbd->user = gc;
 
 	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, NULL,
-					start_net_cb, cbd, l_free) > 0)
+					start_net_cb, cbd, cb_data_unref) > 0)
 		return;
 
 	data->active_context = 0;
@@ -277,7 +272,7 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 					strlen(ctx->password), ctx->password);
 
 	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, param,
-					start_net_cb, cbd, l_free) > 0)
+					start_net_cb, cbd, cb_data_unref) > 0)
 		return;
 
 	qmi_param_free(param);
