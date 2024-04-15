@@ -64,7 +64,7 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 		DBG("ip family %d", ip_family);
 
 	switch (status->status) {
-	case QMI_WDS_CONN_STATUS_DISCONNECTED:
+	case QMI_WDS_CONNECTION_STATUS_DISCONNECTED:
 		if (data->pkt_handle) {
 			/* The context has been disconnected by the network */
 			ofono_gprs_context_deactivated(gc, data->active_context);
