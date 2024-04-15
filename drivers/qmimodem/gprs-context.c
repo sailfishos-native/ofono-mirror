@@ -159,11 +159,14 @@ done:
 static void start_net_cb(struct qmi_result *result, void *user_data)
 {
 	static const uint8_t RESULT_PACKET_HANDLE = 0x01;
+	static const uint8_t PARAM_REQUESTED_SETTINGS = 0x10;
 	struct cb_data *cbd = user_data;
 	ofono_gprs_context_cb_t cb = cbd->cb;
 	struct ofono_gprs_context *gc = cbd->user;
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
 	uint32_t handle;
+	uint32_t requested_settings = 0;
+	struct qmi_param *param;
 
 	DBG("");
 
@@ -177,12 +180,27 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 
 	data->pkt_handle = handle;
 
+	/*
+	 * Explicitly request certain information to be provided.  The requested
+	 * settings is a bit field, with each bit representing whether the
+	 * TLV is included in the GET_CURRENT_SETTINGS response.  We request the
+	 * following settings:
+	 * 2 - PDP Type, 3 - APN Name, 4 - DNS, 5 - Granted QOS,
+	 * 6 - Username, 7 - Auth Proto
+	 * 8 - IP Address, 9 - Gateway, 13 - MTU, 14 - DNS List,
+	 * 15 - IP Family, 17 - Extended Technology
+	 */
+	L_BITS_SET(&requested_settings, 2, 3, 4, 5, 6, 7, 8, 9, 13, 14, 15, 17);
+	param = qmi_param_new_uint32(PARAM_REQUESTED_SETTINGS,
+						requested_settings);
 
 	if (qmi_service_send(data->wds, QMI_WDS_GET_CURRENT_SETTINGS, NULL,
 				get_settings_cb, cbd, cb_data_unref) > 0) {
 		cb_data_ref(cbd);
 		return;
 	}
+
+	qmi_param_free(param);
 
 error:
 	data->active_context = 0;
