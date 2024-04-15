@@ -30,33 +30,16 @@
 #define QMI_WDS_AUTHENTICATION_PAP		0x1
 #define QMI_WDS_AUTHENTICATION_CHAP		0x2
 
-#define QMI_WDS_RESULT_PKT_HANDLE		0x01	/* uint32 */
-
-/* Stop WDS network interface */
-#define QMI_WDS_PARAM_PKT_HANDLE		0x01	/* uint32 */
-
 /* Packet data connection status indication */
-#define QMI_WDS_NOTIFY_CONN_STATUS		0x01
 struct qmi_wds_notify_conn_status {
 	uint8_t status;
 	uint8_t reconf;
 } __attribute__((__packed__));
-#define QMI_WDS_NOTIFY_IP_FAMILY		0x12	/* uint8 */
 
 #define QMI_WDS_CONN_STATUS_DISCONNECTED	0x01
 #define QMI_WDS_CONN_STATUS_CONNECTED		0x02
 #define QMI_WDS_CONN_STATUS_SUSPENDED		0x03
 #define QMI_WDS_CONN_STATUS_AUTHENTICATING	0x04
-
-/* Get the runtime data session settings */
-#define QMI_WDS_RESULT_PDP_TYPE			0x11	/* uint8 */
-#define QMI_WDS_RESULT_APN			0x14	/* string */
-#define QMI_WDS_RESULT_PRIMARY_DNS		0x15	/* uint32 IPv4 */
-#define QMI_WDS_RESULT_SECONDARY_DNS		0x16	/* uint32 IPv4 */
-#define QMI_WDS_RESULT_IP_ADDRESS		0x1e	/* uint32 IPv4 */
-#define QMI_WDS_RESULT_GATEWAY			0x20	/* uint32 IPv4 */
-#define QMI_WDS_RESULT_GATEWAY_NETMASK		0x21	/* uint32 IPv4 */
-#define QMI_WDS_RESULT_IP_FAMILY		0x2b	/* uint8 */
 
 #define QMI_WDS_PDP_TYPE_IPV4			0x00
 #define QMI_WDS_PDP_TYPE_PPP			0x01

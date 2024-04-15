@@ -44,6 +44,8 @@ struct gprs_context_data {
 
 static void pkt_status_notify(struct qmi_result *result, void *user_data)
 {
+	static const uint8_t RESULT_CONN_STATUS = 0x01;
+	static const uint8_t RESULT_IP_FAMILY = 0x12;
 	struct ofono_gprs_context *gc = user_data;
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
 	const struct qmi_wds_notify_conn_status *status;
@@ -52,13 +54,13 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 
 	DBG("");
 
-	status = qmi_result_get(result, QMI_WDS_NOTIFY_CONN_STATUS, &len);
+	status = qmi_result_get(result, RESULT_CONN_STATUS, &len);
 	if (!status)
 		return;
 
 	DBG("conn status %d", status->status);
 
-	if (qmi_result_get_uint8(result, QMI_WDS_NOTIFY_IP_FAMILY, &ip_family))
+	if (qmi_result_get_uint8(result, RESULT_IP_FAMILY, &ip_family))
 		DBG("ip family %d", ip_family);
 
 	switch (status->status) {
@@ -75,6 +77,14 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 
 static void get_settings_cb(struct qmi_result *result, void *user_data)
 {
+	static const uint8_t RESULT_PDP_TYPE = 0x11;	/* uint8 */
+	static const uint8_t RESULT_APN = 0x14;		/* string */
+	static const uint8_t RESULT_PRIMARY_DNS = 0x15;
+	static const uint8_t RESULT_SECONDARY_DNS = 0x16;
+	static const uint8_t RESULT_IP_ADDRESS = 0x1e;
+	static const uint8_t RESULT_GATEWAY = 0x20;
+	static const uint8_t RESULT_GATEWAY_NETMASK = 0x21;
+	static const uint8_t RESULT_IP_FAMILY = 0x2b;	/* uint8 */
 	struct cb_data *cbd = user_data;
 	ofono_gprs_context_cb_t cb = cbd->cb;
 	struct ofono_gprs_context *gc = cbd->user;
@@ -91,49 +101,46 @@ static void get_settings_cb(struct qmi_result *result, void *user_data)
 	if (qmi_result_set_error(result, NULL))
 		goto done;
 
-	apn = qmi_result_get_string(result, QMI_WDS_RESULT_APN);
+	apn = qmi_result_get_string(result, RESULT_APN);
 	if (apn) {
 		DBG("APN: %s", apn);
 		l_free(apn);
 	}
 
-	if (qmi_result_get_uint8(result, QMI_WDS_RESULT_PDP_TYPE, &pdp_type))
+	if (qmi_result_get_uint8(result, RESULT_PDP_TYPE, &pdp_type))
 		DBG("PDP type %d", pdp_type);
 
-	if (qmi_result_get_uint8(result, QMI_WDS_RESULT_IP_FAMILY, &ip_family))
+	if (qmi_result_get_uint8(result, RESULT_IP_FAMILY, &ip_family))
 		DBG("IP family %d", ip_family);
 
-	if (qmi_result_get_uint32(result,QMI_WDS_RESULT_IP_ADDRESS, &ip_addr)) {
+	if (qmi_result_get_uint32(result, RESULT_IP_ADDRESS, &ip_addr)) {
 		addr.s_addr = htonl(ip_addr);
 		straddr = inet_ntoa(addr);
 		DBG("IP addr: %s", straddr);
 		ofono_gprs_context_set_ipv4_address(gc, straddr, 1);
 	}
 
-	if (qmi_result_get_uint32(result,QMI_WDS_RESULT_GATEWAY, &ip_addr)) {
+	if (qmi_result_get_uint32(result, RESULT_GATEWAY, &ip_addr)) {
 		addr.s_addr = htonl(ip_addr);
 		straddr = inet_ntoa(addr);
 		DBG("Gateway: %s", straddr);
 		ofono_gprs_context_set_ipv4_gateway(gc, straddr);
 	}
 
-	if (qmi_result_get_uint32(result,
-				QMI_WDS_RESULT_GATEWAY_NETMASK, &ip_addr)) {
+	if (qmi_result_get_uint32(result, RESULT_GATEWAY_NETMASK, &ip_addr)) {
 		addr.s_addr = htonl(ip_addr);
 		straddr = inet_ntoa(addr);
 		DBG("Gateway netmask: %s", straddr);
 		ofono_gprs_context_set_ipv4_netmask(gc, straddr);
 	}
 
-	if (qmi_result_get_uint32(result,
-				QMI_WDS_RESULT_PRIMARY_DNS, &ip_addr)) {
+	if (qmi_result_get_uint32(result, RESULT_PRIMARY_DNS, &ip_addr)) {
 		addr.s_addr = htonl(ip_addr);
 		dns[0] = inet_ntop(AF_INET, &addr, dns_buf[0], sizeof(dns_buf[0]));
 		DBG("Primary DNS: %s", dns[0]);
 	}
 
-	if (qmi_result_get_uint32(result,
-				QMI_WDS_RESULT_SECONDARY_DNS, &ip_addr)) {
+	if (qmi_result_get_uint32(result, RESULT_SECONDARY_DNS, &ip_addr)) {
 		addr.s_addr = htonl(ip_addr);
 		dns[1] = inet_ntop(AF_INET, &addr, dns_buf[1], sizeof(dns_buf[1]));
 		DBG("Secondary DNS: %s", dns[1]);
@@ -148,6 +155,7 @@ done:
 
 static void start_net_cb(struct qmi_result *result, void *user_data)
 {
+	static const uint8_t RESULT_PACKET_HANDLE = 0x01;
 	struct cb_data *cbd = user_data;
 	ofono_gprs_context_cb_t cb = cbd->cb;
 	struct ofono_gprs_context *gc = cbd->user;
@@ -159,7 +167,7 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 	if (qmi_result_set_error(result, NULL))
 		goto error;
 
-	if (!qmi_result_get_uint32(result, QMI_WDS_RESULT_PKT_HANDLE, &handle))
+	if (!qmi_result_get_uint32(result, RESULT_PACKET_HANDLE, &handle))
 		goto error;
 
 	DBG("packet handle %d", handle);
@@ -314,6 +322,7 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 				unsigned int cid,
 				ofono_gprs_context_cb_t cb, void *user_data)
 {
+	static const uint8_t PARAM_PACKET_HANDLE = 0x01;
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
 	struct cb_data *cbd = cb_data_new(cb, user_data);
 	struct qmi_param *param;
@@ -322,8 +331,7 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 
 	cbd->user = gc;
 
-	param = qmi_param_new_uint32(QMI_WDS_PARAM_PKT_HANDLE,
-						data->pkt_handle);
+	param = qmi_param_new_uint32(PARAM_PACKET_HANDLE, data->pkt_handle);
 
 	if (qmi_service_send(data->wds, QMI_WDS_STOP_NETWORK, param,
 					stop_net_cb, cbd, l_free) > 0)
