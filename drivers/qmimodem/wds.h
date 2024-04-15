@@ -32,12 +32,6 @@ enum qmi_wds_authentication {
 	QMI_WDS_AUTHENTICATION_CHAP	= 0x2,
 };
 
-/* Packet data connection status indication */
-struct qmi_wds_notify_conn_status {
-	uint8_t status;
-	uint8_t reconf;
-} __attribute__((__packed__));
-
 enum qmi_wds_connection_status {
 	QMI_WDS_CONNECTION_STATUS_DISCONNECTED =	0x01,
 	QMI_WDS_CONNECTION_STATUS_CONNECTED =		0x02,

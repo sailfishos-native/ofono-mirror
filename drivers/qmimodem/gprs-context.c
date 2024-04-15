@@ -48,7 +48,10 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 	static const uint8_t RESULT_IP_FAMILY = 0x12;
 	struct ofono_gprs_context *gc = user_data;
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
-	const struct qmi_wds_notify_conn_status *status;
+	const struct {
+		uint8_t status;
+		uint8_t reconf;
+	} __attribute__((__packed__)) *status;
 	uint16_t len;
 	uint8_t ip_family;
 
