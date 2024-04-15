@@ -220,16 +220,17 @@ static void qmi_gprs_read_settings(struct ofono_gprs_context* gc,
 
 static uint8_t auth_method_to_qmi_auth(enum ofono_gprs_auth_method method)
 {
+	/* QMI uses a bitmap */
 	switch (method) {
 	case OFONO_GPRS_AUTH_METHOD_CHAP:
 		return QMI_WDS_AUTHENTICATION_CHAP;
 	case OFONO_GPRS_AUTH_METHOD_PAP:
 		return QMI_WDS_AUTHENTICATION_PAP;
 	case OFONO_GPRS_AUTH_METHOD_NONE:
-		return QMI_WDS_AUTHENTICATION_NONE;
+		return 0;
 	}
 
-	return QMI_WDS_AUTHENTICATION_NONE;
+	return 0;
 }
 
 static void qmi_activate_primary(struct ofono_gprs_context *gc,
@@ -271,11 +272,11 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 	qmi_param_append_uint8(param, QMI_WDS_PARAM_AUTHENTICATION_PREFERENCE,
 					auth);
 
-	if (auth != QMI_WDS_AUTHENTICATION_NONE && ctx->username[0] != '\0')
+	if (auth && ctx->username[0] != '\0')
 		qmi_param_append(param, QMI_WDS_PARAM_USERNAME,
 					strlen(ctx->username), ctx->username);
 
-	if (auth != QMI_WDS_AUTHENTICATION_NONE &&  ctx->password[0] != '\0')
+	if (auth && ctx->password[0] != '\0')
 		qmi_param_append(param, QMI_WDS_PARAM_PASSWORD,
 					strlen(ctx->password), ctx->password);
 

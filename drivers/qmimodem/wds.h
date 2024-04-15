@@ -26,9 +26,11 @@
 #define QMI_WDS_PARAM_PASSWORD			0x18	/* string */
 #define QMI_WDS_PARAM_AUTHENTICATION_PREFERENCE	0x16	/* uint8 */
 
-#define QMI_WDS_AUTHENTICATION_NONE		0x0
-#define QMI_WDS_AUTHENTICATION_PAP		0x1
-#define QMI_WDS_AUTHENTICATION_CHAP		0x2
+
+enum qmi_wds_authentication {
+	QMI_WDS_AUTHENTICATION_PAP	= 0x1,
+	QMI_WDS_AUTHENTICATION_CHAP	= 0x2,
+};
 
 /* Packet data connection status indication */
 struct qmi_wds_notify_conn_status {
