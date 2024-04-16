@@ -283,8 +283,9 @@ static bool received_data(struct l_io *io, void *user_data)
 	return true;
 }
 
-#define TEST_TLV_TYPE		21	/* Its data value is 1 byte */
-#define TEST_DATA_VALUE		0x89
+#define TEST_TLV_TYPE		0x21	/* Its data value is 1 byte */
+#define TEST_REQ_DATA_VALUE	0x89
+#define TEST_RESP_DATA_VALUE	0x8A
 
 static void send_test_data_cb(struct qmi_result *result, void *user_data)
 {
@@ -294,7 +295,7 @@ static void send_test_data_cb(struct qmi_result *result, void *user_data)
 
 	assert(!qmi_result_set_error(result, NULL));
 	assert(qmi_result_get_uint8(result, TEST_TLV_TYPE, &data));
-	assert(data == TEST_DATA_VALUE);
+	assert(data == TEST_RESP_DATA_VALUE);
 
 	info->service_send_callback_called = true;
 }
@@ -307,6 +308,12 @@ static void send_test_data_cb(struct qmi_result *result, void *user_data)
 #define TEST_REQ_MESSAGE_ID	42
 #define TEST_RESP_MESSAGE_ID	43
 #define QMI_HDR_SIZE		7
+
+enum qmi_message_type {
+	QMI_MESSAGE_TYPE_REQ	= 0x00,
+	QMI_MESSAGE_TYPE_RESP	= 0x02,
+	QMI_MESSAGE_TYPE_IND	= 0x04,
+};
 
 struct qmi_test_service_request {
 	uint8_t  type;
@@ -338,7 +345,7 @@ static void send_request_via_qmi(struct test_info *info,
 	struct qmi_param *param;
 
 	param = qmi_param_new();
-	qmi_param_append_uint8(param, TEST_TLV_TYPE, TEST_DATA_VALUE);
+	qmi_param_append_uint8(param, TEST_TLV_TYPE, TEST_REQ_DATA_VALUE);
 	assert(qmi_service_send(service, TEST_REQ_MESSAGE_ID, param,
 					send_test_data_cb, info, NULL));
 
@@ -346,10 +353,35 @@ static void send_request_via_qmi(struct test_info *info,
 		l_main_iterate(-1);
 }
 
-static void send_response_via_socket(struct test_info *info, struct l_io *io)
+static void send_message_to_client(struct sockaddr_qrtr *dest, struct l_io *io,
+					uint8_t type, uint16_t transaction,
+					uint16_t message, uint8_t data_value)
+{
+	struct qmi_test_service_response response;
+
+	/*
+	 * Now echo it back to the qrtr client. The qmi_service send callback
+	 * will validate that the client processed this response correctly.
+	 */
+	memset(&response, 0, sizeof(response));
+	response.type = type;
+	response.transaction = transaction;
+	response.message = L_CPU_TO_LE16(message);
+	response.length = L_CPU_TO_LE16(sizeof(response) - QMI_HDR_SIZE);
+	response.error_type = 2;
+	response.error_length = L_CPU_TO_LE16(4);
+	response.data_type = TEST_TLV_TYPE;
+	response.data_length = 1;
+	response.data_value = data_value;
+
+	sendto(l_io_get_fd(io), &response, sizeof(response), 0,
+					(struct sockaddr *) dest,
+					sizeof(*dest));
+}
+
+static void send_response_to_client(struct test_info *info, struct l_io *io)
 {
 	const struct qmi_test_service_request *request;
-	struct qmi_test_service_response response;
 
 	/* First validate that the qrtr code sent the qmi request properly. */
 	assert(info->received_len == sizeof(*request));
@@ -360,26 +392,16 @@ static void send_response_via_socket(struct test_info *info, struct l_io *io)
 					sizeof(*request) - QMI_HDR_SIZE));
 	assert(request->data_type == TEST_TLV_TYPE);
 	assert(request->data_length == L_CPU_TO_LE16(1));
-	assert(request->data_value == TEST_DATA_VALUE);
+	assert(request->data_value == TEST_REQ_DATA_VALUE);
 
 	/*
-	 * Now echo it back to the qrtr client. The qmi_service send callback
+	 * Now respond to the qrtr client. The qmi_service send callback
 	 * will validate that the client processed this response correctly.
 	 */
-	memset(&response, 0, sizeof(response));
-	response.type = 0x02;
-	response.transaction = request->transaction;
-	response.message = L_CPU_TO_LE16(TEST_RESP_MESSAGE_ID);
-	response.length = L_CPU_TO_LE16(sizeof(response) - QMI_HDR_SIZE);
-	response.error_type = 2;
-	response.error_length = L_CPU_TO_LE16(4);
-	response.data_type = request->data_type;
-	response.data_length = request->data_length;
-	response.data_value = request->data_value;
-
-	sendto(l_io_get_fd(io), &response, sizeof(response), 0,
-					(struct sockaddr *) &info->sender,
-					sizeof(info->sender));
+	send_message_to_client(&info->sender, io, QMI_MESSAGE_TYPE_RESP,
+					request->transaction,
+					TEST_RESP_MESSAGE_ID,
+					TEST_RESP_DATA_VALUE);
 
 	while (!info->service_send_callback_called)
 		l_main_iterate(-1);
@@ -410,7 +432,7 @@ static void test_send_data(const void *data)
 	l_io_set_read_handler(io, received_data, info, NULL);
 
 	send_request_via_qmi(info, service);
-	send_response_via_socket(info, io);
+	send_response_to_client(info, io);
 
 	l_io_destroy(io);
 	qmi_service_unref(service);
