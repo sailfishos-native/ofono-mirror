@@ -36,6 +36,7 @@ struct test_info {
 
 	bool discovery_callback_called		: 1;
 	bool service_send_callback_called	: 1;
+	bool notify_callback_called		: 1;
 };
 
 static uint32_t unique_service_type(uint32_t index)
@@ -286,6 +287,7 @@ static bool received_data(struct l_io *io, void *user_data)
 #define TEST_TLV_TYPE		0x21	/* Its data value is 1 byte */
 #define TEST_REQ_DATA_VALUE	0x89
 #define TEST_RESP_DATA_VALUE	0x8A
+#define TEST_IND_DATA_VALUE	0x8B
 
 static void send_test_data_cb(struct qmi_result *result, void *user_data)
 {
@@ -307,6 +309,7 @@ static void send_test_data_cb(struct qmi_result *result, void *user_data)
 
 #define TEST_REQ_MESSAGE_ID	42
 #define TEST_RESP_MESSAGE_ID	43
+#define TEST_IND_MESSAGE_ID	44
 #define QMI_HDR_SIZE		7
 
 enum qmi_message_type {
@@ -440,6 +443,57 @@ static void test_send_data(const void *data)
 	test_cleanup(info);
 }
 
+
+static void notify_cb(struct qmi_result *result, void *user_data)
+{
+	struct test_info *info = user_data;
+	uint8_t data;
+
+	assert(!qmi_result_set_error(result, NULL));
+	assert(qmi_result_get_uint8(result, TEST_TLV_TYPE, &data));
+	assert(data == TEST_IND_DATA_VALUE);
+
+	info->notify_callback_called = true;
+}
+
+static void test_notifications(const void *data)
+{
+	struct test_info *info = test_setup();
+	struct l_io *io;
+	uint32_t service_type;
+	struct qmi_service *service;
+
+	perform_discovery(info);
+
+	service_type = unique_service_type(0); /* Use the first service */
+	assert(qmi_service_create(info->device, service_type,
+					create_service_cb, info, NULL));
+	perform_all_pending_work();
+	service = l_queue_pop_head(info->services);
+	assert(service);
+
+	io = l_io_new(info->service_fds[0]);
+	assert(io);
+	l_io_set_read_handler(io, received_data, info, NULL);
+
+	send_request_via_qmi(info, service);
+	send_response_to_client(info, io);
+
+	qmi_service_register(service, TEST_IND_MESSAGE_ID, notify_cb, info,
+						NULL);
+	send_message_to_client(&info->sender, io, QMI_MESSAGE_TYPE_IND, 0,
+						TEST_IND_MESSAGE_ID,
+						TEST_IND_DATA_VALUE);
+
+	while (!info->notify_callback_called)
+		l_main_iterate(-1);
+
+	l_io_destroy(io);
+	qmi_service_unref(service);
+
+	test_cleanup(info);
+}
+
 static void exit_if_qrtr_not_supported(void)
 {
 	int fd;
@@ -469,6 +523,7 @@ int main(int argc, char **argv)
 	l_test_add("QRTR discovery", test_discovery, NULL);
 	l_test_add("QRTR services may be created", test_create_services, NULL);
 	l_test_add("QRTR service sends/responses", test_send_data, NULL);
+	l_test_add("QRTR notifications", test_notifications, NULL);
 	result = l_test_run();
 
 	__ofono_log_cleanup();
