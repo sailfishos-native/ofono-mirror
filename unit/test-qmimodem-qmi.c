@@ -221,8 +221,9 @@ static void perform_all_pending_work(void)
 static void test_create_services(const void *data)
 {
 	struct test_info *info = test_setup();
+	struct qmi_service *services[3];
 	uint32_t service_type;
-	int i;
+	size_t i;
 
 	perform_discovery(info);
 
@@ -255,6 +256,22 @@ static void test_create_services(const void *data)
 					create_service_cb, info, NULL));
 	perform_all_pending_work();
 	assert(l_queue_isempty(info->services));
+
+	/* Confirm that multiple services may be created for the same type */
+	service_type = unique_service_type(0);
+
+	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
+		assert(qmi_service_create(info->device, service_type,
+						create_service_cb, info, NULL));
+		perform_all_pending_work();
+
+		assert(l_queue_length(info->services) == 1);
+		services[i] = l_queue_pop_head(info->services);
+		assert(services[i]);
+	}
+
+	for (i = 0; i < L_ARRAY_SIZE(services); i++)
+		qmi_service_unref(services[i]);
 
 	test_cleanup(info);
 }
