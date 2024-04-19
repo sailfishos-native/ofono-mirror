@@ -47,6 +47,13 @@ struct test_info {
 	bool notify_callback_called		: 1;
 };
 
+static void info_clear_received(struct test_info *info)
+{
+	l_free(info->received);
+	info->received = NULL;
+	info->received_len = 0;
+}
+
 static uint32_t unique_service_type(uint32_t index)
 {
 	/* Try to use a value that will not conflict with any real services. */
@@ -544,6 +551,54 @@ static void test_notifications(const void *data)
 	test_cleanup(info);
 }
 
+static void test_service_notification_independence(const void *data)
+{
+	struct test_info *info = test_setup();
+	struct l_io *io;
+	uint32_t service_type;
+	struct qmi_service *services[2];
+	size_t i;
+
+	perform_discovery(info);
+
+	service_type = unique_service_type(0); /* Use the first service */
+
+	io = l_io_new(info->service_fds[0]);
+	assert(io);
+	l_io_set_read_handler(io, received_data, info, NULL);
+
+	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
+		assert(qmi_service_create(info->device, service_type,
+						create_service_cb, info, NULL));
+		perform_all_pending_work();
+		services[i] = l_queue_pop_head(info->services);
+		assert(services[i]);
+
+		send_request_via_qmi(info, services[i]);
+		send_response_to_client(info, io);
+
+		qmi_service_register(services[i], TEST_IND_MESSAGE_ID,
+						notify_cb, info, NULL);
+
+		info_clear_received(info);
+	}
+
+	qmi_service_unref(services[0]);
+
+	send_message_to_client(&info->sender, io, QMI_MESSAGE_TYPE_IND, 0,
+						TEST_IND_MESSAGE_ID,
+						TEST_IND_DATA_VALUE);
+
+	while (!info->notify_callback_called)
+		l_main_iterate(-1);
+
+	for (i = 1; i < L_ARRAY_SIZE(services); i++)
+		qmi_service_unref(services[i]);
+
+	l_io_destroy(io);
+	test_cleanup(info);
+}
+
 static void exit_if_qrtr_not_supported(void)
 {
 	int fd;
@@ -574,6 +629,8 @@ int main(int argc, char **argv)
 	l_test_add("QRTR services may be created", test_create_services, NULL);
 	l_test_add("QRTR service sends/responses", test_send_data, NULL);
 	l_test_add("QRTR notifications", test_notifications, NULL);
+	l_test_add("QRTR service notifications are independent",
+				test_service_notification_independence, NULL);
 	result = l_test_run();
 
 	__ofono_log_cleanup();
