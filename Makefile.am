@@ -932,7 +932,7 @@ unit_objects += $(unit_test_mbim_OBJECTS)
 unit_test_qmimodem_qmi_SOURCES = unit/test-qmimodem-qmi.c src/common.c \
 			src/util.c src/log.c \
 			drivers/qmimodem/qmi.c
-unit_test_qmimodem_qmi_LDADD = @GLIB_LIBS@ $(ell_ldadd)
+unit_test_qmimodem_qmi_LDADD = @GLIB_LIBS@ $(ell_ldadd) -ldl
 unit_objects += $(unit_test_qmimodem_qmi_OBJECTS)
 
 unit/test-provision.db: unit/test-provision.json
