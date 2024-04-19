@@ -23,6 +23,13 @@
 #define TEST_SERVICE_COUNT	2
 #define TEST_TIMEOUT		5
 
+/*
+ * The amount of time to wait to validate that something did NOT occur. The
+ * value is fairly arbitrary -- the longer it is, the longer the tests will take
+ * to complete.
+ */
+#define ALLOWED_QRTR_TRANSFER_TIME 100 /* ms */
+
 struct test_info {
 	int service_fds[TEST_SERVICE_COUNT];
 	struct qmi_device *device;
@@ -36,6 +43,7 @@ struct test_info {
 
 	bool discovery_callback_called		: 1;
 	bool service_send_callback_called	: 1;
+	bool internal_timeout_callback_called	: 1;
 	bool notify_callback_called		: 1;
 };
 
@@ -473,12 +481,20 @@ static void notify_cb(struct qmi_result *result, void *user_data)
 	info->notify_callback_called = true;
 }
 
+static void internal_timeout_cb(struct l_timeout *timeout, void *user_data)
+{
+	struct test_info *info = user_data;
+
+	info->internal_timeout_callback_called = true;
+}
+
 static void test_notifications(const void *data)
 {
 	struct test_info *info = test_setup();
 	struct l_io *io;
 	uint32_t service_type;
 	struct qmi_service *service;
+	struct l_timeout *receive_timeout;
 
 	perform_discovery(info);
 
@@ -505,9 +521,26 @@ static void test_notifications(const void *data)
 	while (!info->notify_callback_called)
 		l_main_iterate(-1);
 
-	l_io_destroy(io);
 	qmi_service_unref(service);
 
+	/* Confirm no notifications received after the service is destroyed */
+	info->notify_callback_called = false;
+	send_message_to_client(&info->sender, io, QMI_MESSAGE_TYPE_IND, 0,
+						TEST_IND_MESSAGE_ID,
+						TEST_IND_DATA_VALUE);
+
+	receive_timeout = l_timeout_create_ms(ALLOWED_QRTR_TRANSFER_TIME,
+						internal_timeout_cb, info,
+						NULL);
+
+	while (!info->internal_timeout_callback_called)
+		perform_all_pending_work();
+
+	assert(!info->notify_callback_called);
+
+	l_timeout_remove(receive_timeout);
+
+	l_io_destroy(io);
 	test_cleanup(info);
 }
 
