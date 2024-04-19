@@ -2660,10 +2660,8 @@ bool qmi_service_create(struct qmi_device *device,
 
 struct qmi_service *qmi_service_ref(struct qmi_service *service)
 {
-	if (!service)
-		return NULL;
-
-	__sync_fetch_and_add(&service->ref_count, 1);
+	if (service)
+		service->ref_count++;
 
 	return service;
 }
@@ -2676,7 +2674,7 @@ void qmi_service_unref(struct qmi_service *service)
 	if (!service)
 		return;
 
-	if (__sync_sub_and_fetch(&service->ref_count, 1))
+	if (--service->ref_count)
 		return;
 
 	device = service->device;
