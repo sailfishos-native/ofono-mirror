@@ -1330,7 +1330,6 @@ static void __rx_ctl_message(struct qmi_device_qmux *qmux,
 	struct qmi_request *req;
 	uint16_t message;
 	uint16_t length;
-	unsigned int tid;
 
 	/* Ignore control messages with client identifier */
 	if (client_id != 0x00)
@@ -1338,7 +1337,6 @@ static void __rx_ctl_message(struct qmi_device_qmux *qmux,
 
 	message = L_LE16_TO_CPU(msg->message);
 	length = L_LE16_TO_CPU(msg->length);
-	tid = control->transaction;
 
 	if (control->type == 0x02 && control->transaction == 0x00) {
 		handle_indication(&qmux->super, service_type, client_id,
@@ -1347,7 +1345,7 @@ static void __rx_ctl_message(struct qmi_device_qmux *qmux,
 	}
 
 	req = l_queue_remove_if(qmux->control_queue, __request_compare,
-						L_UINT_TO_PTR(tid));
+					L_UINT_TO_PTR(control->transaction));
 	if (!req)
 		return;
 
@@ -2860,12 +2858,11 @@ uint16_t qmi_service_send(struct qmi_service *service,
 
 bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 {
-	unsigned int tid = id;
 	struct qmi_device *device;
 	struct qmi_request *req;
 	struct service_family *family;
 
-	if (!service || !tid)
+	if (!service || !id)
 		return false;
 
 	family = service->family;
@@ -2878,11 +2875,11 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 		return false;
 
 	req = l_queue_remove_if(device->req_queue, __request_compare,
-					L_UINT_TO_PTR(tid));
+					L_UINT_TO_PTR(id));
 	if (!req) {
 		req = l_queue_remove_if(device->service_queue,
 						__request_compare,
-						L_UINT_TO_PTR(tid));
+						L_UINT_TO_PTR(id));
 		if (!req)
 			return false;
 	}
@@ -2965,7 +2962,6 @@ uint16_t qmi_service_register(struct qmi_service *service,
 
 bool qmi_service_unregister(struct qmi_service *service, uint16_t id)
 {
-	unsigned int nid = id;
 	struct service_family *family;
 	struct qmi_notify *notify;
 
@@ -2975,7 +2971,7 @@ bool qmi_service_unregister(struct qmi_service *service, uint16_t id)
 	family = service->family;
 
 	notify = l_queue_remove_if(family->notify_list, __notify_compare,
-					L_UINT_TO_PTR(nid));
+					L_UINT_TO_PTR(id));
 
 	if (!notify)
 		return false;
