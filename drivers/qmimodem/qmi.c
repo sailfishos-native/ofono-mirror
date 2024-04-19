@@ -64,6 +64,7 @@ struct qmi_service_info {
 struct qmi_request {
 	uint16_t tid;
 	unsigned int group_id;		/* Always 0 for control */
+	unsigned int service_handle;	/* Always 0 for control */
 	uint8_t client;			/* Always 0 for control and qrtr */
 	struct qmi_service_info info;	/* Not used for control requests */
 	qmi_message_func_t callback;
@@ -95,11 +96,12 @@ struct qmi_device {
 	struct l_queue *service_queue;
 	struct l_queue *discovery_queue;
 	unsigned int next_group_id;	/* Matches requests with services */
+	unsigned int next_service_handle;
 	uint16_t next_service_tid;
 	qmi_debug_func_t debug_func;
 	void *debug_data;
 	struct l_queue *service_infos;
-	struct l_hashmap *service_list;
+	struct l_hashmap *family_list;
 	const struct qmi_device_ops *ops;
 	bool writer_active : 1;
 	bool shutting_down : 1;
@@ -120,7 +122,7 @@ struct qmi_device_qmux {
 	struct l_queue *control_queue;
 };
 
-struct qmi_service {
+struct service_family {
 	int ref_count;
 	struct qmi_device *device;
 	struct qmi_service_info info;
@@ -128,6 +130,12 @@ struct qmi_service {
 	uint8_t client_id;
 	uint16_t next_notify_id;
 	struct l_queue *notify_list;
+};
+
+struct qmi_service {
+	int ref_count;
+	unsigned int handle;	/* Uniquely identifies this client's reqs */
+	struct service_family *family;
 };
 
 struct qmi_param {
@@ -146,6 +154,7 @@ struct qmi_result {
 struct qmi_notify {
 	uint16_t id;
 	uint16_t message;
+	unsigned int service_handle;
 	qmi_result_func_t callback;
 	void *user_data;
 	qmi_destroy_func_t destroy;
@@ -239,6 +248,7 @@ static struct qmi_request *__request_alloc(uint32_t service_type,
 	req = l_malloc(sizeof(struct qmi_request) + msglen);
 	req->tid = 0;
 	req->group_id = 0;
+	req->service_handle = 0;
 	req->len = msglen;
 	req->client = client;
 
@@ -330,21 +340,21 @@ static bool __notify_compare(const void *data, const void *user_data)
 
 struct service_find_by_type_data {
 	unsigned int type;
-	struct qmi_service *found_service;
+	struct service_family *found_family;
 };
 
-static void __service_find_by_type(const void *key, void *value,
+static void __family_find_by_type(const void *key, void *value,
 					void *user_data)
 {
-	struct qmi_service *service = value;
+	struct service_family *family = value;
 	struct service_find_by_type_data *data = user_data;
 
 	/* ignore those that are in process of creation */
 	if (L_PTR_TO_UINT(key) & 0x80000000)
 		return;
 
-	if (service->info.service_type == data->type)
-		data->found_service = service;
+	if (family->info.service_type == data->type)
+		data->found_family = family;
 }
 
 static const char *__service_type_to_string(uint8_t type)
@@ -744,7 +754,8 @@ static uint16_t __service_request_submit(struct qmi_device *device,
 	if (device->next_service_tid < 256)
 		device->next_service_tid = 256;
 
-	req->group_id = service->group_id;
+	req->group_id = service->family->group_id;
+	req->service_handle = service->handle;
 
 	hdr->type = 0x00;
 	hdr->transaction = L_CPU_TO_LE16(req->tid);
@@ -766,18 +777,18 @@ static void service_notify_if_message_matches(void *data, void *user_data)
 
 static void service_notify(const void *key, void *value, void *user_data)
 {
-	struct qmi_service *service = value;
+	struct service_family *family = value;
 	struct qmi_result *result = user_data;
 
 	/* ignore those that are in process of creation */
 	if (L_PTR_TO_UINT(key) & 0x80000000)
 		return;
 
-	l_queue_foreach(service->notify_list, service_notify_if_message_matches,
+	l_queue_foreach(family->notify_list, service_notify_if_message_matches,
 				result);
 }
 
-static unsigned int service_list_create_hash(uint16_t service_type,
+static unsigned int family_list_create_hash(uint16_t service_type,
 							uint8_t client_id)
 {
 	return (service_type | (client_id << 16));
@@ -787,7 +798,7 @@ static void handle_indication(struct qmi_device *device,
 			uint32_t service_type, uint8_t client_id,
 			uint16_t message, uint16_t length, const void *data)
 {
-	struct qmi_service *service;
+	struct service_family *family;
 	struct qmi_result result;
 	unsigned int hash_id;
 
@@ -801,19 +812,19 @@ static void handle_indication(struct qmi_device *device,
 	result.length = length;
 
 	if (client_id == 0xff) {
-		l_hashmap_foreach(device->service_list, service_notify,
+		l_hashmap_foreach(device->family_list, service_notify,
 					&result);
 		return;
 	}
 
-	hash_id = service_list_create_hash(service_type, client_id);
-	service = l_hashmap_lookup(device->service_list,
+	hash_id = family_list_create_hash(service_type, client_id);
+	family = l_hashmap_lookup(device->family_list,
 					L_UINT_TO_PTR(hash_id));
 
-	if (!service)
+	if (!family)
 		return;
 
-	service_notify(NULL, service, &result);
+	service_notify(NULL, family, &result);
 }
 
 static void __rx_message(struct qmi_device *device,
@@ -876,14 +887,14 @@ do {\
 	__discovery_free(&data->super);\
 } while (0)
 
-static void service_destroy(void *data)
+static void family_destroy(void *data)
 {
-	struct qmi_service *service = data;
+	struct service_family *family = data;
 
-	if (!service->device)
+	if (!family->device)
 		return;
 
-	service->device = NULL;
+	family->device = NULL;
 }
 
 static int qmi_device_init(struct qmi_device *device, int fd,
@@ -911,7 +922,7 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 	device->service_queue = l_queue_new();
 	device->discovery_queue = l_queue_new();
 	device->service_infos = l_queue_new();
-	device->service_list = l_hashmap_new();
+	device->family_list = l_hashmap_new();
 
 	device->next_service_tid = 256;
 
@@ -939,7 +950,7 @@ void qmi_device_free(struct qmi_device *device)
 
 	l_io_destroy(device->io);
 
-	l_hashmap_destroy(device->service_list, service_destroy);
+	l_hashmap_destroy(device->family_list, family_destroy);
 
 	l_queue_destroy(device->service_infos, l_free);
 
@@ -1400,9 +1411,41 @@ static bool received_qmux_data(struct l_io *io, void *user_data)
 	return true;
 }
 
+static struct service_family *service_family_ref(struct service_family *family)
+{
+	family->ref_count++;
+
+	return family;
+}
+
+static void service_family_unref(struct service_family *family)
+{
+	struct qmi_device *device;
+	unsigned int hash_id;
+
+	if (--family->ref_count)
+		return;
+
+	device = family->device;
+	if (!device)
+		goto done;
+
+	hash_id = family_list_create_hash(family->info.service_type,
+							family->client_id);
+	l_hashmap_remove(device->family_list, L_UINT_TO_PTR(hash_id));
+
+	if (device->ops->client_release)
+		device->ops->client_release(device, family->info.service_type,
+							family->client_id);
+
+done:
+	l_queue_destroy(family->notify_list, NULL);
+	l_free(family);
+}
+
 struct service_create_shared_data {
 	struct discovery super;
-	struct qmi_service *service;
+	struct service_family *family;
 	struct qmi_device *device;
 	qmi_create_func_t func;
 	void *user_data;
@@ -1430,26 +1473,46 @@ static uint8_t __ctl_request_submit(struct qmi_device_qmux *qmux,
 	return req->tid;
 }
 
-static struct qmi_service *service_create(struct qmi_device *device,
+static struct service_family *service_family_create(struct qmi_device *device,
 			const struct qmi_service_info *info, uint8_t client_id)
 {
-	struct qmi_service *service = l_new(struct qmi_service, 1);
+	struct service_family *family = l_new(struct service_family, 1);
 
-	service->ref_count = 1;
-	service->device = device;
-	service->client_id = client_id;
-	service->notify_list = l_queue_new();
+	family->ref_count = 0;
+	family->device = device;
+	family->client_id = client_id;
+	family->notify_list = l_queue_new();
 
 	if (device->next_group_id == 0) /* 0 is reserved for control */
 		device->next_group_id = 1;
 
-	service->group_id = device->next_group_id++;
+	family->group_id = device->next_group_id++;
 
-	memcpy(&service->info, info, sizeof(service->info));
+	memcpy(&family->info, info, sizeof(family->info));
+
+	__debug_device(device, "service family created [client=%d,type=%d]",
+					family->client_id,
+					family->info.service_type);
+
+	return family;
+}
+
+static struct qmi_service *service_create(struct service_family *family)
+{
+	struct qmi_device *device = family->device;
+	struct qmi_service *service;
+
+	if (device->next_service_handle == 0) /* 0 is reserved for control */
+		device->next_service_handle = 1;
+
+	service = l_new(struct qmi_service, 1);
+	service->ref_count = 1;
+	service->handle = device->next_service_handle++;
+	service->family = service_family_ref(family);
 
 	__debug_device(device, "service created [client=%d,type=%d]",
-					service->client_id,
-					service->info.service_type);
+					family->client_id,
+					family->info.service_type);
 
 	return service;
 }
@@ -1457,25 +1520,28 @@ static struct qmi_service *service_create(struct qmi_device *device,
 static void service_create_shared_reply(struct l_idle *idle, void *user_data)
 {
 	struct service_create_shared_data *data = user_data;
+	struct qmi_service *service;
 
 	l_idle_remove(data->idle);
 	data->idle = NULL;
 
-	DISCOVERY_DONE(data, data->service, data->user_data);
+	service = service_create(data->family);
+	DISCOVERY_DONE(data, service, data->user_data);
+	qmi_service_unref(service);
 }
 
 static void service_create_shared_pending_reply(struct qmi_device *device,
 						unsigned int type,
-						struct qmi_service *service)
+						struct service_family *family)
 {
 	void *key = L_UINT_TO_PTR(type | 0x80000000);
-	struct l_queue *shared = l_hashmap_remove(device->service_list, key);
+	struct l_queue *shared = l_hashmap_remove(device->family_list, key);
 	const struct l_queue_entry *entry;
 
 	for (entry = l_queue_get_entries(shared); entry; entry = entry->next) {
 		struct service_create_shared_data *shared_data = entry->data;
 
-		shared_data->service = qmi_service_ref(service);
+		shared_data->family = service_family_ref(family);
 		shared_data->idle = l_idle_create(service_create_shared_reply,
 							shared_data, NULL);
 	}
@@ -1490,7 +1556,7 @@ static void service_create_shared_data_free(void *user_data)
 	if (data->idle)
 		l_idle_remove(data->idle);
 
-	qmi_service_unref(data->service);
+	service_family_unref(data->family);
 
 	if (data->destroy)
 		data->destroy(data->user_data);
@@ -1727,8 +1793,9 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 {
 	struct qmux_client_create_data *data = user_data;
 	struct qmi_device *device = data->device;
+	struct service_family *family = NULL;
+	struct service_family *old_family = NULL;
 	struct qmi_service *service = NULL;
-	struct qmi_service *old_service = NULL;
 	struct qmi_service_info info;
 	const struct qmi_result_code *result_code;
 	const struct qmi_client_id *client_id;
@@ -1752,23 +1819,25 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 	if (client_id->service != data->type)
 		goto done;
 
-	memset(&info, 0, sizeof(service->info));
+	memset(&info, 0, sizeof(family->info));
 	info.service_type = data->type;
 	info.major = data->major;
 	info.minor = data->minor;
 
-	service = service_create(device, &info, client_id->client);
+	family = service_family_create(device, &info, client_id->client);
 
-	hash_id = service_list_create_hash(service->info.service_type,
-							service->client_id);
-	l_hashmap_replace(device->service_list, L_UINT_TO_PTR(hash_id),
-				service, (void **) &old_service);
+	hash_id = family_list_create_hash(family->info.service_type,
+							family->client_id);
+	l_hashmap_replace(device->family_list, L_UINT_TO_PTR(hash_id),
+				family, (void **) &old_family);
 
-	if (old_service)
-		service_destroy(old_service);
+	if (old_family)
+		family_destroy(old_family);
+
+	service = service_create(family);
 
 done:
-	service_create_shared_pending_reply(device, data->type, service);
+	service_create_shared_pending_reply(device, data->type, family);
 
 	DISCOVERY_DONE(data, service, data->user_data);
 	qmi_service_unref(service);
@@ -1816,7 +1885,7 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 	__qmi_device_discovery_started(device, &data->super);
 
 	/* Mark service creation as pending */
-	l_hashmap_insert(device->service_list,
+	l_hashmap_insert(device->family_list,
 			L_UINT_TO_PTR(type_val | 0x80000000), shared);
 
 	return 0;
@@ -2553,7 +2622,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 			qmi_destroy_func_t destroy)
 {
 	struct l_queue *shared;
-	struct qmi_service *service = NULL;
+	struct service_family *family = NULL;
 	unsigned int type_val = type;
 	int r;
 
@@ -2570,20 +2639,19 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		 * The hash id is simply the service type in this case. There
 		 * is no "pending" state for discovery and no client id.
 		 */
-		service = l_hashmap_lookup(device->service_list,
+		family = l_hashmap_lookup(device->family_list,
 						L_UINT_TO_PTR(type_val));
-		if (!service) {
+		if (!family) {
 			const struct qmi_service_info *info;
 
 			info = __find_service_info_by_type(device, type);
 			if (!info)
 				return false;
 
-			service = service_create(device, info, 0);
-			l_hashmap_insert(device->service_list,
-					L_UINT_TO_PTR(type_val), service);
-		} else
-			service = qmi_service_ref(service);
+			family = service_family_create(device, info, 0);
+			l_hashmap_insert(device->family_list,
+					L_UINT_TO_PTR(type_val), family);
+		}
 
 		data = l_new(struct service_create_shared_data, 1);
 
@@ -2592,7 +2660,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		data->func = func;
 		data->user_data = user_data;
 		data->destroy = destroy;
-		data->service = service;
+		data->family = service_family_ref(family);
 
 		data->idle = l_idle_create(service_create_shared_reply,
 							data, NULL);
@@ -2603,7 +2671,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		return true;
 	}
 
-	shared = l_hashmap_lookup(device->service_list,
+	shared = l_hashmap_lookup(device->family_list,
 					L_UINT_TO_PTR(type_val | 0x80000000));
 
 	if (!shared) {
@@ -2616,14 +2684,14 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		struct service_find_by_type_data data;
 
 		data.type = type_val;
-		data.found_service = NULL;
-		l_hashmap_foreach(device->service_list,	__service_find_by_type,
+		data.found_family = NULL;
+		l_hashmap_foreach(device->family_list,	__family_find_by_type,
 					&data);
-		service = data.found_service;
+		family = data.found_family;
 	} else
 		type_val |= 0x80000000;
 
-	if (shared || service) {
+	if (shared || family) {
 		struct service_create_shared_data *data;
 
 		data = l_new(struct service_create_shared_data, 1);
@@ -2635,7 +2703,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		data->destroy = destroy;
 
 		if (!(type_val & 0x80000000)) {
-			data->service = qmi_service_ref(service);
+			data->family = service_family_ref(family);
 			data->idle = l_idle_create(service_create_shared_reply,
 							data, NULL);
 		} else
@@ -2668,31 +2736,16 @@ struct qmi_service *qmi_service_ref(struct qmi_service *service)
 
 void qmi_service_unref(struct qmi_service *service)
 {
-	struct qmi_device *device;
-	unsigned int hash_id;
-
 	if (!service)
 		return;
 
 	if (--service->ref_count)
 		return;
 
-	device = service->device;
-	if (!device) {
-		l_free(service);
-		return;
-	}
-
 	qmi_service_cancel_all(service);
 	qmi_service_unregister_all(service);
 
-	hash_id = service_list_create_hash(service->info.service_type,
-							service->client_id);
-	l_hashmap_remove(device->service_list, L_UINT_TO_PTR(hash_id));
-
-	if (device->ops->client_release)
-		device->ops->client_release(device, service->info.service_type,
-							service->client_id);
+	service_family_unref(service->family);
 
 	l_free(service);
 }
@@ -2702,7 +2755,7 @@ const char *qmi_service_get_identifier(struct qmi_service *service)
 	if (!service)
 		return NULL;
 
-	return __service_type_to_string(service->info.service_type);
+	return __service_type_to_string(service->family->info.service_type);
 }
 
 bool qmi_service_get_version(struct qmi_service *service,
@@ -2712,10 +2765,10 @@ bool qmi_service_get_version(struct qmi_service *service,
 		return false;
 
 	if (major)
-		*major = service->info.major;
+		*major = service->family->info.major;
 
 	if (minor)
-		*minor = service->info.minor;
+		*minor = service->family->info.minor;
 
 	return true;
 }
@@ -2769,6 +2822,7 @@ uint16_t qmi_service_send(struct qmi_service *service,
 				void *user_data, qmi_destroy_func_t destroy)
 {
 	struct qmi_device *device;
+	struct service_family *family;
 	struct service_send_data *data;
 	struct qmi_request *req;
 	uint16_t tid;
@@ -2776,10 +2830,12 @@ uint16_t qmi_service_send(struct qmi_service *service,
 	if (!service)
 		return 0;
 
-	if (!service->group_id)
+	family = service->family;
+
+	if (!family->group_id)
 		return 0;
 
-	device = service->device;
+	device = family->device;
 	if (!device)
 		return 0;
 
@@ -2789,8 +2845,8 @@ uint16_t qmi_service_send(struct qmi_service *service,
 	data->user_data = user_data;
 	data->destroy = destroy;
 
-	req = __service_request_alloc(&service->info,
-					service->client_id, message,
+	req = __service_request_alloc(&family->info,
+					family->client_id, message,
 					param ? param->data : NULL,
 					param ? param->length : 0,
 					service_send_callback, data);
@@ -2807,14 +2863,17 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 	unsigned int tid = id;
 	struct qmi_device *device;
 	struct qmi_request *req;
+	struct service_family *family;
 
 	if (!service || !tid)
 		return false;
 
-	if (!service->client_id)
+	family = service->family;
+
+	if (!family->client_id)
 		return false;
 
-	device = service->device;
+	device = family->device;
 	if (!device)
 		return false;
 
@@ -2838,9 +2897,9 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 static bool remove_req_if_match(void *data, void *user_data)
 {
 	struct qmi_request *req = data;
-	unsigned int group_id = L_PTR_TO_UINT(user_data);
+	unsigned int service_handle = L_PTR_TO_UINT(user_data);
 
-	if (req->group_id != group_id)
+	if (req->service_handle != service_handle)
 		return false;
 
 	service_send_free(req->user_data);
@@ -2849,10 +2908,10 @@ static bool remove_req_if_match(void *data, void *user_data)
 	return true;
 }
 
-static void remove_client(struct l_queue *queue, unsigned int group_id)
+static void remove_client(struct l_queue *queue, unsigned int service_handle)
 {
 	l_queue_foreach_remove(queue, remove_req_if_match,
-				L_UINT_TO_PTR(group_id));
+				L_UINT_TO_PTR(service_handle));
 }
 
 bool qmi_service_cancel_all(struct qmi_service *service)
@@ -2862,15 +2921,15 @@ bool qmi_service_cancel_all(struct qmi_service *service)
 	if (!service)
 		return false;
 
-	if (!service->group_id)
+	if (!service->family->group_id)
 		return false;
 
-	device = service->device;
+	device = service->family->device;
 	if (!device)
 		return false;
 
-	remove_client(device->req_queue, service->group_id);
-	remove_client(device->service_queue, service->group_id);
+	remove_client(device->req_queue, service->handle);
+	remove_client(device->service_queue, service->handle);
 
 	return true;
 }
@@ -2880,22 +2939,26 @@ uint16_t qmi_service_register(struct qmi_service *service,
 				void *user_data, qmi_destroy_func_t destroy)
 {
 	struct qmi_notify *notify;
+	struct service_family *family;
 
 	if (!service || !func)
 		return 0;
 
+	family = service->family;
+
 	notify = l_new(struct qmi_notify, 1);
 
-	if (service->next_notify_id < 1)
-		service->next_notify_id = 1;
+	if (family->next_notify_id < 1)
+		family->next_notify_id = 1;
 
-	notify->id = service->next_notify_id++;
+	notify->id = family->next_notify_id++;
 	notify->message = message;
+	notify->service_handle = service->handle;
 	notify->callback = func;
 	notify->user_data = user_data;
 	notify->destroy = destroy;
 
-	l_queue_push_tail(service->notify_list, notify);
+	l_queue_push_tail(family->notify_list, notify);
 
 	return notify->id;
 }
@@ -2903,15 +2966,31 @@ uint16_t qmi_service_register(struct qmi_service *service,
 bool qmi_service_unregister(struct qmi_service *service, uint16_t id)
 {
 	unsigned int nid = id;
+	struct service_family *family;
 	struct qmi_notify *notify;
 
 	if (!service || !id)
 		return false;
 
-	notify = l_queue_remove_if(service->notify_list, __notify_compare,
+	family = service->family;
+
+	notify = l_queue_remove_if(family->notify_list, __notify_compare,
 					L_UINT_TO_PTR(nid));
 
 	if (!notify)
+		return false;
+
+	__notify_free(notify);
+
+	return true;
+}
+
+static bool remove_notify_if_handle_match(void *data, void *user_data)
+{
+	struct qmi_notify *notify = data;
+	unsigned int handle = L_PTR_TO_UINT(user_data);
+
+	if (notify->service_handle != handle)
 		return false;
 
 	__notify_free(notify);
@@ -2924,8 +3003,9 @@ bool qmi_service_unregister_all(struct qmi_service *service)
 	if (!service)
 		return false;
 
-	l_queue_destroy(service->notify_list, __notify_free);
-	service->notify_list = NULL;
+	l_queue_foreach_remove(service->family->notify_list,
+					remove_notify_if_handle_match,
+					L_UINT_TO_PTR(service->handle));
 
 	return true;
 }
