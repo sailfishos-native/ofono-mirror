@@ -330,12 +330,18 @@ static void __notify_free(void *data)
 	l_free(notify);
 }
 
+struct notify_compare_details {
+	uint16_t id;
+	unsigned int service_handle;
+};
+
 static bool __notify_compare(const void *data, const void *user_data)
 {
 	const struct qmi_notify *notify = data;
-	uint16_t id = L_PTR_TO_UINT(user_data);
+	const struct notify_compare_details *details = user_data;
 
-	return notify->id == id;
+	return notify->id == details->id &&
+			notify->service_handle == details->service_handle;
 }
 
 struct service_find_by_type_data {
@@ -2962,16 +2968,17 @@ uint16_t qmi_service_register(struct qmi_service *service,
 
 bool qmi_service_unregister(struct qmi_service *service, uint16_t id)
 {
-	struct service_family *family;
 	struct qmi_notify *notify;
+	struct notify_compare_details details;
 
 	if (!service || !id)
 		return false;
 
-	family = service->family;
+	details.id = id;
+	details.service_handle = service->handle;
 
-	notify = l_queue_remove_if(family->notify_list, __notify_compare,
-					L_UINT_TO_PTR(id));
+	notify = l_queue_remove_if(service->family->notify_list,
+						__notify_compare, &details);
 
 	if (!notify)
 		return false;
