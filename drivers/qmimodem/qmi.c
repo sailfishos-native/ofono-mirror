@@ -2345,13 +2345,7 @@ struct qmi_device *qmi_device_new_qrtr(void)
 
 struct qmi_param *qmi_param_new(void)
 {
-	struct qmi_param *param;
-
-	param = l_new(struct qmi_param, 1);
-	if (!param)
-		return NULL;
-
-	return param;
+	return l_new(struct qmi_param, 1);
 }
 
 void qmi_param_free(struct qmi_param *param)
