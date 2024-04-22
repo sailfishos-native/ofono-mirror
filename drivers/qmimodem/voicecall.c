@@ -263,7 +263,6 @@ static void all_call_status_ind(struct qmi_result *result, void *user_data)
 	int i;
 	int offset;
 	uint16_t len;
-	bool status = true;
 	int instance_size;
 	const struct qmi_voice_call_information *call_information;
 	const struct qmi_voice_remote_party_number *remote_party_number;
@@ -275,6 +274,8 @@ static void all_call_status_ind(struct qmi_result *result, void *user_data)
 	static const uint8_t RESULT_CALL_INFO_CALL_INFORMATION = 0x10;
 	static const uint8_t RESULT_CALL_INFO_REMOTE_NUMBER = 0x11;
 
+	uint8_t remote_number_tlv = RESULT_CALL_STATUS_REMOTE_NUMBER;
+
 	DBG("");
 
 	/* mandatory */
@@ -285,7 +286,7 @@ static void all_call_status_ind(struct qmi_result *result, void *user_data)
 		call_information = qmi_result_get(
 			result, RESULT_CALL_INFO_CALL_INFORMATION,
 			&len);
-		status = false;
+		remote_number_tlv = RESULT_CALL_INFO_REMOTE_NUMBER;
 	}
 
 	if (!call_information || len < sizeof(call_information->size)) {
@@ -306,11 +307,7 @@ static void all_call_status_ind(struct qmi_result *result, void *user_data)
 	}
 
 	/* mandatory */
-	remote_party_number = qmi_result_get(
-		result,
-		status ? RESULT_CALL_STATUS_REMOTE_NUMBER :
-			 RESULT_CALL_INFO_REMOTE_NUMBER,
-		&len);
+	remote_party_number = qmi_result_get(result, remote_number_tlv, &len);
 
 	if (!remote_party_number) {
 		DBG("Unable to retrieve remote numbers");
