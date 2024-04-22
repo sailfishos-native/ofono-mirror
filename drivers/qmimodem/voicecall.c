@@ -434,7 +434,8 @@ static void dial(struct ofono_voicecall *vc,
 {
 	struct voicecall_data *vd = ofono_voicecall_get_data(vc);
 	struct cb_data *cbd = cb_data_new(cb, data);
-	struct qmi_param *param;
+	struct qmi_param *param = qmi_param_new();
+
 	const char *calling_number = phone_number_to_string(ph);
 
 	static const uint8_t PARAM_CALL_NUMBER = 0x01;
@@ -445,8 +446,6 @@ static void dial(struct ofono_voicecall *vc,
 
 	cbd->user = vc;
 	memcpy(&vd->dialed, ph, sizeof(*ph));
-
-	param = qmi_param_new();
 
 	if (!qmi_param_append(param, PARAM_CALL_NUMBER,
 			strlen(calling_number), calling_number))
@@ -492,26 +491,21 @@ static void answer(struct ofono_voicecall *vc,
 					ofono_voicecall_cb_t cb, void *data)
 {
 	struct voicecall_data *vd = ofono_voicecall_get_data(vc);
-	struct cb_data *cbd;
+	struct cb_data *cbd = cb_data_new(cb, data);
+	struct qmi_param *param = qmi_param_new();
 	struct ofono_call *call;
-	struct qmi_param *param = NULL;
-
 	static const uint8_t PARAM_CALL_ID = 0x01;
 
 	DBG("");
 
-	call = l_queue_find(vd->call_list,
-					ofono_call_match_by_status,
-					L_UINT_TO_PTR(CALL_STATUS_INCOMING));
-
-	param = qmi_param_new();
-	cbd = cb_data_new(cb, data);
-	cbd->user = vc;
-
-	if (call == NULL) {
+	call = l_queue_find(vd->call_list, ofono_call_match_by_status,
+				L_UINT_TO_PTR(CALL_STATUS_INCOMING));
+	if (!call) {
 		ofono_error("Can not find a call to pick up");
 		goto error;
 	}
+
+	cbd->user = vc;
 
 	if (!qmi_param_append_uint8(param, PARAM_CALL_ID,
 			call->id))
@@ -552,22 +546,20 @@ static void release_specific(struct ofono_voicecall *vc, int id,
 			ofono_voicecall_cb_t cb, void *data)
 {
 	struct voicecall_data *vd = ofono_voicecall_get_data(vc);
-	struct cb_data *cbd;
-	struct qmi_param *param = NULL;
+	struct cb_data *cbd = cb_data_new(cb, data);
+	struct qmi_param *param = qmi_param_new();
 
 	static const uint8_t PARAM_CALL_ID = 0x01;
 
 	DBG("");
 
-	param = qmi_param_new();
-	cbd = cb_data_new(cb, data);
 	cbd->user = vc;
 
 	if (!qmi_param_append_uint8(param, PARAM_CALL_ID, id))
 		goto error;
 
 	if (qmi_service_send(vd->voice, QMI_VOICE_END_CALL, param, end_call_cb,
-			cbd, l_free) > 0)
+				cbd, l_free) > 0)
 		return;
 
 error:
