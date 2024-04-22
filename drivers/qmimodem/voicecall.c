@@ -90,7 +90,7 @@ static bool ofono_call_match_by_id(const void *a, const void *b)
 	const struct ofono_call *call = a;
 	unsigned int id = L_PTR_TO_UINT(b);
 
-	return (call->id == id);
+	return call->id == id;
 }
 
 static bool ofono_call_match_by_status(const void *a, const void *b)
@@ -294,7 +294,7 @@ static void all_call_status_ind(struct qmi_result *result, void *user_data)
 	}
 
 	if (!call_information->size) {
-		DBG("No call informations received!");
+		DBG("No call information received!");
 		return;
 	}
 
@@ -370,9 +370,11 @@ static void all_call_status_ind(struct qmi_result *result, void *user_data)
 		call->direction = qmi_to_ofono_direction(call_info.direction);
 		call->type = 0; /* always voice */
 
-		number_size = MIN(remote_party->number_size, OFONO_MAX_PHONE_NUMBER_LENGTH);
+		number_size = MIN(remote_party->number_size,
+						OFONO_MAX_PHONE_NUMBER_LENGTH);
 		tmp = l_strndup(remote_party->number, number_size);
-		l_strlcpy(call->phone_number.number, tmp, sizeof(call->phone_number.number));
+		l_strlcpy(call->phone_number.number, tmp,
+				sizeof(call->phone_number.number));
 		l_free(tmp);
 
 		if (strlen(call->phone_number.number) > 0)
@@ -489,7 +491,8 @@ static void answer_cb(struct qmi_result *result, void *user_data)
 	CALLBACK_WITH_SUCCESS(cb, cbd->data);
 }
 
-static void answer(struct ofono_voicecall *vc, ofono_voicecall_cb_t cb, void *data)
+static void answer(struct ofono_voicecall *vc,
+					ofono_voicecall_cb_t cb, void *data)
 {
 	struct voicecall_data *vd = ofono_voicecall_get_data(vc);
 	struct cb_data *cbd;
@@ -679,4 +682,3 @@ static const struct ofono_voicecall_driver driver = {
 };
 
 OFONO_ATOM_DRIVER_BUILTIN(voicecall, qmimodem, &driver)
-
