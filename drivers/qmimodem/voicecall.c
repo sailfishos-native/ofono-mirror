@@ -653,8 +653,6 @@ static void qmi_voicecall_remove(struct ofono_voicecall *vc)
 
 	ofono_voicecall_set_data(vc, NULL);
 
-	qmi_service_unregister_all(data->voice);
-
 	qmi_service_unref(data->voice);
 
 	l_queue_destroy(data->call_list, l_free);

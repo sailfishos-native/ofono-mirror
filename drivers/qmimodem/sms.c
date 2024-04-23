@@ -801,8 +801,6 @@ static void qmi_sms_remove(struct ofono_sms *sms)
 
 	ofono_sms_set_data(sms, NULL);
 
-	qmi_service_unregister_all(data->wms);
-
 	qmi_service_unref(data->wms);
 
 	if (data->msg_list)
