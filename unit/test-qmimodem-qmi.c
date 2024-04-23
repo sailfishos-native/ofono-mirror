@@ -173,7 +173,7 @@ static void test_cleanup(struct test_info *info)
 	l_free(info->received);
 	l_timeout_remove(info->timeout);
 	l_queue_destroy(info->services,
-				(l_queue_destroy_func_t) qmi_service_unref);
+				(l_queue_destroy_func_t) qmi_service_free);
 	qmi_device_free(info->device);
 
 	/* The qrtr services will be destroyed automatically. */
@@ -220,7 +220,6 @@ static void create_service_cb(struct qmi_service *service, void *user_data)
 {
 	struct test_info *info = user_data;
 
-	service = qmi_service_ref(service);
 	l_queue_push_tail(info->services, service);
 }
 
@@ -259,7 +258,7 @@ static void test_create_services(const void *data)
 		assert(major == unique_service_version(i));
 		assert(minor == 0);
 
-		qmi_service_unref(service);
+		qmi_service_free(service);
 	}
 
 	/*
@@ -286,7 +285,7 @@ static void test_create_services(const void *data)
 	}
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++)
-		qmi_service_unref(services[i]);
+		qmi_service_free(services[i]);
 
 	test_cleanup(info);
 }
@@ -470,7 +469,7 @@ static void test_send_data(const void *data)
 	send_response_to_client(info, io);
 
 	l_io_destroy(io);
-	qmi_service_unref(service);
+	qmi_service_free(service);
 
 	test_cleanup(info);
 }
@@ -528,7 +527,7 @@ static void test_notifications(const void *data)
 	while (!info->notify_callback_called)
 		l_main_iterate(-1);
 
-	qmi_service_unref(service);
+	qmi_service_free(service);
 
 	/* Confirm no notifications received after the service is destroyed */
 	info->notify_callback_called = false;
@@ -583,7 +582,7 @@ static void test_service_notification_independence(const void *data)
 		info_clear_received(info);
 	}
 
-	qmi_service_unref(services[0]);
+	qmi_service_free(services[0]);
 
 	send_message_to_client(&info->sender, io, QMI_MESSAGE_TYPE_IND, 0,
 						TEST_IND_MESSAGE_ID,
@@ -593,7 +592,7 @@ static void test_service_notification_independence(const void *data)
 		l_main_iterate(-1);
 
 	for (i = 1; i < L_ARRAY_SIZE(services); i++)
-		qmi_service_unref(services[i]);
+		qmi_service_free(services[i]);
 
 	l_io_destroy(io);
 	test_cleanup(info);

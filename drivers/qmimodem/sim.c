@@ -869,7 +869,7 @@ static void create_uim_cb(struct qmi_service *service, void *user_data)
 		goto error;
 	}
 
-	data->uim = qmi_service_ref(service);
+	data->uim = service;
 
 	param = qmi_param_new_uint32(QMI_UIM_PARAM_EVENT_MASK, mask);
 
@@ -894,7 +894,7 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->dms = qmi_service_ref(service);
+	data->dms = service;
 
 	qmi_service_create(data->qmi_dev, QMI_SERVICE_UIM, create_uim_cb, sim,
 					NULL);
@@ -938,12 +938,12 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 			data->card_status_indication_id = 0;
 		}
 
-		qmi_service_unref(data->uim);
+		qmi_service_free(data->uim);
 		data->uim = NULL;
 	}
 
 	if (data->dms) {
-		qmi_service_unref(data->dms);
+		qmi_service_free(data->dms);
 		data->dms = NULL;
 	}
 

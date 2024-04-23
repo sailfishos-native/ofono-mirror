@@ -288,7 +288,7 @@ static void create_voice_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	csd->voice = qmi_service_ref(service);
+	csd->voice = service;
 
 	csd->sups_ind_id = qmi_service_register(csd->voice, QMI_VOICE_SUPS_IND,
 						sups_ind, cs, NULL);
@@ -324,7 +324,7 @@ static void qmi_call_settings_remove(struct ofono_call_settings *cs)
 
 	if (csd->voice) {
 		qmi_service_unregister(csd->voice, csd->sups_ind_id);
-		qmi_service_unref(csd->voice);
+		qmi_service_free(csd->voice);
 	}
 
 	l_free(csd);

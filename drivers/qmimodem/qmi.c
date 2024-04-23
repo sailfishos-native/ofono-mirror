@@ -133,7 +133,6 @@ struct service_family {
 };
 
 struct qmi_service {
-	int ref_count;
 	unsigned int handle;	/* Uniquely identifies this client's reqs */
 	struct service_family *family;
 };
@@ -1510,7 +1509,6 @@ static struct qmi_service *service_create(struct service_family *family)
 		device->next_service_handle = 1;
 
 	service = l_new(struct qmi_service, 1);
-	service->ref_count = 1;
 	service->handle = device->next_service_handle++;
 	service->family = service_family_ref(family);
 
@@ -1531,7 +1529,6 @@ static void service_create_shared_reply(struct l_idle *idle, void *user_data)
 
 	service = service_create(data->family);
 	DISCOVERY_DONE(data, service, data->user_data);
-	qmi_service_unref(service);
 }
 
 static void service_create_shared_pending_reply(struct qmi_device *device,
@@ -1844,7 +1841,6 @@ done:
 	service_create_shared_pending_reply(device, data->type, family);
 
 	DISCOVERY_DONE(data, service, data->user_data);
-	qmi_service_unref(service);
 }
 
 static int qmi_device_qmux_client_create(struct qmi_device *device,
@@ -2724,20 +2720,9 @@ bool qmi_service_create(struct qmi_device *device,
 						user_data, destroy);
 }
 
-struct qmi_service *qmi_service_ref(struct qmi_service *service)
-{
-	if (service)
-		service->ref_count++;
-
-	return service;
-}
-
-void qmi_service_unref(struct qmi_service *service)
+void qmi_service_free(struct qmi_service *service)
 {
 	if (!service)
-		return;
-
-	if (--service->ref_count)
 		return;
 
 	qmi_service_cancel_all(service);

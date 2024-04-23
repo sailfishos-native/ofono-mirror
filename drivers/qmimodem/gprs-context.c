@@ -467,7 +467,7 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->wds = qmi_service_ref(service);
+	data->wds = service;
 
 	qmi_service_register(data->wds, QMI_WDS_PACKET_SERVICE_STATUS,
 					pkt_status_notify, gc, NULL);
@@ -504,7 +504,7 @@ static void qmi_gprs_context_remove(struct ofono_gprs_context *gc)
 	ofono_gprs_context_set_data(gc, NULL);
 
 	if (data->wds)
-		qmi_service_unref(data->wds);
+		qmi_service_free(data->wds);
 
 	l_free(data);
 }

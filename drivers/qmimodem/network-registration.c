@@ -657,7 +657,7 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 		goto error;
 	}
 
-	data->nas = qmi_service_ref(service);
+	data->nas = service;
 
 	param = qmi_param_new();
 
@@ -733,7 +733,7 @@ static void qmi_netreg_remove(struct ofono_netreg *netreg)
 		data->signal_info_indication_id = 0;
 	}
 
-	qmi_service_unref(data->nas);
+	qmi_service_free(data->nas);
 
 	l_free(data);
 }

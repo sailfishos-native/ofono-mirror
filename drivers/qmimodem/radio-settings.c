@@ -222,7 +222,7 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 	if (!service)
 		return;
 
-	data->dms = qmi_service_ref(service);
+	data->dms = service;
 }
 
 static void create_nas_cb(struct qmi_service *service, void *user_data)
@@ -244,7 +244,7 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->nas = qmi_service_ref(service);
+	data->nas = service;
 
 	ofono_radio_settings_register(rs);
 }
@@ -277,8 +277,8 @@ static void qmi_radio_settings_remove(struct ofono_radio_settings *rs)
 
 	ofono_radio_settings_set_data(rs, NULL);
 
-	qmi_service_unref(data->dms);
-	qmi_service_unref(data->nas);
+	qmi_service_free(data->dms);
+	qmi_service_free(data->nas);
 
 	l_free(data);
 }

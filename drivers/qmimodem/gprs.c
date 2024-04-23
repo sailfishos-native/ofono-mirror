@@ -350,7 +350,7 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->wds = qmi_service_ref(service);
+	data->wds = service;
 
 	/*
 	 * First get the SS info - the modem may already be connected,
@@ -382,7 +382,7 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->nas = qmi_service_ref(service);
+	data->nas = service;
 
 	qmi_service_create_shared(data->dev, QMI_SERVICE_WDS,
 						create_wds_cb, gprs, NULL);
@@ -416,7 +416,7 @@ static void qmi_gprs_remove(struct ofono_gprs *gprs)
 
 	ofono_gprs_set_data(gprs, NULL);
 
-	qmi_service_unref(data->wds);
+	qmi_service_free(data->wds);
 
 	if (data->serving_system_indication_id) {
 		qmi_service_unregister(data->nas,
@@ -424,7 +424,7 @@ static void qmi_gprs_remove(struct ofono_gprs *gprs)
 		data->serving_system_indication_id = 0;
 	}
 
-	qmi_service_unref(data->nas);
+	qmi_service_free(data->nas);
 
 	l_free(data);
 }

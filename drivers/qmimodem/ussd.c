@@ -178,7 +178,7 @@ static void create_voice_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->voice = qmi_service_ref(service);
+	data->voice = service;
 
 	qmi_service_register(data->voice, QMI_VOICE_USSD_IND,
 					async_ind, ussd, NULL);
@@ -215,7 +215,7 @@ static void qmi_ussd_remove(struct ofono_ussd *ussd)
 
 	ofono_ussd_set_data(ussd, NULL);
 
-	qmi_service_unref(data->voice);
+	qmi_service_free(data->voice);
 
 	l_free(data);
 }

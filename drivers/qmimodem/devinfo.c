@@ -232,7 +232,7 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->dms = qmi_service_ref(service);
+	data->dms = service;
 	data->device_is_3gpp = false;
 
 	qmi_query_caps(devinfo);
@@ -264,7 +264,7 @@ static void qmi_devinfo_remove(struct ofono_devinfo *devinfo)
 
 	ofono_devinfo_set_data(devinfo, NULL);
 
-	qmi_service_unref(data->dms);
+	qmi_service_free(data->dms);
 
 	l_free(data);
 }

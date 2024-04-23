@@ -618,7 +618,7 @@ static void create_voice_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->voice = qmi_service_ref(service);
+	data->voice = service;
 
 	qmi_service_register(data->voice, QMI_VOICE_ALL_CALL_STATUS_IND,
 				all_call_status_ind, vc, NULL);
@@ -653,7 +653,7 @@ static void qmi_voicecall_remove(struct ofono_voicecall *vc)
 
 	ofono_voicecall_set_data(vc, NULL);
 
-	qmi_service_unref(data->voice);
+	qmi_service_free(data->voice);
 
 	l_queue_destroy(data->call_list, l_free);
 	l_free(data);

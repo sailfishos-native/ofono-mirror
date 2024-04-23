@@ -208,7 +208,7 @@ static void create_pds_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->pds = qmi_service_ref(service);
+	data->pds = service;
 
 	qmi_service_register(data->pds, QMI_PDS_EVENT,
 					event_notify, lr, NULL);
@@ -257,7 +257,7 @@ static void qmi_location_reporting_remove(struct ofono_location_reporting *lr)
 
 	ofono_location_reporting_set_data(lr, NULL);
 
-	qmi_service_unref(data->pds);
+	qmi_service_free(data->pds);
 
 	l_free(data);
 }

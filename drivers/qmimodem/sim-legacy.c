@@ -323,7 +323,7 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->dms = qmi_service_ref(service);
+	data->dms = service;
 
 	data->event_indication_id =
 		qmi_service_register(data->dms, QMI_DMS_EVENT,
@@ -379,7 +379,7 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 		data->event_indication_id = 0;
 	}
 
-	qmi_service_unref(data->dms);
+	qmi_service_free(data->dms);
 
 	l_free(data);
 }

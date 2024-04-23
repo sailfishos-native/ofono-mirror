@@ -222,7 +222,7 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	nmd->nas = qmi_service_ref(service);
+	nmd->nas = service;
 
 	ofono_netmon_register(netmon);
 }
@@ -253,7 +253,7 @@ static void qmi_netmon_remove(struct ofono_netmon *netmon)
 
 	ofono_netmon_set_data(netmon, NULL);
 
-	qmi_service_unref(nmd->nas);
+	qmi_service_free(nmd->nas);
 
 	l_free(nmd);
 }

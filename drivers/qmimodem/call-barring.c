@@ -216,7 +216,7 @@ static void create_voice_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	bd->voice = qmi_service_ref(service);
+	bd->voice = service;
 
 	ofono_call_barring_register(barr);
 }
@@ -248,7 +248,7 @@ static void qmi_call_barring_remove(struct ofono_call_barring *barr)
 	ofono_call_barring_set_data(barr, NULL);
 
 	if (bd->voice)
-		qmi_service_unref(bd->voice);
+		qmi_service_free(bd->voice);
 
 	l_free(bd);
 }

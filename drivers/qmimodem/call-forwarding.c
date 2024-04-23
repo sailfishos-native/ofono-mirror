@@ -302,7 +302,7 @@ static void create_voice_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	cfd->voice = qmi_service_ref(service);
+	cfd->voice = service;
 
 	ofono_call_forwarding_register(cf);
 }
@@ -334,7 +334,7 @@ static void qmi_call_forwarding_remove(struct ofono_call_forwarding *cf)
 	ofono_call_forwarding_set_data(cf, NULL);
 
 	if (cfd->voice)
-		qmi_service_unref(cfd->voice);
+		qmi_service_free(cfd->voice);
 
 	l_free(cfd);
 }

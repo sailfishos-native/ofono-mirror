@@ -759,7 +759,7 @@ static void create_wms_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	data->wms = qmi_service_ref(service);
+	data->wms = service;
 
 	memset(&data->rd_msg_id, 0, sizeof(data->rd_msg_id));
 	data->msg_mode = QMI_WMS_MESSAGE_MODE_GSMWCDMA;
@@ -801,7 +801,7 @@ static void qmi_sms_remove(struct ofono_sms *sms)
 
 	ofono_sms_set_data(sms, NULL);
 
-	qmi_service_unref(data->wms);
+	qmi_service_free(data->wms);
 
 	if (data->msg_list)
 		l_free(data->msg_list);

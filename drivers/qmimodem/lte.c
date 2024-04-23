@@ -183,7 +183,7 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 		return;
 	}
 
-	ldd->wds = qmi_service_ref(service);
+	ldd->wds = service;
 
 	/* Query the default profile */
 	param = qmi_param_new();
@@ -228,7 +228,7 @@ static void qmimodem_lte_remove(struct ofono_lte *lte)
 
 	ofono_lte_set_data(lte, NULL);
 
-	qmi_service_unref(ldd->wds);
+	qmi_service_free(ldd->wds);
 
 	l_free(ldd);
 }

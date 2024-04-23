@@ -124,10 +124,10 @@ static int gobi_probe(struct ofono_modem *modem)
 
 static void cleanup_services(struct gobi_data *data)
 {
-	qmi_service_unref(data->dms);
+	qmi_service_free(data->dms);
 	data->dms = NULL;
 
-	qmi_service_unref(data->wda);
+	qmi_service_free(data->wda);
 	data->wda = NULL;
 }
 
@@ -330,7 +330,7 @@ static void create_wda_cb(struct qmi_service *service, void *user_data)
 		goto error;
 	}
 
-	data->wda = qmi_service_ref(service);
+	data->wda = service;
 
 	if (qmi_service_send(data->wda, QMI_WDA_GET_DATA_FORMAT, NULL,
 				get_data_format_cb, modem, NULL) > 0)
@@ -354,7 +354,7 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 	if (!service)
 		goto error;
 
-	data->dms = qmi_service_ref(service);
+	data->dms = service;
 
 	if (qmi_service_create(data->device, QMI_SERVICE_WDA,
 					create_wda_cb, modem, NULL))
