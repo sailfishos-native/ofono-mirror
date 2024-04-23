@@ -471,9 +471,6 @@ static int gobi_disable(struct ofono_modem *modem)
 
 	DBG("%p", modem);
 
-	qmi_service_cancel_all(data->dms);
-	qmi_service_unregister_all(data->dms);
-
 	/*
 	 * Telit QMI modem must remain online. If powered down, it also
 	 * powers down the sim card, and QMI interface has no way to bring

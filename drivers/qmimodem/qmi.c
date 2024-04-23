@@ -2720,19 +2720,6 @@ bool qmi_service_create(struct qmi_device *device,
 						user_data, destroy);
 }
 
-void qmi_service_free(struct qmi_service *service)
-{
-	if (!service)
-		return;
-
-	qmi_service_cancel_all(service);
-	qmi_service_unregister_all(service);
-
-	service_family_unref(service->family);
-
-	l_free(service);
-}
-
 const char *qmi_service_get_identifier(struct qmi_service *service)
 {
 	if (!service)
@@ -2896,7 +2883,7 @@ static void remove_client(struct l_queue *queue, unsigned int service_handle)
 				L_UINT_TO_PTR(service_handle));
 }
 
-bool qmi_service_cancel_all(struct qmi_service *service)
+static bool qmi_service_cancel_all(struct qmi_service *service)
 {
 	struct qmi_device *device;
 
@@ -2980,7 +2967,7 @@ static bool remove_notify_if_handle_match(void *data, void *user_data)
 	return true;
 }
 
-bool qmi_service_unregister_all(struct qmi_service *service)
+static bool qmi_service_unregister_all(struct qmi_service *service)
 {
 	if (!service)
 		return false;
@@ -2990,4 +2977,17 @@ bool qmi_service_unregister_all(struct qmi_service *service)
 					L_UINT_TO_PTR(service->handle));
 
 	return true;
+}
+
+void qmi_service_free(struct qmi_service *service)
+{
+	if (!service)
+		return;
+
+	qmi_service_cancel_all(service);
+	qmi_service_unregister_all(service);
+
+	service_family_unref(service->family);
+
+	l_free(service);
 }
