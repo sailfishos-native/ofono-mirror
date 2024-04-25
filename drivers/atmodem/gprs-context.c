@@ -458,10 +458,6 @@ static int at_gprs_context_probe(struct ofono_gprs_context *gc,
 
 	ofono_gprs_context_set_data(gc, gcd);
 
-	chat = g_at_chat_get_slave(gcd->chat);
-	if (chat == NULL)
-		return 0;
-
 	switch (vendor) {
 	case OFONO_VENDOR_SIMCOM_SIM900:
 		gcd->use_atd99 = FALSE;
@@ -471,7 +467,10 @@ static int at_gprs_context_probe(struct ofono_gprs_context *gc,
 						at_cgdata_test_cb, gc, NULL);
 	}
 
-	g_at_chat_register(chat, "+CGEV:", cgev_notify, FALSE, gc, NULL);
+	chat = g_at_chat_get_slave(gcd->chat);
+	if (chat)
+		g_at_chat_register(chat, "+CGEV:", cgev_notify, FALSE, gc,
+									NULL);
 
 	return 0;
 }
