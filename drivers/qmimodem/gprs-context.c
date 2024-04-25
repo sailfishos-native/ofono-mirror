@@ -194,7 +194,7 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 	param = qmi_param_new_uint32(PARAM_REQUESTED_SETTINGS,
 						requested_settings);
 
-	if (qmi_service_send(data->wds, QMI_WDS_GET_CURRENT_SETTINGS, NULL,
+	if (qmi_service_send(data->wds, QMI_WDS_GET_CURRENT_SETTINGS, param,
 				get_settings_cb, cbd, cb_data_unref) > 0) {
 		cb_data_ref(cbd);
 		return;
