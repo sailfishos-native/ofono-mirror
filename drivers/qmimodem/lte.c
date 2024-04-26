@@ -73,24 +73,23 @@ static void qmimodem_lte_set_default_attach_info(const struct ofono_lte *lte,
 		uint8_t type;
 		uint8_t index;
 	} __attribute__((packed)) p = {
-		.type = 0, /* 3GPP */
+		.type = QMI_WDS_PROFILE_TYPE_3GPP,
+		.index = ldd->default_profile,
 	};
 
 	DBG("");
 
-	p.index = ldd->default_profile;
-
 	param = qmi_param_new();
 
 	/* Profile selector */
-	qmi_param_append(param, 0x01, sizeof(p), &p);
+	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
 
 	/* WDS APN Name */
 	qmi_param_append(param, QMI_WDS_PARAM_APN,
 				strlen(info->apn), info->apn);
 
 	/* Modify profile */
-	if (qmi_service_send(ldd->wds, 0x28, param,
+	if (qmi_service_send(ldd->wds, QMI_WDS_MODIFY_PROFILE, param,
 					modify_profile_cb, cbd, l_free) > 0)
 		return;
 
@@ -114,6 +113,7 @@ static void reset_profile_cb(struct qmi_result *result, void *user_data)
 
 static void get_default_profile_cb(struct qmi_result *result, void *user_data)
 {
+	static const uint8_t RESULT_DEFAULT_PROFILE_NUMBER = 0x1;
 	struct ofono_lte *lte = user_data;
 	struct lte_data *ldd = ofono_lte_get_data(lte);
 	uint16_t error;
@@ -123,7 +123,7 @@ static void get_default_profile_cb(struct qmi_result *result, void *user_data)
 		uint8_t type;
 		uint8_t index;
 	} __attribute__((packed)) p = {
-		.type = 0, /* 3GPP */
+		.type = QMI_WDS_PROFILE_TYPE_3GPP,
 	};
 
 	DBG("");
@@ -134,7 +134,8 @@ static void get_default_profile_cb(struct qmi_result *result, void *user_data)
 	}
 
 	/* Profile index */
-	if (!qmi_result_get_uint8(result, 0x01, &index)) {
+	if (!qmi_result_get_uint8(result, RESULT_DEFAULT_PROFILE_NUMBER,
+								&index)) {
 		ofono_error("Failed query default profile");
 		goto error;
 	}
@@ -148,10 +149,10 @@ static void get_default_profile_cb(struct qmi_result *result, void *user_data)
 	param = qmi_param_new();
 
 	/* Profile selector */
-	qmi_param_append(param, 0x01, sizeof(p), &p);
+	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
 
 	/* Reset profile */
-	if (qmi_service_send(ldd->wds, 0x4b, param,
+	if (qmi_service_send(ldd->wds, QMI_WDS_RESET_PROFILE, param,
 				reset_profile_cb, lte, NULL) > 0)
 		return;
 
@@ -171,8 +172,8 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 		uint8_t type;
 		uint8_t family;
 	} __attribute((packed)) p = {
-		.type = 0,   /* 3GPP */
-		.family = 0, /* embedded */
+		.type = QMI_WDS_PROFILE_TYPE_3GPP,
+		.family = QMI_WDS_PROFILE_FAMILY_EMBEDDED,
 	};
 
 	DBG("");
@@ -189,11 +190,11 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 	param = qmi_param_new();
 
 	/* Profile type */
-	qmi_param_append(param, 0x1, sizeof(p), &p);
+	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
 
 	/* Get default profile */
-	if (qmi_service_send(ldd->wds, 0x49, param,
-				get_default_profile_cb, lte, NULL) > 0)
+	if (qmi_service_send(ldd->wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
+				param, get_default_profile_cb, lte, NULL) > 0)
 		return;
 
 	qmi_param_free(param);

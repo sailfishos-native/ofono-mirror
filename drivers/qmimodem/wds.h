@@ -20,12 +20,12 @@
  */
 
 /* Start WDS network interface */
+#define QMI_WDS_PARAM_PROFILE_TYPE		0x01
 #define QMI_WDS_PARAM_APN			0x14	/* string */
 #define QMI_WDS_PARAM_IP_FAMILY			0x19	/* uint8 */
 #define QMI_WDS_PARAM_USERNAME			0x17	/* string */
 #define QMI_WDS_PARAM_PASSWORD			0x18	/* string */
 #define QMI_WDS_PARAM_AUTHENTICATION_PREFERENCE	0x16	/* uint8 */
-
 
 enum qmi_wds_authentication {
 	QMI_WDS_AUTHENTICATION_PAP	= 0x1,
@@ -57,6 +57,17 @@ enum qmi_wds_client_type {
 	QMI_WDS_CLIENT_TYPE_TETHERED = 0x01,
 };
 
+enum qmi_wds_profile_type {
+	QMI_WDS_PROFILE_TYPE_3GPP =	0x00,
+	QMI_WDS_PROFILE_TYPE_3GPP2 =	0x01,
+	QMI_WDS_PROFILE_TYPE_EPC =	0x02,
+};
+
+enum qmi_wds_profile_family {
+	QMI_WDS_PROFILE_FAMILY_EMBEDDED =	0x00,
+	QMI_WDS_PROFILE_FAMILY_TETHERED =	0x01,
+};
+
 enum qmi_wds_command {
 	QMI_WDS_RESET					= 0x00,
 	QMI_WDS_EVENT_REPORT				= 0x01,
@@ -83,6 +94,7 @@ enum qmi_wds_command {
 	QMI_WDS_GET_CURRENT_DATA_BEARER_TECHNOLOGY 	= 0x44,
 	QMI_WDS_GET_DEFAULT_PROFILE_NUMBER		= 0x49,
 	QMI_WDS_SET_DEFAULT_PROFILE_NUMBER		= 0x4A,
+	QMI_WDS_RESET_PROFILE				= 0x4B,
 	QMI_WDS_SET_IP_FAMILY				= 0x4D,
 	QMI_WDS_SET_AUTOCONNECT_SETTINGS		= 0x51,
 	QMI_WDS_GET_PDN_THROTTLE_INFO			= 0x6C,
