@@ -108,3 +108,5 @@ enum qmi_wds_command {
 	QMI_WDS_CONFIGURE_PROFILE_EVENT_LIST		= 0xA7,
 	QMI_WDS_PROFILE_CHANGED				= 0xA8,
 };
+
+int qmi_wds_auth_from_ofono(enum ofono_gprs_auth_method method);
