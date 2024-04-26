@@ -1,3 +1,10 @@
+ver 2.6:
+	Fix issue with handling ATD*99 for non-muxed ports.
+	Fix issue with handling QRTR discover timeout.
+	Add support for QMI voice call feature.
+	Add support for exposing modem capabilities.
+	Remove support for BlueZ 4.x services.
+
 ver 2.5:
 	Fix issue with LTE provisioning support.
 	Fix issue with SMS and address length checks.
