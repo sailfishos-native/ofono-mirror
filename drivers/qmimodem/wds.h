@@ -110,3 +110,4 @@ enum qmi_wds_command {
 };
 
 int qmi_wds_auth_from_ofono(enum ofono_gprs_auth_method method);
+int qmi_wds_pdp_type_from_ofono(enum ofono_gprs_proto proto);

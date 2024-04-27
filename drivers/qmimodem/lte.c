@@ -66,6 +66,10 @@ static void qmimodem_lte_set_default_attach_info(const struct ofono_lte *lte,
 			const struct ofono_lte_default_attach_info *info,
 			ofono_lte_cb_t cb, void *data)
 {
+	static const uint8_t PARAM_PDP_TYPE = 0x11;
+	static const uint8_t PARAM_USERNAME = 0x1B;
+	static const uint8_t PARAM_PASSWORD = 0x1C;
+	static const uint8_t PARAM_AUTHENTICATION_PREFERENCE = 0x1D;
 	struct lte_data *ldd = ofono_lte_get_data(lte);
 	struct cb_data *cbd = cb_data_new(cb, data);
 	struct qmi_param* param;
@@ -76,19 +80,28 @@ static void qmimodem_lte_set_default_attach_info(const struct ofono_lte *lte,
 		.type = QMI_WDS_PROFILE_TYPE_3GPP,
 		.index = ldd->default_profile,
 	};
+	uint8_t auth = qmi_wds_auth_from_ofono(info->auth_method);
 
 	DBG("");
 
 	param = qmi_param_new();
 
-	/* Profile selector */
 	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
-
-	/* WDS APN Name */
+	qmi_param_append_uint8(param, PARAM_PDP_TYPE,
+				qmi_wds_pdp_type_from_ofono(info->proto));
 	qmi_param_append(param, QMI_WDS_PARAM_APN,
 				strlen(info->apn), info->apn);
 
-	/* Modify profile */
+	qmi_param_append_uint8(param, PARAM_AUTHENTICATION_PREFERENCE, auth);
+
+	if (auth && info->username[0])
+		qmi_param_append(param, PARAM_USERNAME,
+					strlen(info->username), info->username);
+
+	if (auth && info->password[0])
+		qmi_param_append(param, PARAM_PASSWORD,
+					strlen(info->password), info->password);
+
 	if (qmi_service_send(ldd->wds, QMI_WDS_MODIFY_PROFILE, param,
 					modify_profile_cb, cbd, l_free) > 0)
 		return;

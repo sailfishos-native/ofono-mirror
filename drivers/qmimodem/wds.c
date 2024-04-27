@@ -23,3 +23,17 @@ int qmi_wds_auth_from_ofono(enum ofono_gprs_auth_method method)
 
 	return -ENOENT;
 }
+
+int qmi_wds_pdp_type_from_ofono(enum ofono_gprs_proto proto)
+{
+	switch (proto) {
+	case OFONO_GPRS_PROTO_IP:
+		return QMI_WDS_PDP_TYPE_IPV4;
+	case OFONO_GPRS_PROTO_IPV6:
+		return QMI_WDS_PDP_TYPE_IPV6;
+	case OFONO_GPRS_PROTO_IPV4V6:
+		return QMI_WDS_PDP_TYPE_IPV4V6;
+	}
+
+	return -ENOENT;
+}
