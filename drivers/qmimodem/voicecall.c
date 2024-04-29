@@ -682,6 +682,7 @@ static void send_one_dtmf(struct ofono_voicecall *vc, const char dtmf,
 error:
 	CALLBACK_WITH_FAILURE(cb, data);
 	l_free(param);
+	cb_data_unref(cbd);
 }
 
 static void send_one_dtmf_cb(const struct ofono_error *error, void *data)
