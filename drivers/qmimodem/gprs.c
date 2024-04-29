@@ -38,7 +38,7 @@ struct gprs_data {
 	struct qmi_device *dev;
 	struct qmi_service *nas;
 	struct qmi_service *wds;
-	unsigned int last_auto_context_id;
+	unsigned int default_profile;
 	uint16_t serving_system_indication_id;
 };
 
@@ -116,46 +116,12 @@ static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 	if (qmi_result_get_uint8(result, 0x11, &iptype))
 		ofono_info("LTE attach IP type: %hhd", iptype);
 
-	ofono_gprs_cid_activated(gprs, data->last_auto_context_id, apn);
+	ofono_gprs_cid_activated(gprs, data->default_profile, apn);
 	l_free(apn);
 
 	return;
 
 noapn:
-	data->last_auto_context_id = 0;
-	ofono_error("LTE bearer established but APN not set");
-}
-
-static void get_default_profile_cb(struct qmi_result *result, void *user_data)
-{
-	struct ofono_gprs* gprs = user_data;
-	struct gprs_data *data = ofono_gprs_get_data(gprs);
-	uint16_t error;
-	uint8_t index;
-
-	DBG("");
-
-	if (qmi_result_set_error(result, &error)) {
-		ofono_error("Get default profile error: %hd", error);
-		goto error;
-	}
-
-	/* Profile index */
-	if (!qmi_result_get_uint8(result, 0x01, &index)) {
-		ofono_error("Failed query default profile");
-		goto error;
-	}
-
-	DBG("Default profile index: %hhd", index);
-
-	data->last_auto_context_id = index;
-
-	if (qmi_service_send(data->wds, QMI_WDS_GET_LTE_ATTACH_PARAMETERS,
-				NULL, get_lte_attach_param_cb, gprs, NULL) > 0)
-		return;
-
-error:
-	data->last_auto_context_id = 0;
 	ofono_error("LTE bearer established but APN not set");
 }
 
@@ -167,41 +133,16 @@ error:
 static void get_lte_attach_params(struct ofono_gprs* gprs)
 {
 	struct gprs_data *data = ofono_gprs_get_data(gprs);
-	struct {
-		uint8_t type;
-		uint8_t family;
-	} __attribute((packed)) p = {
-		.type = 0,   /* 3GPP */
-		.family = 0, /* embedded */
-	};
-	struct qmi_param *param;
 
 	DBG("");
 
-	if (data->last_auto_context_id != 0)
-		return; /* Established or in progress */
-
-	/* Set query in progress */
-	data->last_auto_context_id = -1;
-
-	/* First we query the default profile in order to find out which
-	 * context the modem has activated.
-	 */
-	param = qmi_param_new();
-
-	/* Profile type */
-	qmi_param_append(param, 0x1, sizeof(p), &p);
-
-	if (qmi_service_send(data->wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
-				param, get_default_profile_cb, gprs, NULL) > 0)
+	if (qmi_service_send(data->wds, QMI_WDS_GET_LTE_ATTACH_PARAMETERS,
+				NULL, get_lte_attach_param_cb, gprs, NULL) > 0)
 		return;
-
-	qmi_param_free(param);
 }
 
 static int handle_ss_info(struct qmi_result *result, struct ofono_gprs *gprs)
 {
-	struct gprs_data *data = ofono_gprs_get_data(gprs);
 	int status;
 	int tech;
 	int bearer_tech;
@@ -222,8 +163,6 @@ static int handle_ss_info(struct qmi_result *result, struct ofono_gprs *gprs)
 			 */
 			get_lte_attach_params(gprs);
 		}
-	} else {
-		data->last_auto_context_id = 0;
 	}
 
 	/* DC is optional so only notify on successful extraction */
@@ -337,20 +276,29 @@ static void qmi_attached_status(struct ofono_gprs *gprs,
 	l_free(cbd);
 }
 
-static void create_wds_cb(struct qmi_service *service, void *user_data)
+static void get_default_profile_cb(struct qmi_result *result, void *user_data)
 {
+	static const uint8_t RESULT_DEFAULT_PROFILE_NUMBER = 0x1;
 	struct ofono_gprs *gprs = user_data;
 	struct gprs_data *data = ofono_gprs_get_data(gprs);
+	uint16_t error;
+	uint8_t index;
 
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request WDS service");
-		ofono_gprs_remove(gprs);
-		return;
+	if (qmi_result_set_error(result, &error)) {
+		ofono_error("Get default profile error: %hd", error);
+		goto error;
 	}
 
-	data->wds = service;
+	/* Profile index */
+	if (!qmi_result_get_uint8(result, RESULT_DEFAULT_PROFILE_NUMBER,
+								&index)) {
+		ofono_error("Failed query default profile");
+		goto error;
+	}
+
+	DBG("Default profile index: %hhd", index);
+	data->default_profile = index;
+	ofono_gprs_set_cid_range(gprs, index, index);
 
 	/*
 	 * First get the SS info - the modem may already be connected,
@@ -358,15 +306,53 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 	 */
 	qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
 					ss_info_notify, gprs, NULL);
-
 	data->serving_system_indication_id =
 		qmi_service_register(data->nas,
 					QMI_NAS_SERVING_SYSTEM_INDICATION,
 					ss_info_notify, gprs, NULL);
 
-	ofono_gprs_set_cid_range(gprs, 1, 1);
-
 	ofono_gprs_register(gprs);
+	return;
+error:
+	ofono_gprs_remove(gprs);
+}
+
+static void create_wds_cb(struct qmi_service *service, void *user_data)
+{
+	struct ofono_gprs *gprs = user_data;
+	struct gprs_data *data = ofono_gprs_get_data(gprs);
+	struct {
+		uint8_t type;
+		uint8_t family;
+	} __attribute((packed)) p = {
+		.type = QMI_WDS_PROFILE_TYPE_3GPP,
+		.family = QMI_WDS_PROFILE_FAMILY_EMBEDDED,
+	};
+	struct qmi_param *param;
+
+	DBG("");
+
+	if (!service) {
+		ofono_error("Failed to request WDS service");
+		goto error;
+	}
+
+	data->wds = service;
+
+	/*
+	 * Query the default profile.  We never change the default profile
+	 * number, so querying it once should be sufficient
+	 */
+	param = qmi_param_new();
+	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
+
+	if (qmi_service_send(data->wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
+				param, get_default_profile_cb, gprs, NULL) > 0)
+		return;
+
+	qmi_param_free(param);
+error:
+	ofono_gprs_remove(gprs);
 }
 
 static void create_nas_cb(struct qmi_service *service, void *user_data)
