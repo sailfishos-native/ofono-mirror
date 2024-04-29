@@ -692,20 +692,18 @@ static void send_one_dtmf_cb(const struct ofono_error *error, void *data)
 
 	DBG("");
 
-	if (error->type != OFONO_ERROR_TYPE_NO_ERROR ||
-			*vd->next_dtmf == 0) {
-		if (error->type == OFONO_ERROR_TYPE_NO_ERROR)
-			CALLBACK_WITH_SUCCESS(vd->send_dtmf_cb, vd->send_dtmf_data);
-		else
-			CALLBACK_WITH_FAILURE(vd->send_dtmf_cb, vd->send_dtmf_data);
-
-		l_free(vd->full_dtmf);
-		vd->full_dtmf = NULL;
-	} else {
-		send_one_dtmf(vc,
-				*(vd->next_dtmf++),
-				send_one_dtmf_cb, vd);
+	if (error->type == OFONO_ERROR_TYPE_NO_ERROR && *vd->next_dtmf) {
+		send_one_dtmf(vc, *(vd->next_dtmf++), send_one_dtmf_cb, vd);
+		return;
 	}
+
+	if (error->type == OFONO_ERROR_TYPE_NO_ERROR)
+		CALLBACK_WITH_SUCCESS(vd->send_dtmf_cb, vd->send_dtmf_data);
+	else
+		CALLBACK_WITH_FAILURE(vd->send_dtmf_cb, vd->send_dtmf_data);
+
+	l_free(vd->full_dtmf);
+	vd->full_dtmf = NULL;
 }
 
 static void send_dtmf(struct ofono_voicecall *vc, const char *dtmf,
