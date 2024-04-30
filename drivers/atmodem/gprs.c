@@ -675,7 +675,7 @@ static void gprs_initialized(gboolean ok, GAtResult *result, gpointer user_data)
 		g_at_chat_send(gd->chat, "AT#PSNT=1", none_prefix,
 						NULL, NULL, NULL);
 		break;
-	case OFONO_VENDOR_SIMCOM:
+	case OFONO_VENDOR_SIMCOM_A76XX:
 		g_at_chat_register(gd->chat, "+CNSMOD:", simcom_mode_notify,
 						FALSE, gprs, NULL);
 		g_at_chat_send(gd->chat, "AT+CNSMOD=1", none_prefix,
@@ -805,7 +805,7 @@ retry:
 
 	g_at_chat_send(gd->chat, cmd, none_prefix, NULL, NULL, NULL);
 
-	if (gd->vendor != OFONO_VENDOR_SIMCOM)
+	if (gd->vendor != OFONO_VENDOR_SIMCOM_A76XX)
 		g_at_chat_send(gd->chat, "AT+CGAUTO=0", none_prefix,
 					NULL, NULL, NULL);
 

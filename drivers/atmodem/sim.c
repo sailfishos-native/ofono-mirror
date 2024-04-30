@@ -1199,6 +1199,7 @@ static void at_pin_retries_query(struct ofono_sim *sim,
 			return;
 		break;
 	case OFONO_VENDOR_SIMCOM:
+	case OFONO_VENDOR_SIMCOM_A76XX:
 		if (g_at_chat_send(sd->chat, "AT+SPIC", simcom_spic_prefix,
 					simcom_spic_cb, cbd, g_free) > 0)
 			return;
@@ -1355,6 +1356,7 @@ static void at_pin_send_cb(gboolean ok, GAtResult *result,
 	case OFONO_VENDOR_ALCATEL:
 	case OFONO_VENDOR_HUAWEI:
 	case OFONO_VENDOR_SIMCOM:
+	case OFONO_VENDOR_SIMCOM_A76XX:
 	case OFONO_VENDOR_SIERRA:
 		/*
 		 * On ZTE modems, after pin is entered, SIM state is checked
@@ -1647,7 +1649,7 @@ static void at_discover_apps(struct ofono_sim *sim,
 	 * command with SIM cards of some operators
 	 */
 	if (sd->vendor == OFONO_VENDOR_QUECTEL_EC2X
-			|| sd->vendor == OFONO_VENDOR_SIMCOM)
+			|| sd->vendor == OFONO_VENDOR_SIMCOM_A76XX)
 		goto error;
 
 	cbd = cb_data_new(cb, data);

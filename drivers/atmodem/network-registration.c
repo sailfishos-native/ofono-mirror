@@ -1936,6 +1936,7 @@ static void at_creg_set_cb(gboolean ok, GAtResult *result, gpointer user_data)
 
 	switch (nd->vendor) {
 	case OFONO_VENDOR_SIMCOM:
+	case OFONO_VENDOR_SIMCOM_A76XX:
 		/* Register for CSQ changes */
 		g_at_chat_send(nd->chat, "AT+AUTOCSQ=1,1", none_prefix,
 				NULL, NULL, NULL);

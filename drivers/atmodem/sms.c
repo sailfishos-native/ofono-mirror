@@ -846,6 +846,7 @@ static gboolean build_cnmi_string(char *buf, int *cnmi_opts,
 	case OFONO_VENDOR_HUAWEI:
 	case OFONO_VENDOR_ZTE:
 	case OFONO_VENDOR_SIMCOM:
+	case OFONO_VENDOR_SIMCOM_A76XX:
 	case OFONO_VENDOR_QUECTEL:
 	case OFONO_VENDOR_QUECTEL_EC2X:
 	case OFONO_VENDOR_DROID:
