@@ -184,6 +184,13 @@ static void ss_info_notify(struct qmi_result *result, void *user_data)
 		ofono_gprs_status_notify(gprs, status);
 }
 
+static void event_report_notify(struct qmi_result *result, void *user_data)
+{
+	DBG("");
+
+	qmi_result_print_tlvs(result);
+}
+
 static void attach_detach_cb(struct qmi_result *result, void *user_data)
 {
 	struct cb_data *cbd = user_data;
@@ -275,6 +282,74 @@ static void qmi_attached_status(struct ofono_gprs *gprs,
 	l_free(cbd);
 }
 
+static void set_event_report_cb(struct qmi_result *result, void *user_data)
+{
+	struct ofono_gprs *gprs = user_data;
+	struct gprs_data *data = ofono_gprs_get_data(gprs);
+	uint16_t error;
+
+	DBG("");
+
+	if (qmi_result_set_error(result, &error)) {
+		ofono_error("set_event_report_cb: %hd", error);
+		goto error;
+	}
+
+	/*
+	 * First get the SS info - the modem may already be connected,
+	 * and the state-change notification may never arrive
+	 */
+	qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
+					ss_info_notify, gprs, NULL);
+
+	ofono_gprs_register(gprs);
+	return;
+error:
+	ofono_gprs_remove(gprs);
+}
+
+static int set_event_report_request(struct ofono_gprs *gprs)
+{
+	static const uint8_t PARAM_CHANNEL_RATE = 0x10;
+	static const uint8_t PARAM_TRANSFER_STATISTICS = 0x11;
+	static const uint8_t PARAM_DATA_BEARER_TECHNOLOGY = 0x12;
+	static const uint8_t PARAM_DORMANCY_STATUS = 0x13;
+	static const uint8_t PARAM_CURRENT_DATA_BEARER_TECHNOLOGY = 0x15;
+	static const uint8_t PARAM_PREFERRED_DATA_SYSTEM = 0x18;
+	static const uint8_t PARAM_DATA_SYSTEM_STATUS = 0x1A;
+	static const uint8_t PARAM_LIMITED_DATA_SYSTEM_STATUS = 0x1C;
+	static const uint8_t PARAM_PDN_FILTER_REMOVALS = 0x1D;
+	static const uint8_t PARAM_DATA_BEARER_TECHNOLOGY_EXTENDED = 0x1E;
+
+	struct gprs_data *data = ofono_gprs_get_data(gprs);
+	struct {
+		uint8_t interval;
+		uint32_t indicators;
+	} __attribute((packed)) ts = {
+		.interval = 5,
+		.indicators = ~0, /* register for everything */
+	};
+	struct qmi_param *param = qmi_param_new();
+
+	qmi_param_append_uint8(param, PARAM_CHANNEL_RATE, 1);
+	qmi_param_append(param, PARAM_TRANSFER_STATISTICS, sizeof(ts), &ts);
+	qmi_param_append_uint8(param, PARAM_DATA_BEARER_TECHNOLOGY, 1);
+	qmi_param_append_uint8(param, PARAM_DORMANCY_STATUS, 1);
+	qmi_param_append_uint8(param, PARAM_CURRENT_DATA_BEARER_TECHNOLOGY, 1);
+	qmi_param_append_uint8(param, PARAM_PREFERRED_DATA_SYSTEM, 1);
+	qmi_param_append_uint8(param, PARAM_DATA_SYSTEM_STATUS, 1);
+	qmi_param_append_uint8(param, PARAM_LIMITED_DATA_SYSTEM_STATUS, 1);
+	qmi_param_append_uint8(param, PARAM_PDN_FILTER_REMOVALS, 1);
+	qmi_param_append_uint8(param, PARAM_DATA_BEARER_TECHNOLOGY_EXTENDED, 1);
+
+	if (qmi_service_send(data->wds, QMI_WDS_EVENT_REPORT,
+				param, set_event_report_cb, gprs, NULL) > 0)
+		return 0;
+
+	qmi_param_free(param);
+	return -EIO;
+}
+
 static void get_default_profile_number_cb(struct qmi_result *result,
 								void *user_data)
 {
@@ -300,15 +375,8 @@ static void get_default_profile_number_cb(struct qmi_result *result,
 	data->default_profile = index;
 	ofono_gprs_set_cid_range(gprs, index, index);
 
-	/*
-	 * First get the SS info - the modem may already be connected,
-	 * and the state-change notification may never arrive
-	 */
-	qmi_service_send(data->nas, QMI_NAS_GET_SERVING_SYSTEM, NULL,
-					ss_info_notify, gprs, NULL);
-
-	ofono_gprs_register(gprs);
-	return;
+	if (set_event_report_request(gprs) >= 0)
+		return;
 error:
 	ofono_gprs_remove(gprs);
 }
@@ -353,6 +421,8 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 	}
 
 	data->wds = service;
+	qmi_service_register(data->wds, QMI_WDS_EVENT_REPORT,
+				event_report_notify, gprs, NULL);
 
 	if (get_default_profile_number_request(gprs) >= 0)
 		return;
