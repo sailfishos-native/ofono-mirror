@@ -532,6 +532,9 @@ builtin_sources += drivers/atmodem/atutil.h \
 builtin_sources += drivers/atmodem/atutil.h \
 			drivers/quectelmodem/radio-settings.c
 
+builtin_sources += drivers/atmodem/atutil.h \
+			drivers/simcommodem/radio-settings.c
+
 if PHONESIM
 builtin_modules += phonesim
 builtin_sources += plugins/phonesim.c
