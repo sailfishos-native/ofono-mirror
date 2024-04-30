@@ -191,6 +191,13 @@ static void event_report_notify(struct qmi_result *result, void *user_data)
 	qmi_result_print_tlvs(result);
 }
 
+static void profile_changed_notify(struct qmi_result *result, void *user_data)
+{
+	DBG("");
+
+	qmi_result_print_tlvs(result);
+}
+
 static void attach_detach_cb(struct qmi_result *result, void *user_data)
 {
 	struct cb_data *cbd = user_data;
@@ -282,7 +289,7 @@ static void qmi_attached_status(struct ofono_gprs *gprs,
 	l_free(cbd);
 }
 
-static void set_event_report_cb(struct qmi_result *result, void *user_data)
+static void indication_register_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_gprs *gprs = user_data;
 	struct gprs_data *data = ofono_gprs_get_data(gprs);
@@ -291,7 +298,7 @@ static void set_event_report_cb(struct qmi_result *result, void *user_data)
 	DBG("");
 
 	if (qmi_result_set_error(result, &error)) {
-		ofono_error("set_event_report_cb: %hd", error);
+		ofono_error("indication_register_cb: %hd", error);
 		goto error;
 	}
 
@@ -304,6 +311,41 @@ static void set_event_report_cb(struct qmi_result *result, void *user_data)
 
 	ofono_gprs_register(gprs);
 	return;
+error:
+	ofono_gprs_remove(gprs);
+}
+
+static int indication_register_request(struct ofono_gprs *gprs)
+{
+	static const uint8_t PARAM_PROFILE_CHANGES = 0x19;
+
+	struct gprs_data *data = ofono_gprs_get_data(gprs);
+	struct qmi_param *param = qmi_param_new();
+
+	qmi_param_append_uint8(param, PARAM_PROFILE_CHANGES, 1);
+
+	if (qmi_service_send(data->wds, QMI_WDS_INDICATION_REGISTER,
+				param, indication_register_cb, gprs, NULL) > 0)
+		return 0;
+
+	qmi_param_free(param);
+	return -EIO;
+}
+
+static void set_event_report_cb(struct qmi_result *result, void *user_data)
+{
+	struct ofono_gprs *gprs = user_data;
+	uint16_t error;
+
+	DBG("");
+
+	if (qmi_result_set_error(result, &error)) {
+		ofono_error("set_event_report_cb: %hd", error);
+		goto error;
+	}
+
+	if (indication_register_request(gprs) >= 0)
+		return;
 error:
 	ofono_gprs_remove(gprs);
 }
@@ -423,6 +465,8 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 	data->wds = service;
 	qmi_service_register(data->wds, QMI_WDS_EVENT_REPORT,
 				event_report_notify, gprs, NULL);
+	qmi_service_register(data->wds, QMI_WDS_PROFILE_CHANGED,
+				profile_changed_notify, gprs, NULL);
 
 	if (get_default_profile_number_request(gprs) >= 0)
 		return;
