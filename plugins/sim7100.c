@@ -59,9 +59,15 @@
 #include <drivers/atmodem/vendor.h>
 #include <drivers/atmodem/atutil.h>
 
+enum sim7x00_model {
+	SIMCOM_UNKNOWN = 0,
+	SIMCOM_A76XX,
+};
+
 struct sim7100_data {
 	GAtChat *at;
 	GAtChat *ppp;
+	enum sim7x00_model model;
 };
 
 static void sim7100_debug(const char *str, void *user_data)
@@ -116,6 +122,39 @@ static void cfun_set_on_cb(gboolean ok, GAtResult *result, gpointer user_data)
 		ofono_modem_set_powered(modem, TRUE);
 }
 
+static void cgmm_cb(gboolean ok, GAtResult *result, gpointer user_data)
+{
+	struct ofono_modem *modem = user_data;
+	struct sim7100_data *data = ofono_modem_get_data(modem);
+	GAtResultIter iter;
+	const char *model;
+
+	if (!ok) {
+		ofono_error("%s: failed to query model",
+						ofono_modem_get_path(modem));
+		ofono_modem_set_powered(modem, FALSE);
+		return;
+	}
+
+	g_at_result_iter_init(&iter, result);
+
+	while (g_at_result_iter_next(&iter, NULL)) {
+		if (!g_at_result_iter_next_unquoted_string(&iter, &model))
+			continue;
+
+		DBG("modem model: %s", model);
+
+		if (g_str_has_prefix(model, "A7672"))
+			data->model = SIMCOM_A76XX;
+
+		break;
+	}
+
+	/* power up modem */
+	g_at_chat_send(data->at, "AT+CFUN=1", NULL, cfun_set_on_cb, modem,
+									NULL);
+}
+
 static int open_device(struct ofono_modem *modem, char *devkey, GAtChat **chat)
 {
 	DBG("devkey=%s", devkey);
@@ -145,9 +184,8 @@ static int sim7100_enable(struct ofono_modem *modem)
 	/* ensure modem is in a known state; verbose on, echo/quiet off */
 	g_at_chat_send(data->at, "ATE0Q0V1", NULL, NULL, NULL, NULL);
 
-	/* power up modem */
-	g_at_chat_send(data->at, "AT+CFUN=1", NULL, cfun_set_on_cb,
-								modem, NULL);
+	/* query modem model string */
+	g_at_chat_send(data->at, "AT+CGMM", NULL, cgmm_cb, modem, NULL);
 
 	return -EINPROGRESS;
 }
