@@ -834,7 +834,8 @@ static gboolean setup_telitqmi(struct modem_info *modem)
 		DBG("%s %s %s %s %s", info->devnode, info->interface,
 				info->number, info->label, subsystem);
 
-		if (g_strcmp0(info->interface, "255/255/255") == 0 &&
+		if ((!g_strcmp0(info->interface, "255/255/255") ||
+				!g_strcmp0(info->interface, "255/255/80")) &&
 				g_strcmp0(info->number, "02") == 0) {
 			if (g_strcmp0(subsystem, "net") == 0)
 				net = info;
@@ -849,7 +850,8 @@ static gboolean setup_telitqmi(struct modem_info *modem)
 	if (setup_qmi(modem, qmi, net) < 0)
 		return FALSE;
 
-	ofono_modem_set_boolean(modem->modem, "ForceSimLegacy", TRUE);
+	if (g_strcmp0(modem->model, "1070"))
+		ofono_modem_set_boolean(modem->modem, "ForceSimLegacy", TRUE);
 
 	return TRUE;
 }
@@ -2037,6 +2039,8 @@ static struct {
 	{ "telit",	"cdc_acm",	"1bc7", "0021"	},
 	{ "telitqmi",	"qmi_wwan",	"1bc7", "1201"	},
 	{ "telitqmi",	"option",	"1bc7", "1201"	},
+	{ "telitqmi",	"qmi_wwan",	"1bc7", "1070"	},
+	{ "telitqmi",	"option",	"1bc7", "1070"	},
 	{ "droid",	"qmi_wwan",	"22b8", "2a70"	},
 	{ "droid",	"option",	"22b8", "2a70"	},
 	{ "nokia",	"option",	"0421", "060e"	},
