@@ -152,6 +152,16 @@ static void cgmm_cb(gboolean ok, GAtResult *result, gpointer user_data)
 		break;
 	}
 
+	switch (data->model) {
+	case SIMCOM_A76XX:
+		/* ignore NO CARRIER on the AT channel when disconnecting PPP */
+		g_at_chat_blacklist_terminator(data->at,
+					G_AT_CHAT_TERMINATOR_NO_CARRIER);
+		break;
+	default:
+		break;
+	}
+
 	/* power up modem */
 	g_at_chat_send(data->at, "AT+CFUN=4", NULL, cfun_set_on_cb, modem,
 									NULL);
