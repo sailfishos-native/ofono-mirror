@@ -101,7 +101,7 @@ static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 	DBG("");
 
 	if (qmi_result_set_error(result, &error)) {
-		ofono_error("Failed to query LTE attach params: %hd", error);
+		ofono_error("get_lte_attach_param_cb: %hd", error);
 		goto noapn;
 	}
 
@@ -275,7 +275,8 @@ static void qmi_attached_status(struct ofono_gprs *gprs,
 	l_free(cbd);
 }
 
-static void get_default_profile_cb(struct qmi_result *result, void *user_data)
+static void get_default_profile_number_cb(struct qmi_result *result,
+								void *user_data)
 {
 	static const uint8_t RESULT_DEFAULT_PROFILE_NUMBER = 0x1;
 	struct ofono_gprs *gprs = user_data;
@@ -312,9 +313,8 @@ error:
 	ofono_gprs_remove(gprs);
 }
 
-static void create_wds_cb(struct qmi_service *service, void *user_data)
+static int get_default_profile_number_request(struct ofono_gprs *gprs)
 {
-	struct ofono_gprs *gprs = user_data;
 	struct gprs_data *data = ofono_gprs_get_data(gprs);
 	struct {
 		uint8_t type;
@@ -323,7 +323,27 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 		.type = QMI_WDS_PROFILE_TYPE_3GPP,
 		.family = QMI_WDS_PROFILE_FAMILY_EMBEDDED,
 	};
-	struct qmi_param *param;
+	struct qmi_param *param = qmi_param_new();
+
+	/*
+	 * Query the default profile.  We never change the default profile
+	 * number, so querying it once should be sufficient
+	 */
+	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
+
+	if (qmi_service_send(data->wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
+				param, get_default_profile_number_cb,
+				gprs, NULL) > 0)
+		return 0;
+
+	qmi_param_free(param);
+	return -EIO;
+}
+
+static void create_wds_cb(struct qmi_service *service, void *user_data)
+{
+	struct ofono_gprs *gprs = user_data;
+	struct gprs_data *data = ofono_gprs_get_data(gprs);
 
 	DBG("");
 
@@ -334,18 +354,8 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 
 	data->wds = service;
 
-	/*
-	 * Query the default profile.  We never change the default profile
-	 * number, so querying it once should be sufficient
-	 */
-	param = qmi_param_new();
-	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
-
-	if (qmi_service_send(data->wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
-				param, get_default_profile_cb, gprs, NULL) > 0)
+	if (get_default_profile_number_request(gprs) >= 0)
 		return;
-
-	qmi_param_free(param);
 error:
 	ofono_gprs_remove(gprs);
 }
