@@ -1631,6 +1631,57 @@ static gboolean setup_sim7x00(struct modem_info *modem)
 	return TRUE;
 }
 
+static gboolean setup_sim76xx(struct modem_info *modem)
+{
+	const char *diag = NULL;
+	const char *mdm = NULL;
+	const char *ppp = NULL;
+	const char *gps = NULL;
+	GSList *list;
+
+	DBG("%s", modem->syspath);
+
+	for (list = modem->devices; list; list = list->next) {
+		const struct device_info *info = list->data;
+		const char *subsystem;
+
+		subsystem = udev_device_get_subsystem(info->udev_device);
+		if (!g_str_equal(subsystem, "tty"))
+			continue;
+
+		DBG("%s %s %s", info->devnode, info->interface, info->number);
+
+		/*
+		 * SIM76xx USB numbering:
+		 * 0: RNDIS (ep_87)
+		 * 1: RNDIS (ep_0c and ep_83)
+		 * 2: QCDM/DIAG (ttyUSB0)
+		 * 3: NMEA (ttyUSB3)
+		 * 4: AT (ttyUSB1)
+		 * 5: AT/PPP (ttyUSB2)
+		 */
+		if (g_str_equal(info->number, "02"))
+			diag = info->devnode;
+		else if (g_str_equal(info->number, "03"))
+			gps = info->devnode;
+		else if (g_str_equal(info->number, "04"))
+			mdm = info->devnode;
+		else if (g_str_equal(info->number, "05"))
+			ppp = info->devnode;
+	}
+
+	if (mdm == NULL)
+		return FALSE;
+
+	DBG("at=%s ppp=%s gps=%s diag=%s", mdm, ppp, gps, diag);
+
+	ofono_modem_set_driver(modem->modem, "sim7100");
+	ofono_modem_set_string(modem->modem, "AT", mdm);
+	ofono_modem_set_string(modem->modem, "PPP", ppp);
+
+	return TRUE;
+}
+
 static struct {
 	const char *name;
 	gboolean (*setup)(struct modem_info *modem);
@@ -1651,6 +1702,7 @@ static struct {
 	{ "telitqmi",	setup_telitqmi	},
 	{ "simcom",	setup_simcom	},
 	{ "sim7x00",	setup_sim7x00	},
+	{ "sim76xx",	setup_sim76xx	},
 	{ "zte",	setup_zte	},
 	{ "icera",	setup_icera	},
 	{ "samsung",	setup_samsung	},
@@ -2034,6 +2086,7 @@ static struct {
 	{ "simcom",	"option",	"05c6", "9000"	},
 	{ "sim7x00",	"option",	"1e0e", "9001"	},
 	{ "sim7x00",	"qmi_wwan",	"1e0e",	"9001"	},
+	{ "sim76xx",	"option",	"1e0e", "9011"	},
 	{ "telit",	"usbserial",	"1bc7"		},
 	{ "telit",	"option",	"1bc7"		},
 	{ "telit",	"cdc_acm",	"1bc7", "0021"	},
