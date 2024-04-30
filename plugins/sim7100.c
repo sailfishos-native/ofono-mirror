@@ -57,6 +57,7 @@
 #include <ofono/gprs-context.h>
 
 #include <drivers/atmodem/vendor.h>
+#include <drivers/atmodem/atutil.h>
 
 struct sim7100_data {
 	GAtChat *at;
@@ -67,7 +68,7 @@ static void sim7100_debug(const char *str, void *user_data)
 {
 	const char *prefix = user_data;
 
-	ofono_info("%s%s", prefix, str);
+	ofono_info("%s: %s", prefix, str);
 }
 
 /* Detect hardware, and initialize if found */
@@ -115,36 +116,14 @@ static void cfun_set_on_cb(gboolean ok, GAtResult *result, gpointer user_data)
 		ofono_modem_set_powered(modem, TRUE);
 }
 
-static int open_device(struct ofono_modem *modem, const char *devkey,
-			GAtChat **chatp)
+static int open_device(struct ofono_modem *modem, char *devkey, GAtChat **chat)
 {
-	GIOChannel *channel;
-	GAtSyntax *syntax;
-	GAtChat *chat;
-	const char *device;
-
 	DBG("devkey=%s", devkey);
 
-	device = ofono_modem_get_string(modem, devkey);
-	if (device == NULL)
-		return -EINVAL;
-
-	channel = g_at_tty_open(device, NULL);
-	if (channel == NULL)
+	*chat = at_util_open_device(modem, devkey, sim7100_debug, devkey, NULL);
+	if (*chat == NULL)
 		return -EIO;
 
-	syntax = g_at_syntax_new_gsm_permissive();
-	chat = g_at_chat_new(channel, syntax);
-	g_at_syntax_unref(syntax);
-	g_io_channel_unref(channel);
-
-	if (chat == NULL)
-		return -EIO;
-
-	if (getenv("OFONO_AT_DEBUG"))
-		g_at_chat_set_debug(chat, sim7100_debug, "");
-
-	*chatp = chat;
 	return 0;
 }
 
