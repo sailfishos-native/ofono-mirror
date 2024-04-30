@@ -49,6 +49,7 @@
 #include <ofono/message-waiting.h>
 #include <ofono/netreg.h>
 #include <ofono/phonebook.h>
+#include <ofono/radio-settings.h>
 #include <ofono/sim.h>
 #include <ofono/sms.h>
 #include <ofono/ussd.h>
@@ -282,6 +283,7 @@ static void sim7100_post_sim(struct ofono_modem *modem)
 							"atmodem", data->at);
 		ofono_sms_create(modem, OFONO_VENDOR_SIMCOM_A76XX,
 							"atmodem", data->at);
+		ofono_radio_settings_create(modem, 0, "simcommodem", data->at);
 		gprs = ofono_gprs_create(modem, OFONO_VENDOR_SIMCOM_A76XX,
 							"atmodem", data->at);
 		break;
