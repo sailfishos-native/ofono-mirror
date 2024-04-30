@@ -59,6 +59,8 @@
 #include <drivers/atmodem/vendor.h>
 #include <drivers/atmodem/atutil.h>
 
+static const char *cfun_prefix[] = { "+CFUN:", NULL };
+
 enum sim7x00_model {
 	SIMCOM_UNKNOWN = 0,
 	SIMCOM_A76XX,
@@ -151,7 +153,7 @@ static void cgmm_cb(gboolean ok, GAtResult *result, gpointer user_data)
 	}
 
 	/* power up modem */
-	g_at_chat_send(data->at, "AT+CFUN=1", NULL, cfun_set_on_cb, modem,
+	g_at_chat_send(data->at, "AT+CFUN=4", NULL, cfun_set_on_cb, modem,
 									NULL);
 }
 
@@ -266,11 +268,42 @@ static void sim7100_post_sim(struct ofono_modem *modem)
 		ofono_message_waiting_register(mw);
 }
 
+static void set_online_cb(gboolean ok, GAtResult *result, gpointer user_data)
+{
+	struct cb_data *cbd = user_data;
+	ofono_modem_online_cb_t cb = cbd->cb;
+	struct ofono_error error;
+
+	DBG("ok: %i", ok);
+
+	decode_at_error(&error, g_at_result_final_response(result));
+	cb(&error, cbd->data);
+}
+
+static void sim7100_set_online(struct ofono_modem *modem, ofono_bool_t online,
+				ofono_modem_online_cb_t cb, void *user_data)
+{
+	struct sim7100_data *data = ofono_modem_get_data(modem);
+	struct cb_data *cbd = cb_data_new(cb, user_data);
+	char const *command = online ? "AT+CFUN=1" : "AT+CFUN=4";
+
+	DBG("%s", online ? "online" : "offline");
+
+	if (g_at_chat_send(data->at, command, cfun_prefix, set_online_cb, cbd,
+				g_free) > 0)
+		return;
+
+	CALLBACK_WITH_FAILURE(cb, cbd->data);
+
+	g_free(cbd);
+}
+
 static struct ofono_modem_driver sim7100_driver = {
 	.probe		= sim7100_probe,
 	.remove		= sim7100_remove,
 	.enable		= sim7100_enable,
 	.disable	= sim7100_disable,
+	.set_online	= sim7100_set_online,
 	.pre_sim	= sim7100_pre_sim,
 	.post_sim	= sim7100_post_sim,
 };
