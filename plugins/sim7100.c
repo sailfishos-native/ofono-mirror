@@ -242,8 +242,19 @@ static void sim7100_pre_sim(struct ofono_modem *modem)
 	DBG("");
 
 	ofono_devinfo_create(modem, 0, "atmodem", data->at);
-	sim = ofono_sim_create(modem, 0, "atmodem", data->at);
-	ofono_voicecall_create(modem, OFONO_VENDOR_SIMCOM, "atmodem", data->at);
+
+	switch (data->model) {
+	case SIMCOM_A76XX:
+		sim = ofono_sim_create(modem, OFONO_VENDOR_SIMCOM_A76XX,
+							"atmodem", data->at);
+		ofono_voicecall_create(modem, 0, "atmodem", data->at);
+		break;
+	default:
+		sim = ofono_sim_create(modem, 0, "atmodem", data->at);
+		ofono_voicecall_create(modem, OFONO_VENDOR_SIMCOM,
+							"atmodem", data->at);
+		break;
+	}
 
 	if (sim)
 		ofono_sim_inserted_notify(sim, TRUE);
@@ -261,13 +272,27 @@ static void sim7100_post_sim(struct ofono_modem *modem)
 	ofono_ussd_create(modem, 0, "atmodem", data->at);
 	ofono_call_forwarding_create(modem, 0, "atmodem", data->at);
 	ofono_call_settings_create(modem, 0, "atmodem", data->at);
-	ofono_netreg_create(modem, 0, "atmodem", data->at);
 	ofono_call_meter_create(modem, 0, "atmodem", data->at);
 	ofono_call_barring_create(modem, 0, "atmodem", data->at);
-	ofono_sms_create(modem, OFONO_VENDOR_SIMCOM, "atmodem", data->at);
 	ofono_phonebook_create(modem, 0, "atmodem", data->at);
 
-	gprs = ofono_gprs_create(modem, 0, "atmodem", data->at);
+	switch (data->model) {
+	case SIMCOM_A76XX:
+		ofono_netreg_create(modem, OFONO_VENDOR_SIMCOM_A76XX,
+							"atmodem", data->at);
+		ofono_sms_create(modem, OFONO_VENDOR_SIMCOM_A76XX,
+							"atmodem", data->at);
+		gprs = ofono_gprs_create(modem, OFONO_VENDOR_SIMCOM_A76XX,
+							"atmodem", data->at);
+		break;
+	default:
+		ofono_netreg_create(modem, 0, "atmodem", data->at);
+		ofono_sms_create(modem, OFONO_VENDOR_SIMCOM, "atmodem",
+								data->at);
+		gprs = ofono_gprs_create(modem, 0, "atmodem", data->at);
+		break;
+	}
+
 	gc = ofono_gprs_context_create(modem, 0, "atmodem", data->ppp);
 
 	if (gprs && gc)
