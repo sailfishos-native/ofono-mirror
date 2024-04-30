@@ -226,7 +226,7 @@ static void get_oper_mode_cb(struct qmi_result *result, void *user_data)
 	switch (data->oper_mode) {
 	case QMI_DMS_OPER_MODE_ONLINE:
 		param = qmi_param_new_uint8(QMI_DMS_PARAM_OPER_MODE,
-					QMI_DMS_OPER_MODE_PERSIST_LOW_POWER);
+					QMI_DMS_OPER_MODE_LOW_POWER);
 		if (!param) {
 			shutdown_device(modem);
 			return;
@@ -480,7 +480,7 @@ static int gobi_disable(struct ofono_modem *modem)
 		goto out;
 
 	param = qmi_param_new_uint8(QMI_DMS_PARAM_OPER_MODE,
-					QMI_DMS_OPER_MODE_PERSIST_LOW_POWER);
+					QMI_DMS_OPER_MODE_LOW_POWER);
 	if (!param)
 		return -ENOMEM;
 

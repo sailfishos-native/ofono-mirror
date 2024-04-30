@@ -850,7 +850,6 @@ static gboolean setup_telitqmi(struct modem_info *modem)
 		return FALSE;
 
 	ofono_modem_set_boolean(modem->modem, "ForceSimLegacy", TRUE);
-	ofono_modem_set_boolean(modem->modem, "AlwaysOnline", TRUE);
 
 	return TRUE;
 }
