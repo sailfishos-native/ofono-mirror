@@ -149,7 +149,7 @@ static int sim7100_enable(struct ofono_modem *modem)
 	g_at_chat_send(data->at, "AT+CFUN=1", NULL, cfun_set_on_cb,
 								modem, NULL);
 
-	return 0;
+	return -EINPROGRESS;
 }
 
 static void cfun_set_off_cb(gboolean ok, GAtResult *result, gpointer user_data)
