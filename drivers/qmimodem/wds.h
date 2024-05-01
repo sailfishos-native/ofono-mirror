@@ -68,6 +68,21 @@ enum qmi_wds_profile_family {
 	QMI_WDS_PROFILE_FAMILY_TETHERED =	0x01,
 };
 
+enum qmi_wds_3gpp_rat {
+	QMI_WDS_3GPP_RAT_WCDMA			= 0x01,
+	QMI_WDS_RAT_3GPP_GPRS			= 0x02,
+	QMI_WDS_RAT_3GPP_HSDPA			= 0x04,
+	QMI_WDS_RAT_3GPP_HSUPA			= 0x08,
+	QMI_WDS_RAT_3GPP_EDGE			= 0x10,
+	QMI_WDS_RAT_3GPP_LTE			= 0x20,
+	QMI_WDS_RAT_3GPP_HSDPAPLUS		= 0x40,
+	QMI_WDS_RAT_3GPP_DCHSDPAPLUS		= 0x80,
+	QMI_WDS_RAT_3GPP_64QAM			= 0x100,
+	QMI_WDS_RAT_3GPP_TDSCDMA		= 0x200,
+	QMI_WDS_RAT_3GPP_5GNR			= 0x400,
+	QMI_WDS_RAT_3GPP_NULL_BEARER		= 0x8000,
+};
+
 enum qmi_wds_command {
 	QMI_WDS_RESET					= 0x00,
 	QMI_WDS_EVENT_REPORT				= 0x01,
@@ -111,3 +126,5 @@ enum qmi_wds_command {
 
 int qmi_wds_auth_from_ofono(enum ofono_gprs_auth_method method);
 int qmi_wds_pdp_type_from_ofono(enum ofono_gprs_proto proto);
+
+int qmi_wds_parse_data_system_status(const void *dss, uint16_t len);
