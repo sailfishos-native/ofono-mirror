@@ -151,19 +151,6 @@ static int handle_ss_info(struct qmi_result *result, struct ofono_gprs *gprs)
 	if (!extract_ss_info(result, &status, &tech))
 		return -1;
 
-	if (status == NETWORK_REGISTRATION_STATUS_REGISTERED) {
-		if (tech == ACCESS_TECHNOLOGY_EUTRAN) {
-			/* On LTE we are effectively always attached; and
-			 * the default bearer is established as soon as the
-			 * network is joined.  We just need to query the
-			 * parameters in effect on the default bearer and
-			 * let the ofono core know about the activated
-			 * context.
-			 */
-			get_lte_attach_params(gprs);
-		}
-	}
-
 	/* DC is optional so only notify on successful extraction */
 	if (extract_dc_info(result, &bearer_tech))
 		ofono_gprs_bearer_notify(gprs, bearer_tech);
@@ -186,7 +173,30 @@ static void ss_info_notify(struct qmi_result *result, void *user_data)
 
 static void event_report_notify(struct qmi_result *result, void *user_data)
 {
+	static const uint8_t RESULT_DATA_SYSTEM_STATUS = 0x24;
+	struct ofono_gprs *gprs = user_data;
+	const void *tlv;
+	uint16_t len;
+
 	DBG("");
+
+	/*
+	 * On LTE we are effectively always attached; and the default bearer is
+	 * established as soon as the network is joined.  We just need to query
+	 * the parameters in effect on the default bearer and let the ofono core
+	 * know about the activated context.
+	 */
+	tlv = qmi_result_get(result, RESULT_DATA_SYSTEM_STATUS, &len);
+	if (tlv) {
+		int r = qmi_wds_parse_data_system_status(tlv, len);
+		static const uint32_t lte_5g = QMI_WDS_RAT_3GPP_LTE |
+						QMI_WDS_RAT_3GPP_5GNR;
+
+		if (r >= 0 && (r & lte_5g))
+			get_lte_attach_params(gprs);
+
+		return;
+	}
 
 	qmi_result_print_tlvs(result);
 }
