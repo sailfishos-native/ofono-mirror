@@ -1080,7 +1080,7 @@ int qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
 	if (!device)
-		return false;
+		return -EINVAL;
 
 	if (!device->ops->discover)
 		return -ENOTSUP;
