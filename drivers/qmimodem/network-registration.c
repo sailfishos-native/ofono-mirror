@@ -94,11 +94,13 @@ static bool extract_ss_info(struct qmi_result *result, int *status,
 				enum roaming_status *roaming,
 				struct ofono_network_operator *operator)
 {
+	static const uint8_t RESULT_DATA_CAPABILITY_STATUS = 0x11;
 	const struct qmi_nas_serving_system *ss;
 	const struct qmi_nas_current_plmn *plmn;
 	uint8_t i, roaming_status;
 	uint16_t value16, len, opname_len;
 	uint32_t value32;
+	const void *dcs;
 
 	DBG("");
 
@@ -161,6 +163,19 @@ static bool extract_ss_info(struct qmi_result *result, int *status,
 					"%s%s",	operator->mcc, operator->mnc);
 
 		DBG("%s (%s:%s)", operator->name, operator->mcc, operator->mnc);
+	}
+
+	dcs = qmi_result_get(result, RESULT_DATA_CAPABILITY_STATUS, &len);
+	if (dcs) {
+		_auto_(l_strv_free) char **techs =
+			qmi_nas_data_capability_status_to_string_list(dcs, len);
+
+		if (techs) {
+			_auto_(l_free) char *joined =
+						l_strjoinv(techs, ',');
+
+			DBG("radio techs in use: %s", joined);
+		}
 	}
 
 	if (qmi_result_get_uint16(result, QMI_NAS_RESULT_LOCATION_AREA_CODE,

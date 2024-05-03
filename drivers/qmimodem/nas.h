@@ -107,27 +107,6 @@ struct qmi_nas_serving_system {
 } __attribute__((__packed__));
 #define QMI_NAS_RESULT_ROAMING_STATUS		0x10	/* uint8 */
 
-#define QMI_NAS_RESULT_DATA_CAPABILITY_STATUS		0x11	/* uint8 */
-struct qmi_nas_data_capability {
-	uint8_t cap_count;
-	uint8_t cap[0];
-} __attribute__((__packed__));
-
-#define QMI_NAS_DATA_CAPABILITY_NONE          0x00
-#define QMI_NAS_DATA_CAPABILITY_GPRS          0x01
-#define QMI_NAS_DATA_CAPABILITY_EDGE          0x02
-#define QMI_NAS_DATA_CAPABILITY_HSDPA         0x03
-#define QMI_NAS_DATA_CAPABILITY_HSUPA         0x04
-#define QMI_NAS_DATA_CAPABILITY_WCDMA         0x05
-#define QMI_NAS_DATA_CAPABILITY_CDMA          0x06
-#define QMI_NAS_DATA_CAPABILITY_EVDO_REV_0    0x07
-#define QMI_NAS_DATA_CAPABILITY_EVDO_REV_A    0x08
-#define QMI_NAS_DATA_CAPABILITY_GSM           0x09
-#define QMI_NAS_DATA_CAPABILITY_EVDO_REV_B    0x0A
-#define QMI_NAS_DATA_CAPABILITY_LTE           0x0B
-#define QMI_NAS_DATA_CAPABILITY_HSDPA_PLUS    0x0C
-#define QMI_NAS_DATA_CAPABILITY_DC_HSDPA_PLUS 0x0D
-
 #define QMI_NAS_RESULT_CURRENT_PLMN		0x12
 struct qmi_nas_current_plmn {
 	uint16_t mcc;
@@ -180,6 +159,19 @@ struct qmi_nas_home_network {
 
 #define QMI_NAS_RESULT_SYSTEM_SELECTION_PREF_MODE	0x11
 
+enum qmi_nas_data_capability {
+	QMI_NAS_DATA_CAPABILITY_NONE				= 0x00,
+	QMI_NAS_DATA_CAPABILITY_GPRS				= 0x01,
+	QMI_NAS_DATA_CAPABILITY_EDGE				= 0x02,
+	QMI_NAS_DATA_CAPABILITY_HSDPA				= 0x03,
+	QMI_NAS_DATA_CAPABILITY_HSUPA				= 0x04,
+	QMI_NAS_DATA_CAPABILITY_WCDMA				= 0x05,
+	QMI_NAS_DATA_CAPABILITY_GSM				= 0x09,
+	QMI_NAS_DATA_CAPABILITY_LTE				= 0x0B,
+	QMI_NAS_DATA_CAPABILITY_HSDPA_PLUS			= 0x0C,
+	QMI_NAS_DATA_CAPABILITY_DC_HSDPA_PLUS			= 0x0D,
+};
+
 enum qmi_nas_command {
 	/* Reset NAS service state variables */
 	QMI_NAS_RESET				= 0x00,
@@ -231,4 +223,7 @@ enum qmi_nas_command {
 };
 
 int qmi_nas_rat_to_tech(uint8_t rat);
+
+char **qmi_nas_data_capability_status_to_string_list(const void *tlv,
+								uint16_t len);
 int qmi_nas_cap_to_bearer_tech(int cap_tech);
