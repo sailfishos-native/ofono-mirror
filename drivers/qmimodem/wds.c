@@ -75,3 +75,58 @@ int qmi_wds_parse_data_system_status(const void *dss, uint16_t len)
 
 	return -ENOENT;
 }
+
+int qmi_wds_parse_extended_data_bearer_technology(const void *edbt, uint16_t len)
+{
+	uint32_t technology;
+	uint32_t rat;
+	uint32_t so;
+	int bearer;
+
+	if (len != sizeof(uint32_t) * 2 + sizeof(uint64_t))
+		return -EBADMSG;
+
+	technology = l_get_le32(edbt);
+	rat = l_get_le32(edbt + sizeof(uint32_t));
+	so = l_get_le64(edbt + sizeof(uint32_t) * 2);
+
+	if (technology != QMI_WDS_PROFILE_TYPE_3GPP)
+		return -EINVAL;
+
+	switch (rat) {
+	case QMI_WDS_RAT_WCDMA:
+		bearer = PACKET_BEARER_UMTS;
+		break;
+	case QMI_WDS_RAT_LTE:
+		bearer = PACKET_BEARER_EPS;
+		break;
+	default:
+		return -ENOENT;
+	}
+
+	if (so & (QMI_WDS_SO_LTE_LIMITED | QMI_WDS_SO_LTE_FDD |
+			QMI_WDS_SO_LTE_TDD))
+		return PACKET_BEARER_EPS;
+
+	if (so & (QMI_WDS_SO_HSDPAPLUS | QMI_WDS_SO_DC_HSDPAPLUS |
+			QMI_WDS_SO_64_QAM | QMI_WDS_SO_HSPA))
+		return PACKET_BEARER_HSUPA_HSDPA;
+
+	if (so & (QMI_WDS_SO_HSUPA | QMI_WDS_SO_DC_HSUPA))
+		return PACKET_BEARER_HSUPA;
+
+	if (so & QMI_WDS_SO_HSDPA)
+		return PACKET_BEARER_HSDPA;
+
+	if (so & QMI_WDS_SO_WCDMA)
+		return PACKET_BEARER_UMTS;
+
+	if (so & QMI_WDS_SO_EDGE)
+		return PACKET_BEARER_EGPRS;
+
+	if (so & QMI_WDS_SO_GPRS)
+		return PACKET_BEARER_GPRS;
+
+	/* Fall back to rat */
+	return bearer;
+}

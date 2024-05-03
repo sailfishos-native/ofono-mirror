@@ -151,9 +151,7 @@ static int handle_ss_info(struct qmi_result *result, struct ofono_gprs *gprs)
 	if (!extract_ss_info(result, &status, &tech))
 		return -1;
 
-	/* DC is optional so only notify on successful extraction */
-	if (extract_dc_info(result, &bearer_tech))
-		ofono_gprs_bearer_notify(gprs, bearer_tech);
+	extract_dc_info(result, &bearer_tech);
 
 	return status;
 }
@@ -174,6 +172,7 @@ static void ss_info_notify(struct qmi_result *result, void *user_data)
 static void event_report_notify(struct qmi_result *result, void *user_data)
 {
 	static const uint8_t RESULT_DATA_SYSTEM_STATUS = 0x24;
+	static const uint8_t RESULT_EXTENDED_DATA_BEARER_TECHNOLOGY = 0x2a;
 	struct ofono_gprs *gprs = user_data;
 	const void *tlv;
 	uint16_t len;
@@ -195,6 +194,21 @@ static void event_report_notify(struct qmi_result *result, void *user_data)
 		if (r >= 0 && (r & lte_5g))
 			get_lte_attach_params(gprs);
 
+		return;
+	}
+
+	tlv = qmi_result_get(result,
+				RESULT_EXTENDED_DATA_BEARER_TECHNOLOGY, &len);
+	if (tlv) {
+		int r = qmi_wds_parse_extended_data_bearer_technology(tlv, len);
+
+		if (r < 0) {
+			ofono_warn("extended_data_bearer_technology: %s(%d)",
+					strerror(-r), r);
+			return;
+		}
+
+		ofono_gprs_bearer_notify(gprs, r);
 		return;
 	}
 

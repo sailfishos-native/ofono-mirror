@@ -83,6 +83,43 @@ enum qmi_wds_rat_3gpp {
 	QMI_WDS_RAT_3GPP_NULL_BEARER		= 0x8000,
 };
 
+enum qmi_wds_rat {
+	QMI_WDS_RAT_WCDMA			= 0x01,
+	QMI_WDS_RAT_GERAN			= 0x02,
+	QMI_WDS_RAT_LTE				= 0x03,
+	QMI_WDS_RAT_TDSCDMA			= 0x04,
+	QMI_WDS_RAT_WLAN			= 0x05,
+};
+
+enum qmi_wds_service_option {
+	QMI_WDS_SO_WCDMA			= 0x01ULL,
+	QMI_WDS_SO_HSDPA			= 0x02ULL,
+	QMI_WDS_SO_HSUPA			= 0x04ULL,
+	QMI_WDS_SO_HSDPAPLUS			= 0x08ULL,
+	QMI_WDS_SO_DC_HSDPAPLUS			= 0x10ULL,
+	QMI_WDS_SO_64_QAM			= 0x20ULL,
+	QMI_WDS_SO_HSPA				= 0x40ULL,
+	QMI_WDS_SO_GPRS				= 0x80ULL,
+	QMI_WDS_SO_EDGE				= 0x100ULL,
+	QMI_WDS_SO_GSM				= 0x200ULL,
+	QMI_WDS_SO_S2B				= 0x400ULL,
+	QMI_WDS_SO_LTE_LIMITED			= 0x800ULL,
+	QMI_WDS_SO_LTE_FDD			= 0x1000ULL,
+	QMI_WDS_SO_LTE_TDD			= 0x2000ULL,
+	QMI_WDS_SO_TDSCDMA			= 0x4000ULL,
+	QMI_WDS_SO_DC_HSUPA			= 0x8000ULL,
+	QMI_WDS_SO_LTE_CA_DL			= 0x10000ULL,
+	QMI_WDS_SO_LTE_CA_UL			= 0x20000ULL,
+	QMI_WDS_SO_S2B_LIMITED			= 0x40000ULL,
+	QMI_WDS_SO_FOUR_POINT_FIVE_G		= 0x80000ULL,
+	QMI_WDS_SO_FOUR_POINT_FIVE_G_PLUS	= 0x100000ULL,
+	QMI_WDS_SO_5G_TDD			= 0x10000000000ULL,
+	QMI_WDS_SO_5G_SUB6			= 0x20000000000ULL,
+	QMI_WDS_SO_5G_MMWAVE			= 0x40000000000ULL,
+	QMI_WDS_SO_5G_NSA			= 0x80000000000ULL,
+	QMI_WDS_SO_5G_SA			= 0x100000000000ULL,
+};
+
 enum qmi_wds_command {
 	QMI_WDS_RESET					= 0x00,
 	QMI_WDS_EVENT_REPORT				= 0x01,
@@ -128,3 +165,5 @@ int qmi_wds_auth_from_ofono(enum ofono_gprs_auth_method method);
 int qmi_wds_pdp_type_from_ofono(enum ofono_gprs_proto proto);
 
 int qmi_wds_parse_data_system_status(const void *dss, uint16_t len);
+int qmi_wds_parse_extended_data_bearer_technology(const void *edbt,
+							uint16_t len);
