@@ -1092,7 +1092,7 @@ int qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
 	if (!device)
-		return false;
+		return -EINVAL;
 
 	if (!device->ops->shutdown)
 		return -ENOTSUP;
