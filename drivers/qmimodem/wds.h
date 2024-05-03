@@ -68,8 +68,8 @@ enum qmi_wds_profile_family {
 	QMI_WDS_PROFILE_FAMILY_TETHERED =	0x01,
 };
 
-enum qmi_wds_3gpp_rat {
-	QMI_WDS_3GPP_RAT_WCDMA			= 0x01,
+enum qmi_wds_rat_3gpp {
+	QMI_WDS_RAT_3GPP_WCDMA			= 0x01,
 	QMI_WDS_RAT_3GPP_GPRS			= 0x02,
 	QMI_WDS_RAT_3GPP_HSDPA			= 0x04,
 	QMI_WDS_RAT_3GPP_HSUPA			= 0x08,
