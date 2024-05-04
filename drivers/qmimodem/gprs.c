@@ -70,6 +70,7 @@ static bool extract_ss_info(struct qmi_result *result, int *status, int *tech)
 
 static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 {
+	static const uint8_t PARAM_APN = 0x10;
 	struct ofono_gprs *gprs = user_data;
 	struct gprs_data *data = ofono_gprs_get_data(gprs);
 	char *apn = NULL;
@@ -83,7 +84,7 @@ static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 	}
 
 	/* APN */
-	apn = qmi_result_get_string(result, 0x10);
+	apn = qmi_result_get_string(result, PARAM_APN);
 	if (!apn) {
 		DBG("Default profile has no APN setting");
 		goto noapn;
