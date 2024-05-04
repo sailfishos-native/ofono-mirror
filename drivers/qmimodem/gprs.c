@@ -74,7 +74,6 @@ static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 	struct gprs_data *data = ofono_gprs_get_data(gprs);
 	char *apn = NULL;
 	uint16_t error;
-	uint8_t iptype;
 
 	DBG("");
 
@@ -89,9 +88,6 @@ static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 		DBG("Default profile has no APN setting");
 		goto noapn;
 	}
-
-	if (qmi_result_get_uint8(result, 0x11, &iptype))
-		ofono_info("LTE attach IP type: %hhd", iptype);
 
 	ofono_gprs_cid_activated(gprs, data->default_profile, apn);
 	l_free(apn);
