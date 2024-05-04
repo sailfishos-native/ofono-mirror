@@ -78,43 +78,19 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 	}
 }
 
-static void get_settings_cb(struct qmi_result *result, void *user_data)
+static void get_settings_ipv4(struct ofono_gprs_context *gc,
+					struct qmi_result *result)
 {
-	static const uint8_t RESULT_PDP_TYPE = 0x11;	/* uint8 */
-	static const uint8_t RESULT_APN = 0x14;		/* string */
 	static const uint8_t RESULT_PRIMARY_DNS = 0x15;
 	static const uint8_t RESULT_SECONDARY_DNS = 0x16;
 	static const uint8_t RESULT_IP_ADDRESS = 0x1e;
 	static const uint8_t RESULT_GATEWAY = 0x20;
 	static const uint8_t RESULT_GATEWAY_NETMASK = 0x21;
-	static const uint8_t RESULT_IP_FAMILY = 0x2b;	/* uint8 */
-	struct cb_data *cbd = user_data;
-	ofono_gprs_context_cb_t cb = cbd->cb;
-	struct ofono_gprs_context *gc = cbd->user;
-	uint8_t pdp_type, ip_family;
 	uint32_t ip_addr;
 	struct in_addr addr;
 	char* straddr;
-	char* apn;
 	const char *dns[3] = { NULL, NULL, NULL };
 	char dns_buf[2][INET_ADDRSTRLEN];
-
-	DBG("");
-
-	if (qmi_result_set_error(result, NULL))
-		goto done;
-
-	apn = qmi_result_get_string(result, RESULT_APN);
-	if (apn) {
-		DBG("APN: %s", apn);
-		l_free(apn);
-	}
-
-	if (qmi_result_get_uint8(result, RESULT_PDP_TYPE, &pdp_type))
-		DBG("PDP type %d", pdp_type);
-
-	if (qmi_result_get_uint8(result, RESULT_IP_FAMILY, &ip_family))
-		DBG("IP family %d", ip_family);
 
 	if (qmi_result_get_uint32(result, RESULT_IP_ADDRESS, &ip_addr)) {
 		addr.s_addr = htonl(ip_addr);
@@ -151,6 +127,47 @@ static void get_settings_cb(struct qmi_result *result, void *user_data)
 
 	if (dns[0])
 		ofono_gprs_context_set_ipv4_dns_servers(gc, dns);
+}
+
+static void get_settings_cb(struct qmi_result *result, void *user_data)
+{
+	static const uint8_t RESULT_PDP_TYPE = 0x11;	/* uint8 */
+	static const uint8_t RESULT_APN = 0x14;		/* string */
+	static const uint8_t RESULT_IP_FAMILY = 0x2b;	/* uint8 */
+	struct cb_data *cbd = user_data;
+	ofono_gprs_context_cb_t cb = cbd->cb;
+	struct ofono_gprs_context *gc = cbd->user;
+	uint8_t pdp_type, ip_family;
+	char *apn;
+
+	DBG("");
+
+	if (qmi_result_set_error(result, NULL))
+		goto done;
+
+	apn = qmi_result_get_string(result, RESULT_APN);
+	if (apn) {
+		DBG("APN: %s", apn);
+		l_free(apn);
+	}
+
+	if (qmi_result_get_uint8(result, RESULT_PDP_TYPE, &pdp_type))
+		DBG("PDP type %d", pdp_type);
+
+	if (!qmi_result_get_uint8(result, RESULT_IP_FAMILY, &ip_family)) {
+		ofono_error("No IP family in results");
+		goto done;
+	}
+
+	switch (ip_family) {
+	case QMI_WDS_IP_FAMILY_IPV4:
+		get_settings_ipv4(gc, result);
+		break;
+	case QMI_WDS_IP_FAMILY_IPV6:
+		break;
+	default:
+		break;
+	}
 
 done:
 	CALLBACK_WITH_SUCCESS(cb, cbd->data);
