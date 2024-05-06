@@ -78,6 +78,63 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 	}
 }
 
+static void get_settings_ipv6(struct ofono_gprs_context *gc,
+					struct qmi_result *result)
+{
+	static const uint8_t RESULT_IP_ADDRESS = 0x25;
+	static const uint8_t RESULT_GATEWAY = 0x26;
+	static const uint8_t RESULT_PRIMARY_DNS = 0x27;
+	static const uint8_t RESULT_SECONDARY_DNS = 0x28;
+	static const uint8_t RESULT_MTU = 0x29;
+	const char *dns[3] = { NULL, NULL, NULL };
+	char dns1str[INET6_ADDRSTRLEN];
+	char dns2str[INET6_ADDRSTRLEN];
+	char ipv6str[INET6_ADDRSTRLEN];
+	const void *tlv;
+	uint16_t len;
+	uint32_t mtu;
+
+	tlv = qmi_result_get(result, RESULT_IP_ADDRESS, &len);
+	if (tlv && len == sizeof(struct in6_addr) + 1) {
+		const struct in6_addr *ip = tlv;
+		uint8_t prefix_len = l_get_u8(ip + 1);
+
+		inet_ntop(AF_INET6, ip, ipv6str, sizeof(ipv6str));
+		ofono_gprs_context_set_ipv6_address(gc, ipv6str);
+		ofono_gprs_context_set_ipv6_prefix_length(gc, prefix_len);
+	}
+
+	tlv = qmi_result_get(result, RESULT_GATEWAY, &len);
+	if (tlv && len == sizeof(struct in6_addr) + 1) {
+		const struct in6_addr *gw = tlv;
+
+		inet_ntop(AF_INET6, gw, ipv6str, sizeof(ipv6str));
+		ofono_gprs_context_set_ipv6_gateway(gc, ipv6str);
+	}
+
+	tlv = qmi_result_get(result, RESULT_PRIMARY_DNS, &len);
+	if (tlv && len == sizeof(struct in6_addr)) {
+		const struct in6_addr *dns1 = tlv;
+
+		inet_ntop(AF_INET6, dns1, dns1str, sizeof(dns1str));
+		dns[0] = dns1str;
+	}
+
+	tlv = qmi_result_get(result, RESULT_SECONDARY_DNS, &len);
+	if (tlv && len == sizeof(struct in6_addr)) {
+		const struct in6_addr *dns2 = tlv;
+
+		inet_ntop(AF_INET6, dns2, dns2str, sizeof(dns2str));
+		dns[1] = dns2str;
+	}
+
+	if (dns[0])
+		ofono_gprs_context_set_ipv6_dns_servers(gc, dns);
+
+	if (qmi_result_get_uint32(result, RESULT_MTU, &mtu))
+		DBG("MTU: %u", mtu);
+}
+
 static void get_settings_ipv4(struct ofono_gprs_context *gc,
 					struct qmi_result *result)
 {
@@ -164,6 +221,7 @@ static void get_settings_cb(struct qmi_result *result, void *user_data)
 		get_settings_ipv4(gc, result);
 		break;
 	case QMI_WDS_IP_FAMILY_IPV6:
+		get_settings_ipv6(gc, result);
 		break;
 	default:
 		break;
