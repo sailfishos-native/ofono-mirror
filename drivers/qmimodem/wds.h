@@ -46,6 +46,12 @@ enum qmi_wds_pdp_type {
 	QMI_WDS_PDP_TYPE_IPV4V6		= 0x03,
 };
 
+enum qmi_wds_ip_support {
+	QMI_WDS_IP_SUPPORT_IPV4		= 0x00,
+	QMI_WDS_IP_SUPPORT_IPV6		= 0x01,
+	QMI_WDS_IP_SUPPORT_IPV4V6	= 0x02,
+};
+
 enum qmi_wds_ip_family {
 	QMI_WDS_IP_FAMILY_UNKNOWN = 0,
 	QMI_WDS_IP_FAMILY_IPV4 = 4,

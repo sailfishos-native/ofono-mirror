@@ -282,6 +282,55 @@ error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 }
 
+static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
+{
+	static const uint8_t RESULT_IP_SUPPORT_TYPE = 0x11;
+	struct cb_data *cbd = user_data;
+	ofono_gprs_context_cb_t cb = cbd->cb;
+	struct ofono_gprs_context *gc = cbd->user;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+	uint16_t error;
+	uint8_t iptype;
+	struct qmi_param *param;
+	uint8_t ip_family;
+
+	DBG("");
+
+	if (qmi_result_set_error(result, &error))
+		goto error;
+
+	if (!qmi_result_get_uint8(result, RESULT_IP_SUPPORT_TYPE, &iptype))
+		goto error;
+
+	switch (iptype) {
+	case QMI_WDS_IP_SUPPORT_IPV4:
+		ip_family = QMI_WDS_IP_FAMILY_IPV4;
+		break;
+	case QMI_WDS_IP_SUPPORT_IPV6:
+		ip_family = QMI_WDS_IP_FAMILY_IPV6;
+		break;
+	case QMI_WDS_IP_SUPPORT_IPV4V6:
+		ip_family = QMI_WDS_IP_FAMILY_IPV4;
+		break;
+	default:
+		goto error;
+	}
+
+	param = qmi_param_new_uint8(QMI_WDS_PARAM_IP_FAMILY, ip_family);
+
+	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, param,
+					start_net_cb, cbd, cb_data_unref) > 0) {
+		cb_data_ref(cbd);
+		return;
+	}
+
+	qmi_param_free(param);
+
+error:
+	data->active_context = 0;
+	CALLBACK_WITH_FAILURE(cb, cbd->data);
+}
+
 /*
  * This function gets called for "automatic" contexts, those which are
  * not activated via activate_primary.  For these, we will still need
@@ -299,18 +348,15 @@ static void qmi_gprs_read_settings(struct ofono_gprs_context* gc,
 
 	DBG("cid %u", cid);
 
-	data->active_context = cid;
-
-	cbd->user = gc;
-
-	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, NULL,
-					start_net_cb, cbd, cb_data_unref) > 0)
+	if (qmi_service_send(data->wds, QMI_WDS_GET_LTE_ATTACH_PARAMETERS,
+				NULL, get_lte_attach_param_cb, cbd,
+				cb_data_unref) > 0) {
+		data->active_context = cid;
+		cbd->user = gc;
 		return;
-
-	data->active_context = 0;
+	}
 
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
 	l_free(cbd);
 }
 
