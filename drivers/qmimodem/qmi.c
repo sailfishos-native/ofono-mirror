@@ -101,6 +101,7 @@ struct qmi_device {
 	qmi_debug_func_t debug_func;
 	void *debug_data;
 	struct l_queue *service_infos;
+	struct l_hashmap *pending_family_creations;	/* holds l_queues */
 	struct l_hashmap *family_list;
 	const struct qmi_device_ops *ops;
 	bool writer_active : 1;
@@ -353,10 +354,6 @@ static void __family_find_by_type(const void *key, void *value,
 {
 	struct service_family *family = value;
 	struct service_find_by_type_data *data = user_data;
-
-	/* ignore those that are in process of creation */
-	if (L_PTR_TO_UINT(key) & 0x80000000)
-		return;
 
 	if (family->info.service_type == data->type)
 		data->found_family = family;
@@ -785,10 +782,6 @@ static void service_notify(const void *key, void *value, void *user_data)
 	struct service_family *family = value;
 	struct qmi_result *result = user_data;
 
-	/* ignore those that are in process of creation */
-	if (L_PTR_TO_UINT(key) & 0x80000000)
-		return;
-
 	l_queue_foreach(family->notify_list, service_notify_if_message_matches,
 				result);
 }
@@ -927,6 +920,7 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 	device->service_queue = l_queue_new();
 	device->discovery_queue = l_queue_new();
 	device->service_infos = l_queue_new();
+	device->pending_family_creations = l_hashmap_new();
 	device->family_list = l_hashmap_new();
 
 	device->next_service_tid = 256;
@@ -940,6 +934,15 @@ static void __qmi_device_shutdown_finished(struct qmi_device *device)
 {
 	if (device->destroyed)
 		device->ops->destroy(device);
+}
+
+static void free_pending_family_creations_queue(struct l_queue *pending)
+{
+	/*
+	 * The service_create_shared_data objects are owned by the discovery
+	 * queue and do not need to be freed here.
+	 */
+	l_queue_destroy(pending, NULL);
 }
 
 void qmi_device_free(struct qmi_device *device)
@@ -956,6 +959,8 @@ void qmi_device_free(struct qmi_device *device)
 	l_io_destroy(device->io);
 
 	l_hashmap_destroy(device->family_list, family_destroy);
+	l_hashmap_destroy(device->pending_family_creations,
+		(l_hashmap_destroy_func_t) free_pending_family_creations_queue);
 
 	l_queue_destroy(device->service_infos, l_free);
 
@@ -1535,11 +1540,12 @@ static void service_create_shared_pending_reply(struct qmi_device *device,
 						unsigned int type,
 						struct service_family *family)
 {
-	void *key = L_UINT_TO_PTR(type | 0x80000000);
-	struct l_queue *shared = l_hashmap_remove(device->family_list, key);
+	void *key = L_UINT_TO_PTR(type);
+	struct l_queue *pending = l_hashmap_remove(
+					device->pending_family_creations, key);
 	const struct l_queue_entry *entry;
 
-	for (entry = l_queue_get_entries(shared); entry; entry = entry->next) {
+	for (entry = l_queue_get_entries(pending); entry; entry = entry->next) {
 		struct service_create_shared_data *shared_data = entry->data;
 
 		shared_data->family = service_family_ref(family);
@@ -1547,7 +1553,7 @@ static void service_create_shared_pending_reply(struct qmi_device *device,
 							shared_data, NULL);
 	}
 
-	l_queue_destroy(shared, NULL);
+	l_queue_destroy(pending, NULL);
 }
 
 static void service_create_shared_data_free(void *user_data)
@@ -1853,13 +1859,11 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 	unsigned char client_req[] = { 0x01, 0x01, 0x00, service_type };
 	struct qmi_request *req;
 	struct qmux_client_create_data *data;
-	struct l_queue *shared;
-	unsigned int type_val = service_type;
+	struct l_queue *pending;
 
 	if (!l_queue_length(device->service_infos))
 		return -ENOENT;
 
-	shared = l_queue_new();
 	data = l_new(struct qmux_client_create_data, 1);
 
 	data->super.destroy = qmux_client_create_data_free;
@@ -1884,9 +1888,13 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 
 	__qmi_device_discovery_started(device, &data->super);
 
-	/* Mark service creation as pending */
-	l_hashmap_insert(device->family_list,
-			L_UINT_TO_PTR(type_val | 0x80000000), shared);
+	/*
+	 * Only subsequent requests for this same service will be added to
+	 * the queue.
+	 */
+	pending = l_queue_new();
+	l_hashmap_insert(device->pending_family_creations,
+			L_UINT_TO_PTR(service_type), pending);
 
 	return 0;
 }
@@ -2615,9 +2623,8 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 			qmi_create_func_t func, void *user_data,
 			qmi_destroy_func_t destroy)
 {
-	struct l_queue *shared;
+	struct l_queue *pending;
 	struct service_family *family = NULL;
-	unsigned int type_val = type;
 	int r;
 
 	if (!device || !func)
@@ -2631,10 +2638,10 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 
 		/*
 		 * The hash id is simply the service type in this case. There
-		 * is no "pending" state for discovery and no client id.
+		 * is no client id.
 		 */
 		family = l_hashmap_lookup(device->family_list,
-						L_UINT_TO_PTR(type_val));
+						L_UINT_TO_PTR(type));
 		if (!family) {
 			const struct qmi_service_info *info;
 
@@ -2644,7 +2651,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 
 			family = service_family_create(device, info, 0);
 			l_hashmap_insert(device->family_list,
-					L_UINT_TO_PTR(type_val), family);
+						L_UINT_TO_PTR(type), family);
 		}
 
 		data = l_new(struct service_create_shared_data, 1);
@@ -2665,27 +2672,25 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		return true;
 	}
 
-	shared = l_hashmap_lookup(device->family_list,
-					L_UINT_TO_PTR(type_val | 0x80000000));
+	pending = l_hashmap_lookup(device->pending_family_creations,
+						L_UINT_TO_PTR(type));
 
-	if (!shared) {
+	if (!pending) {
 		/*
 		 * There is no way to find in an l_hashmap using a custom
 		 * function. Instead we use a temporary struct to store the
-		 * found service. This is not very clean, but we expect this
-		 * code to be refactored soon.
+		 * found service family.
 		 */
 		struct service_find_by_type_data data;
 
-		data.type = type_val;
+		data.type = type;
 		data.found_family = NULL;
 		l_hashmap_foreach(device->family_list,	__family_find_by_type,
 					&data);
 		family = data.found_family;
-	} else
-		type_val |= 0x80000000;
+	}
 
-	if (shared || family) {
+	if (pending || family) {
 		struct service_create_shared_data *data;
 
 		data = l_new(struct service_create_shared_data, 1);
@@ -2696,12 +2701,12 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 		data->user_data = user_data;
 		data->destroy = destroy;
 
-		if (!(type_val & 0x80000000)) {
+		if (family) {
 			data->family = service_family_ref(family);
 			data->idle = l_idle_create(service_create_shared_reply,
 							data, NULL);
 		} else
-			l_queue_push_head(shared, data);
+			l_queue_push_head(pending, data);
 
 		__qmi_device_discovery_started(device, &data->super);
 
