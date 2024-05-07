@@ -488,6 +488,7 @@ static int gobi_disable(struct ofono_modem *modem)
 					power_disable_cb, modem, NULL) > 0)
 		return -EINPROGRESS;
 
+	qmi_param_free(param);
 out:
 	shutdown_device(modem);
 
