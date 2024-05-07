@@ -1,3 +1,9 @@
+ver 2.7:
+	Fix issue with handling SIM7100 modem enable operation.
+	Fix issue with handling QMI NAS indications earlier.
+	Add support for handling QMI default bearer.
+	Add support for handling QMI DTMF tones.
+
 ver 2.6:
 	Fix issue with handling ATD*99 for non-muxed ports.
 	Fix issue with handling QRTR discover timeout.
