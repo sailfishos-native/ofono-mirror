@@ -171,11 +171,13 @@ static void print_backtrace(unsigned int offset)
 
 	for (i = offset; i < n_ptrs - 1; i++) {
 		Dl_info info;
+		const char *fname = "???";
 		char addr[20], buf[PATH_MAX * 2];
 		int len, written;
 		char *ptr, *pos;
 
-		dladdr(frames[i], &info);
+		if (dladdr(frames[i], &info))
+			fname = info.dli_fname;
 
 		len = snprintf(addr, sizeof(addr), "%p\n", frames[i]);
 		if (len < 0)
@@ -199,7 +201,7 @@ static void print_backtrace(unsigned int offset)
 
 		if (strcmp(buf, "??") == 0) {
 			ofono_error("#%-2u %p in %s", i - offset,
-						frames[i], info.dli_fname);
+						frames[i], fname);
 			continue;
 		}
 
