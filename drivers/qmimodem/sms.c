@@ -788,7 +788,8 @@ static int qmi_sms_probe(struct ofono_sms *sms,
 
 	ofono_sms_set_data(sms, data);
 
-	qmi_service_create(device, QMI_SERVICE_WMS, create_wms_cb, sms, NULL);
+	qmi_service_create_shared(device, QMI_SERVICE_WMS, create_wms_cb, sms,
+					NULL);
 
 	return 0;
 }

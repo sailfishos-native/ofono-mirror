@@ -244,7 +244,8 @@ static int qmi_location_reporting_probe(struct ofono_location_reporting *lr,
 
 	ofono_location_reporting_set_data(lr, data);
 
-	qmi_service_create(device, QMI_SERVICE_PDS, create_pds_cb, lr, NULL);
+	qmi_service_create_shared(device, QMI_SERVICE_PDS, create_pds_cb, lr,
+					NULL);
 
 	return 0;
 }

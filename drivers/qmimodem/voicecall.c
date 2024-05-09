@@ -763,7 +763,7 @@ static int qmi_voicecall_probe(struct ofono_voicecall *vc,
 
 	ofono_voicecall_set_data(vc, data);
 
-	qmi_service_create(device, QMI_SERVICE_VOICE,
+	qmi_service_create_shared(device, QMI_SERVICE_VOICE,
 					create_voice_cb, vc, NULL);
 
 	return 0;

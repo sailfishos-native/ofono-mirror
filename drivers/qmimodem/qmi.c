@@ -2712,14 +2712,6 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 	return true;
 }
 
-bool qmi_service_create(struct qmi_device *device,
-				uint16_t type, qmi_create_func_t func,
-				void *user_data, qmi_destroy_func_t destroy)
-{
-	return qmi_service_create_shared(device, type, func,
-						user_data, destroy);
-}
-
 const char *qmi_service_get_identifier(struct qmi_service *service)
 {
 	if (!service)

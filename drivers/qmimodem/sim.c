@@ -896,8 +896,8 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 
 	data->dms = service;
 
-	qmi_service_create(data->qmi_dev, QMI_SERVICE_UIM, create_uim_cb, sim,
-					NULL);
+	qmi_service_create_shared(data->qmi_dev, QMI_SERVICE_UIM, create_uim_cb,
+					sim, NULL);
 }
 
 static int qmi_sim_probe(struct ofono_sim *sim,

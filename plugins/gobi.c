@@ -405,7 +405,7 @@ static void create_dms_cb(struct qmi_service *service, void *user_data)
 
 	data->dms = service;
 
-	if (qmi_service_create(data->device, QMI_SERVICE_WDA,
+	if (qmi_service_create_shared(data->device, QMI_SERVICE_WDA,
 					create_wda_cb, modem, NULL))
 		return;
 

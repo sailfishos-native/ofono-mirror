@@ -150,9 +150,6 @@ typedef void (*qmi_result_func_t)(struct qmi_result *result, void *user_data);
 
 typedef void (*qmi_create_func_t)(struct qmi_service *service, void *user_data);
 
-bool qmi_service_create(struct qmi_device *device,
-				uint16_t type, qmi_create_func_t func,
-				void *user_data, qmi_destroy_func_t destroy);
 bool qmi_service_create_shared(struct qmi_device *device,
 				uint16_t type, qmi_create_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);

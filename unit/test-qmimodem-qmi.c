@@ -246,7 +246,7 @@ static void test_create_services(const void *data)
 		uint16_t major, minor;
 
 		service_type = unique_service_type(i);
-		assert(qmi_service_create(info->device, service_type,
+		assert(qmi_service_create_shared(info->device, service_type,
 						create_service_cb, info, NULL));
 		perform_all_pending_work();
 
@@ -266,7 +266,7 @@ static void test_create_services(const void *data)
 	 * call the callback.
 	 */
 	service_type = unique_service_type(TEST_SERVICE_COUNT);
-	assert(!qmi_service_create(info->device, service_type,
+	assert(!qmi_service_create_shared(info->device, service_type,
 					create_service_cb, info, NULL));
 	perform_all_pending_work();
 	assert(l_queue_isempty(info->services));
@@ -275,7 +275,7 @@ static void test_create_services(const void *data)
 	service_type = unique_service_type(0);
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
-		assert(qmi_service_create(info->device, service_type,
+		assert(qmi_service_create_shared(info->device, service_type,
 						create_service_cb, info, NULL));
 		perform_all_pending_work();
 
@@ -455,7 +455,7 @@ static void test_send_data(const void *data)
 	perform_discovery(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
-	assert(qmi_service_create(info->device, service_type,
+	assert(qmi_service_create_shared(info->device, service_type,
 					create_service_cb, info, NULL));
 	perform_all_pending_work();
 	service = l_queue_pop_head(info->services);
@@ -505,7 +505,7 @@ static void test_notifications(const void *data)
 	perform_discovery(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
-	assert(qmi_service_create(info->device, service_type,
+	assert(qmi_service_create_shared(info->device, service_type,
 					create_service_cb, info, NULL));
 	perform_all_pending_work();
 	service = l_queue_pop_head(info->services);
@@ -567,7 +567,7 @@ static void test_service_notification_independence(const void *data)
 	l_io_set_read_handler(io, received_data, info, NULL);
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
-		assert(qmi_service_create(info->device, service_type,
+		assert(qmi_service_create_shared(info->device, service_type,
 						create_service_cb, info, NULL));
 		perform_all_pending_work();
 		services[i] = l_queue_pop_head(info->services);
