@@ -103,9 +103,9 @@ static void gobi_debug(const char *str, void *user_data)
 static int gobi_probe(struct ofono_modem *modem)
 {
 	struct gobi_data *data;
-	const char *kernel_driver;
 	const char *value;
 	enum qmi_protocol protocol;
+	const char *if_driver;
 
 	DBG("%p", modem);
 
@@ -118,12 +118,14 @@ static int gobi_probe(struct ofono_modem *modem)
 	else
 		return -EPROTO;
 
+	if_driver = ofono_modem_get_string(modem,
+						"NetworkInterfaceKernelDriver");
+	DBG("netdev driver: %s", if_driver);
+
 	data = l_new(struct gobi_data, 1);
 	data->protocol = protocol;
-	kernel_driver = ofono_modem_get_string(modem, "KernelDriver");
-	DBG("kernel_driver: %s", kernel_driver);
 
-	if (!strcmp(kernel_driver, "qmi_wwan_q"))
+	if (!strcmp(if_driver, "qmi_wwan_q"))
 		data->using_qmi_wwan_q = true;
 
 	data->main_net_ifindex =

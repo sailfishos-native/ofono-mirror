@@ -216,7 +216,7 @@ static int setup_qmi_netdev(struct modem_info *modem,
 	if (r < 0)
 		return r;
 
-	ofono_modem_set_string(modem->modem, "KernelDriver",
+	ofono_modem_set_string(modem->modem, "NetworkInterfaceKernelDriver",
 							net->kernel_driver);
 	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
 	ofono_modem_set_integer(modem->modem, "NetworkInterfaceIndex",
