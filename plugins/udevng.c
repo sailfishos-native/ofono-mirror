@@ -44,6 +44,7 @@ enum modem_type {
 	MODEM_TYPE_SERIAL,
 	MODEM_TYPE_PCIE,
 	MODEM_TYPE_EMBEDDED,
+	MODEM_TYPE_MHI,
 };
 
 struct modem_info {
@@ -281,6 +282,9 @@ static int setup_qmi_qrtr(struct modem_info *modem,
 	switch (modem->type) {
 	case MODEM_TYPE_EMBEDDED:
 		ofono_modem_set_string(modem->modem, "Bus", "embedded");
+		break;
+	case MODEM_TYPE_MHI:
+		ofono_modem_set_string(modem->modem, "Bus", "pcie");
 		break;
 	case MODEM_TYPE_USB:
 	case MODEM_TYPE_SERIAL:
@@ -1730,6 +1734,42 @@ static gboolean setup_sim76xx(struct modem_info *modem)
 	return TRUE;
 }
 
+static gboolean setup_mhi(struct modem_info *modem)
+{
+	const struct device_info *net = NULL;
+	const struct device_info *qrtr = NULL;
+	GSList *list;
+	int r;
+
+	DBG("%s", modem->syspath);
+
+	for (list = modem->devices; list; list = list->next) {
+		const struct device_info *info = list->data;
+		const char *subsystem =
+				udev_device_get_subsystem(info->udev_device);
+
+		DBG("%s", udev_device_get_syspath(info->udev_device));
+
+		if (l_streq0(udev_device_get_property_value(info->udev_device,
+								"MODALIAS"),
+					"mhi:IPCR"))
+			qrtr = info;
+		else if (l_streq0(subsystem, "net"))
+			net = info;
+	}
+
+	DBG("net: %p, qrtr: %p", net, qrtr);
+
+	if (!net || !qrtr)
+		return FALSE;
+
+	r = setup_qmi_qrtr(modem, net);
+	if (r < 0)
+		return FALSE;
+
+	return TRUE;
+}
+
 static struct {
 	const char *name;
 	gboolean (*setup)(struct modem_info *modem);
@@ -1772,6 +1812,7 @@ static struct {
 	{ "tc65",	setup_tc65		},
 	{ "ehs6",	setup_ehs6		},
 	{ "gobiqrtr",	setup_gobi_qrtr		},
+	{ "mhi",	setup_mhi		},
 	{ }
 };
 
@@ -1823,6 +1864,7 @@ static void destroy_modem(gpointer data)
 	case MODEM_TYPE_USB:
 	case MODEM_TYPE_PCIE:
 	case MODEM_TYPE_EMBEDDED:
+	case MODEM_TYPE_MHI:
 		for (list = modem->devices; list; list = list->next) {
 			struct device_info *info = list->data;
 
@@ -1854,6 +1896,7 @@ static gboolean check_remove(gpointer key, gpointer value, gpointer user_data)
 	switch (modem->type) {
 	case MODEM_TYPE_USB:
 	case MODEM_TYPE_PCIE:
+	case MODEM_TYPE_MHI:
 		for (list = modem->devices; list; list = list->next) {
 			struct device_info *info = list->data;
 			const char *syspath =
@@ -2315,11 +2358,137 @@ static void check_pci_device(struct udev_device *device)
 			device, kernel_driver);
 }
 
+static const struct {
+	const char *driver;
+	uint16_t vend;
+	uint16_t dev;
+	uint16_t subvend;
+	uint16_t subdev;
+} wwan_driver_list[] = {
+	{ "mhi",		0x17cb, 0x0308, },
+	{ }
+};
+
+static int parse_pci_id(const char *id, uint16_t *out_vend, uint16_t *out_dev)
+{
+	_auto_(l_strv_free) char **ids = l_strsplit(id, ':');
+	int r;
+
+	if (!ids || !ids[0] || !ids[1] || ids[2])
+		return -EINVAL;
+
+	r = l_safe_atox16(ids[0], out_vend);
+	if (r < 0)
+		return r;
+
+	r = l_safe_atox16(ids[1], out_dev);
+	if (r < 0)
+		return r;
+
+	return 0;
+}
+
+static bool add_mhi_device(struct udev_device *device,
+						struct udev_device *parent)
+{
+	const char *syspath;
+	const char *kernel_driver;
+	const char *pci_id;
+	const char *pci_subid;
+	uint16_t vend, dev, subvend, subdev;
+	unsigned int i;
+
+	/* Use syspath of the MHI device as the modem path */
+	syspath = udev_device_get_syspath(parent);
+	if (!syspath)
+		return false;
+
+	kernel_driver = udev_device_get_property_value(device, "ID_NET_DRIVER");
+	if (!kernel_driver)
+		kernel_driver = udev_device_get_driver(device);
+
+	/* vid / pid is on the parent of the MHI device */
+	pci_id = udev_device_get_property_value(parent, "PCI_ID");
+	pci_subid = udev_device_get_property_value(parent, "PCI_SUBSYS_ID");
+
+	if (!pci_id || !pci_subid)
+		return false;
+
+	if (parse_pci_id(pci_id, &vend, &dev) < 0)
+		return false;
+
+	if (parse_pci_id(pci_subid, &subvend, &subdev) < 0)
+		return false;
+
+	for (i = 0; wwan_driver_list[i].driver; i++) {
+		if (wwan_driver_list[i].vend != vend)
+			continue;
+
+		if (wwan_driver_list[i].dev != dev)
+			continue;
+
+		if (wwan_driver_list[i].subvend &&
+				wwan_driver_list[i].subvend != subvend)
+			continue;
+
+		if (wwan_driver_list[i].subdev &&
+				wwan_driver_list[i].subdev != subdev)
+			continue;
+
+		add_device(syspath, NULL, wwan_driver_list[i].driver,
+				NULL, NULL, MODEM_TYPE_MHI,
+				device, kernel_driver);
+		return true;
+	}
+
+	return false;
+}
+
+static void check_wwan_device(struct udev_device *device)
+{
+	struct udev_device *parent;
+
+	parent = udev_device_get_parent_with_subsystem_devtype(device,
+								"mhi", NULL);
+	if (!parent)
+		return;
+
+	/* If this is an MHI device, find the MHI parent */
+	parent = udev_device_get_parent(parent);
+	if (!parent)
+		return;
+
+	add_mhi_device(device, parent);
+}
+
+static void check_mhi_device(struct udev_device *device)
+{
+	struct udev_device *parent =
+		udev_device_get_parent_with_subsystem_devtype(device,
+								"pci", NULL);
+
+	if (!parent)
+		return;
+
+	add_mhi_device(device, parent);
+}
+
 static void check_net_device(struct udev_device *device)
 {
 	char path[32];
 	const char *name;
 	const char *iflink;
+	struct udev_device *parent;
+
+	parent = udev_device_get_parent(device);
+	if (parent && l_streq0(udev_device_get_subsystem(parent), "mhi")) {
+		parent = udev_device_get_parent_with_subsystem_devtype(device,
+								"pci", NULL);
+		if (parent)
+			add_mhi_device(device, parent);
+
+		return;
+	}
 
 	name = udev_device_get_sysname(device);
 	if (!l_str_has_prefix(name, "rmnet_"))
@@ -2337,25 +2506,29 @@ static void check_net_device(struct udev_device *device)
 
 static void check_device(struct udev_device *device)
 {
-	const char *bus;
+	const char *subsystem = udev_device_get_subsystem(device);
+	const char *bus = udev_device_get_property_value(device, "ID_BUS");
 
-	bus = udev_device_get_property_value(device, "ID_BUS");
-	if (bus == NULL) {
-		bus = udev_device_get_subsystem(device);
-		if (bus == NULL)
-			return;
+	if (l_streq0(subsystem, "net")) {
+		/* Handle USB-connected network devices in check_usb_device */
+		if (l_streq0(bus, "usb"))
+			check_usb_device(device);
+		else
+			check_net_device(device);
+
+		return;
 	}
 
-	if ((g_str_equal(bus, "usb") == TRUE) ||
-			(g_str_equal(bus, "usbmisc") == TRUE))
+	if (l_streq0(subsystem, "usb") || l_streq0(subsystem, "usbmisc"))
 		check_usb_device(device);
-	else if (g_str_equal(bus, "pci") == TRUE)
+	else if (l_streq0(subsystem, "pci"))
 		check_pci_device(device);
-	else if (g_str_equal(bus, "net") == TRUE)
-		check_net_device(device);
+	else if (l_streq0(subsystem, "wwan"))
+		check_wwan_device(device);
+	else if (l_streq0(subsystem, "mhi"))
+		check_mhi_device(device);
 	else
 		add_serial_device(device);
-
 }
 
 static gboolean create_modem(gpointer key, gpointer value, gpointer user_data)
@@ -2414,6 +2587,8 @@ static void enumerate_devices(struct udev *context)
 	udev_enumerate_add_match_subsystem(enumerate, "net");
 	udev_enumerate_add_match_subsystem(enumerate, "hsi");
 	udev_enumerate_add_match_subsystem(enumerate, "pci");
+	udev_enumerate_add_match_subsystem(enumerate, "wwan");
+	udev_enumerate_add_match_subsystem(enumerate, "mhi");
 
 	udev_enumerate_scan_devices(enumerate);
 
@@ -2539,6 +2714,8 @@ static int detect_init(void)
 							"usbmisc", NULL);
 	udev_monitor_filter_add_match_subsystem_devtype(udev_mon, "net", NULL);
 	udev_monitor_filter_add_match_subsystem_devtype(udev_mon, "hsi", NULL);
+	udev_monitor_filter_add_match_subsystem_devtype(udev_mon, "wwan", NULL);
+	udev_monitor_filter_add_match_subsystem_devtype(udev_mon, "mhi", NULL);
 
 	udev_monitor_filter_update(udev_mon);
 
