@@ -197,20 +197,14 @@ static gboolean setup_hso(struct modem_info *modem)
 	return TRUE;
 }
 
-static int setup_qmi(struct modem_info *modem, const struct device_info *qmi,
-			const struct device_info *net)
+static int setup_qmi_netdev(struct modem_info *modem,
+					const struct device_info *net)
 {
 	const char *attr_value;
 	uint32_t ifindex;
 	int r;
 
-	DBG("qmi: %s net: %s kernel_driver: %s interface_number: %s",
-		qmi->devnode, net->devnode, net->kernel_driver, net->number);
-
-	if (!qmi->kernel_driver)
-		return -EINVAL;
-
-	if (!net->number && modem->type != MODEM_TYPE_EMBEDDED)
+	if (!net->kernel_driver)
 		return -EINVAL;
 
 	attr_value = udev_device_get_sysattr_value(net->udev_device,
@@ -222,30 +216,60 @@ static int setup_qmi(struct modem_info *modem, const struct device_info *qmi,
 	if (r < 0)
 		return r;
 
-	ofono_modem_set_driver(modem->modem, "gobi");
-	ofono_modem_set_string(modem->modem, "Device", qmi->devnode);
 	ofono_modem_set_string(modem->modem, "KernelDriver",
 							net->kernel_driver);
 	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
-	ofono_modem_set_string(modem->modem, "InterfaceNumber", net->number);
 	ofono_modem_set_integer(modem->modem, "NetworkInterfaceIndex",
 							ifindex);
 
+	return 0;
+}
+
+static int setup_qmi_qmux(struct modem_info *modem,
+				const struct device_info *qmi,
+				const struct device_info *net)
+{
+	DBG("qmi: %s net: %s kernel_driver: %s interface_number: %s",
+		qmi->devnode, net->devnode, net->kernel_driver, net->number);
+
+	if (modem->type != MODEM_TYPE_USB)
+		return -ENOTSUP;
+
+	if (!net->number)
+		return -EINVAL;
+
+	if (!qmi->kernel_driver)
+		return -EINVAL;
+
+	ofono_modem_set_driver(modem->modem, "gobi");
+	ofono_modem_set_string(modem->modem, "Device", qmi->devnode);
+	ofono_modem_set_string(modem->modem, "DeviceProtocol", "qmux");
+	ofono_modem_set_string(modem->modem, "InterfaceNumber", net->number);
+
+	ofono_modem_set_string(modem->modem, "Bus", "usb");
+
+	return setup_qmi_netdev(modem, net);
+}
+
+static int setup_qmi_qrtr(struct modem_info *modem,
+				const struct device_info *net)
+{
+	DBG("net: %s kernel_driver: %s", net->devnode, net->kernel_driver);
+
 	switch (modem->type) {
-	case MODEM_TYPE_USB:
-		ofono_modem_set_string(modem->modem, "Bus", "usb");
-		break;
-	case MODEM_TYPE_PCIE:
-		ofono_modem_set_string(modem->modem, "Bus", "pcie");
-		break;
 	case MODEM_TYPE_EMBEDDED:
 		ofono_modem_set_string(modem->modem, "Bus", "embedded");
 		break;
+	case MODEM_TYPE_USB:
 	case MODEM_TYPE_SERIAL:
-		break;
+	case MODEM_TYPE_PCIE:
+		return -ENOTSUP;
 	}
 
-	return 0;
+	ofono_modem_set_driver(modem->modem, "gobi");
+	ofono_modem_set_string(modem->modem, "DeviceProtocol", "qrtr");
+
+	return setup_qmi_netdev(modem, net);
 }
 
 static gboolean setup_gobi_qrtr_premux(struct modem_info *modem,
@@ -310,7 +334,7 @@ static gboolean setup_gobi_qrtr(struct modem_info *modem)
 		return FALSE;
 	}
 
-	r = setup_qmi(modem, ipa_info, ipa_info);
+	r = setup_qmi_qrtr(modem, ipa_info);
 	if (r < 0)
 		return FALSE;
 
@@ -367,7 +391,7 @@ static gboolean setup_gobi(struct modem_info *modem)
 	DBG("qmi=%s net=%s mdm=%s gps=%s diag=%s",
 			qmi->devnode, net->devnode, mdm, gps, diag);
 
-	if (setup_qmi(modem, qmi, net) < 0)
+	if (setup_qmi_qmux(modem, qmi, net) < 0)
 		return FALSE;
 
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
@@ -432,7 +456,7 @@ static gboolean setup_sierra(struct modem_info *modem)
 	}
 
 	if (qmi != NULL && net != NULL) {
-		if (setup_qmi(modem, qmi, net) < 0)
+		if (setup_qmi_qmux(modem, qmi, net) < 0)
 			return FALSE;
 
 		goto done;
@@ -510,7 +534,7 @@ static gboolean setup_huawei(struct modem_info *modem)
 	}
 
 	if (qmi != NULL && net != NULL) {
-		if (setup_qmi(modem, qmi, net) < 0)
+		if (setup_qmi_qmux(modem, qmi, net) < 0)
 			return FALSE;
 
 		goto done;
@@ -847,7 +871,7 @@ static gboolean setup_telitqmi(struct modem_info *modem)
 	if (qmi == NULL || net == NULL)
 		return FALSE;
 
-	if (setup_qmi(modem, qmi, net) < 0)
+	if (setup_qmi_qmux(modem, qmi, net) < 0)
 		return FALSE;
 
 	if (g_strcmp0(modem->model, "1070"))
@@ -1161,7 +1185,7 @@ static gboolean setup_quectelqmi(struct modem_info *modem)
 
 	DBG("gps=%s aux=%s", gps, aux);
 
-	if (setup_qmi(modem, qmi, net) < 0)
+	if (setup_qmi_qmux(modem, qmi, net) < 0)
 		return FALSE;
 
 	qmap_size = udev_device_get_sysattr_value(net->udev_device,
@@ -1611,7 +1635,7 @@ static gboolean setup_sim7x00(struct modem_info *modem)
 	if (qmi != NULL && net != NULL) {
 		DBG("mdm=%s gps=%s diag=%s", mdm, gps, diag);
 
-		if (setup_qmi(modem, qmi, net) < 0)
+		if (setup_qmi_qmux(modem, qmi, net) < 0)
 			return FALSE;
 
 		ofono_modem_set_string(modem->modem, "Modem", mdm);

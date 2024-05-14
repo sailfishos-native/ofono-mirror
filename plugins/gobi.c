@@ -72,6 +72,11 @@
 #define GOBI_VOICE	(1 << 9)
 #define GOBI_WDA	(1 << 10)
 
+enum qmi_protocol {
+	QMI_PROTOCOL_QMUX,
+	QMI_PROTOCOL_QRTR,
+};
+
 struct gobi_data {
 	struct qmi_device *device;
 	struct qmi_service *dms;
@@ -85,6 +90,7 @@ struct gobi_data {
 	char main_net_name[IFNAMSIZ];
 	uint32_t max_aggregation_size;
 	uint32_t set_powered_id;
+	enum qmi_protocol protocol;
 };
 
 static void gobi_debug(const char *str, void *user_data)
@@ -98,11 +104,22 @@ static int gobi_probe(struct ofono_modem *modem)
 {
 	struct gobi_data *data;
 	const char *kernel_driver;
+	const char *value;
+	enum qmi_protocol protocol;
 
 	DBG("%p", modem);
 
-	data = l_new(struct gobi_data, 1);
+	value = ofono_modem_get_string(modem, "DeviceProtocol");
 
+	if (l_streq0(value, "qrtr"))
+		protocol = QMI_PROTOCOL_QRTR;
+	else if (l_streq0(value, "qmux"))
+		protocol = QMI_PROTOCOL_QMUX;
+	else
+		return -EPROTO;
+
+	data = l_new(struct gobi_data, 1);
+	data->protocol = protocol;
 	kernel_driver = ofono_modem_get_string(modem, "KernelDriver");
 	DBG("kernel_driver: %s", kernel_driver);
 
@@ -421,25 +438,22 @@ static void discover_cb(void *user_data)
 static int gobi_enable(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
-	const char *kernel_driver;
+	const char *device;
 	int r;
 
 	DBG("%p", modem);
 
-	kernel_driver = ofono_modem_get_string(modem, "KernelDriver");
-	if (!kernel_driver)
-		return -EINVAL;
-
-	if (!strcmp(kernel_driver, "qrtr"))
+	switch (data->protocol) {
+	case QMI_PROTOCOL_QRTR:
 		data->device = qmi_device_new_qrtr();
-	else {
-		const char *device;
-
+		break;
+	case QMI_PROTOCOL_QMUX:
 		device = ofono_modem_get_string(modem, "Device");
 		if (!device)
 			return -EINVAL;
 
 		data->device = qmi_device_new_qmux(device);
+		break;
 	}
 
 	if (!data->device)
