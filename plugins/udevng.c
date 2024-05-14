@@ -78,6 +78,23 @@ struct serial_device_info {
 	struct udev_device *dev;
 };
 
+static const char *get_ifname(const struct device_info *info)
+{
+	struct udev_device *udev_device = info->udev_device;
+	const char *net_name;
+
+	net_name = udev_device_get_property_value(udev_device, "ID_NET_NAME");
+	if (net_name)
+		return net_name;
+
+	net_name = udev_device_get_property_value(udev_device, "INTERFACE");
+	if (net_name)
+		return net_name;
+
+	/* Fall back to using sysname (M: field in udevadm) */
+	return udev_device_get_sysname(udev_device);
+}
+
 static gboolean setup_isi(struct modem_info *modem)
 {
 	const char *node = NULL;
@@ -96,7 +113,7 @@ static gboolean setup_isi(struct modem_info *modem)
 			if (g_strcmp0(info->interface, "2/254/0") == 0)
 				addr = 16;
 
-			node = info->devnode;
+			node = get_ifname(info);
 		}
 	}
 
@@ -142,7 +159,7 @@ static gboolean setup_mbm(struct modem_info *modem)
 						"gw") == TRUE ||
 				g_str_has_suffix(info->sysattr,
 						"NetworkAdapter") == TRUE) {
-			network = info->devnode;
+			network = get_ifname(info);
 		}
 	}
 
@@ -178,9 +195,12 @@ static gboolean setup_hso(struct modem_info *modem)
 			app = info->devnode;
 		else if (g_strcmp0(info->sysattr, "Modem") == 0)
 			mdm = info->devnode;
-		else if (info->sysattr == NULL &&
-				g_str_has_prefix(info->devnode, "hso") == TRUE)
-			net = info->devnode;
+		else if (!info->sysattr) {
+			const char *net_name = get_ifname(info);
+
+			if (g_str_has_prefix(net_name, "hso"))
+				net = get_ifname(info);
+		}
 	}
 
 	if (ctl == NULL || app == NULL)
@@ -218,7 +238,8 @@ static int setup_qmi_netdev(struct modem_info *modem,
 
 	ofono_modem_set_string(modem->modem, "NetworkInterfaceKernelDriver",
 							net->kernel_driver);
-	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
+	ofono_modem_set_string(modem->modem, "NetworkInterface",
+							get_ifname(net));
 	ofono_modem_set_integer(modem->modem, "NetworkInterfaceIndex",
 							ifindex);
 
@@ -230,7 +251,8 @@ static int setup_qmi_qmux(struct modem_info *modem,
 				const struct device_info *net)
 {
 	DBG("qmi: %s net: %s kernel_driver: %s interface_number: %s",
-		qmi->devnode, net->devnode, net->kernel_driver, net->number);
+			qmi->devnode, get_ifname(net),
+			net->kernel_driver, net->number);
 
 	if (modem->type != MODEM_TYPE_USB)
 		return -ENOTSUP;
@@ -254,7 +276,7 @@ static int setup_qmi_qmux(struct modem_info *modem,
 static int setup_qmi_qrtr(struct modem_info *modem,
 				const struct device_info *net)
 {
-	DBG("net: %s kernel_driver: %s", net->devnode, net->kernel_driver);
+	DBG("net: %s kernel_driver: %s", get_ifname(net), net->kernel_driver);
 
 	switch (modem->type) {
 	case MODEM_TYPE_EMBEDDED:
@@ -389,7 +411,7 @@ static gboolean setup_gobi(struct modem_info *modem)
 		return FALSE;
 
 	DBG("qmi=%s net=%s mdm=%s gps=%s diag=%s",
-			qmi->devnode, net->devnode, mdm, gps, diag);
+			qmi->devnode, get_ifname(net), mdm, gps, diag);
 
 	if (setup_qmi_qmux(modem, qmi, net) < 0)
 		return FALSE;
@@ -465,10 +487,11 @@ static gboolean setup_sierra(struct modem_info *modem)
 	if (mdm == NULL || net == NULL)
 		return FALSE;
 
-	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
+	ofono_modem_set_string(modem->modem, "NetworkInterface",
+					get_ifname(net));
 done:
 	DBG("modem=%s app=%s net=%s diag=%s qmi=%s",
-			mdm, app, net->devnode, diag, qmi->devnode);
+			mdm, app, get_ifname(net), diag, qmi->devnode);
 
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
 	ofono_modem_set_string(modem->modem, "App", app);
@@ -543,10 +566,11 @@ static gboolean setup_huawei(struct modem_info *modem)
 	if (mdm == NULL || pcui == NULL)
 		return FALSE;
 
-	ofono_modem_set_string(modem->modem, "NetworkInterface", net->devnode);
+	ofono_modem_set_string(modem->modem, "NetworkInterface",
+					get_ifname(net));
 done:
 	DBG("mdm=%s pcui=%s diag=%s qmi=%s net=%s",
-		mdm, pcui, diag, qmi->devnode, net->devnode);
+		mdm, pcui, diag, qmi->devnode, get_ifname(net));
 
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
 	ofono_modem_set_string(modem->modem, "Pcui", pcui);
@@ -646,11 +670,11 @@ static gboolean setup_icera(struct modem_info *modem)
 				mdm = info->devnode;
 		} else if (g_strcmp0(info->interface, "2/6/0") == 0) {
 			if (g_strcmp0(info->number, "05") == 0)
-				net = info->devnode;
+				net = get_ifname(info);
 			else if (g_strcmp0(info->number, "06") == 0)
-				net = info->devnode;
+				net = get_ifname(info);
 			else if (g_strcmp0(info->number, "07") == 0)
-				net = info->devnode;
+				net = get_ifname(info);
 		}
 	}
 
@@ -823,7 +847,7 @@ static gboolean setup_telit(struct modem_info *modem)
 				gps = info->devnode;
 		} else if (info->sysattr && (g_str_has_suffix(info->sysattr,
 						"CDC NCM") == TRUE)) {
-			net = info->devnode;
+			net = get_ifname(info);
 		}
 	}
 
@@ -1022,7 +1046,7 @@ static gboolean setup_samsung(struct modem_info *modem)
 		if (g_strcmp0(info->interface, "10/0/0") == 0)
 			control = info->devnode;
 		else if (g_strcmp0(info->interface, "255/0/0") == 0)
-			network = info->devnode;
+			network = get_ifname(info);
 	}
 
 	if (control == NULL && network == NULL)
@@ -1249,7 +1273,7 @@ static gboolean setup_mbim(struct modem_info *modem)
 		if (g_strcmp0(subsystem, "usbmisc") == 0) /* cdc-wdm */
 			ctl = info->devnode;
 		else if (g_strcmp0(subsystem, "net") == 0) /* wwan */
-			net = info->devnode;
+			net = get_ifname(info);
 		else if (g_strcmp0(subsystem, "tty") == 0) {
 			if (g_strcmp0(info->number, "02") == 0)
 				atcmd = info->devnode;
@@ -1407,7 +1431,7 @@ static gboolean setup_ublox(struct modem_info *modem)
 				g_strcmp0(info->interface, "2/13/0") == 0 ||
 				g_strcmp0(info->interface, "10/0/0") == 0 ||
 				g_strcmp0(info->interface, "224/1/3") == 0) {
-			net = info->devnode;
+			net = get_ifname(info);
 		}
 	}
 
@@ -1452,7 +1476,7 @@ static gboolean setup_gemalto(struct modem_info *modem)
 			else if (g_strcmp0(info->number, "03") == 0)
 				mdm = info->devnode;
 			else if (g_strcmp0(subsystem, "net") == 0)
-				net = info->devnode;
+				net = get_ifname(info);
 			else if (g_strcmp0(subsystem, "usbmisc") == 0)
 				qmi = info->devnode;
 		}
@@ -1470,9 +1494,9 @@ static gboolean setup_gemalto(struct modem_info *modem)
 		if (g_strcmp0(info->interface, "2/6/0") == 0) {
 			if (g_strcmp0(subsystem, "net") == 0) {
 				if (g_strcmp0(info->number, "0a") == 0)
-					net = info->devnode;
+					net = get_ifname(info);
 				if (g_strcmp0(info->number, "0c") == 0)
-					net2 = info->devnode;
+					net2 = get_ifname(info);
 			}
 		}
 	}
@@ -1535,11 +1559,11 @@ static gboolean setup_xmm7xxx(struct modem_info *modem)
 				} else if (g_strcmp0(subsystem, "net")
 									== 0) {
 					if (g_strcmp0(info->number, "06") == 0)
-						net = info->devnode;
+						net = get_ifname(info);
 					if (g_strcmp0(info->number, "08") == 0)
-						net2 = info->devnode;
+						net2 = get_ifname(info);
 					if (g_strcmp0(info->number, "0a") == 0)
-						net3 = info->devnode;
+						net3 = get_ifname(info);
 				}
 			} else {
 				if (g_strcmp0(subsystem, "tty") == 0) {
@@ -1548,7 +1572,7 @@ static gboolean setup_xmm7xxx(struct modem_info *modem)
 				} else if (g_strcmp0(subsystem, "net")
 									== 0) {
 					if (g_strcmp0(info->number, "00") == 0)
-						net = info->devnode;
+						net = get_ifname(info);
 				}
 			}
 
@@ -1992,13 +2016,6 @@ static void add_device(const char *modem_syspath, const char *modem_devname,
 
 	if (modem->type == MODEM_TYPE_USB) {
 		devnode = udev_device_get_devnode(device);
-		if (devnode == NULL) {
-			devnode = udev_device_get_property_value(device,
-							"INTERFACE");
-			if (devnode == NULL)
-				return;
-		}
-
 		usb_interface = udev_device_get_parent_with_subsystem_devtype(
 							device, "usb",
 							"usb_interface");
