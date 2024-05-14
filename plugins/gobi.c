@@ -100,12 +100,37 @@ static void gobi_debug(const char *str, void *user_data)
 	ofono_info("%s%s", prefix, str);
 }
 
+/*
+ * Probe the modem.  The following modem properties are expected to be set
+ * in order to initialize the driver properly:
+ *
+ * DeviceProtocol
+ *   Can be "qrtr" or "qmux", tells the driver which QMI encapsulation protocol
+ *   is being used.
+ *
+ * NetworkInterface
+ *   The string that contains the 'main' network device.  This can be
+ *   "rmnet_ipa" on SoC systems, or "wwan0" for upstream linux systems.
+ *
+ * NetworkInterfaceIndex
+ *   The index of the main interface given by NetworkInterface
+ *
+ * NetworkInterfaceDriver
+ *   The kernel driver that is being used by the main network device.  Certain
+ *   drivers such as 'qmi_wwan' or 'qmi_wwan_q' are treated specifically.
+ *
+ * Bus
+ *   The bus of the modem.  Values can be "usb", "embedded", or "pci"
+ */
 static int gobi_probe(struct ofono_modem *modem)
 {
 	struct gobi_data *data;
 	const char *value;
 	enum qmi_protocol protocol;
 	const char *if_driver;
+	const char *ifname;
+	int ifindex;
+	const char *bus;
 
 	DBG("%p", modem);
 
@@ -120,7 +145,14 @@ static int gobi_probe(struct ofono_modem *modem)
 
 	if_driver = ofono_modem_get_string(modem,
 						"NetworkInterfaceKernelDriver");
-	DBG("netdev driver: %s", if_driver);
+	ifname = ofono_modem_get_string(modem, "NetworkInterface");
+	ifindex = ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
+	bus = ofono_modem_get_string(modem, "Bus");
+
+	DBG("net: %s[%s](%d) %s", ifname, if_driver, ifindex, bus);
+
+	if (!if_driver || !ifname || !ifindex || !bus)
+		return -EPROTO;
 
 	data = l_new(struct gobi_data, 1);
 	data->protocol = protocol;
@@ -133,8 +165,6 @@ static int gobi_probe(struct ofono_modem *modem)
 	l_strlcpy(data->main_net_name,
 			ofono_modem_get_string(modem, "NetworkInterface"),
 			sizeof(data->main_net_name));
-	DBG("net: %s (%d)", data->main_net_name, data->main_net_ifindex);
-
 	ofono_modem_set_data(modem, data);
 	ofono_modem_set_capabilities(modem, OFONO_MODEM_CAPABILITY_LTE);
 
