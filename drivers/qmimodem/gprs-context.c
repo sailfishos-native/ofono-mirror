@@ -525,23 +525,29 @@ static void qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc)
 		goto error;
 	}
 
-	interface_number = ofono_modem_get_string(modem, "InterfaceNumber");
-	if (!interface_number && endpoint_info.endpoint_type !=
-					QMI_DATA_ENDPOINT_TYPE_EMBEDDED) {
-		ofono_error("%s: Missing 'InterfaceNumber'",
+	switch (endpoint_info.endpoint_type) {
+	case QMI_DATA_ENDPOINT_TYPE_PCIE:
+		endpoint_info.interface_number = 0x04; /* Magic for PCIE */
+		break;
+	case QMI_DATA_ENDPOINT_TYPE_EMBEDDED:
+		endpoint_info.interface_number = 0x01;
+		break;
+	case QMI_DATA_ENDPOINT_TYPE_HSUSB:
+		interface_number = ofono_modem_get_string(modem,
+							"InterfaceNumber");
+		if (!l_safe_atox8(interface_number, &u8)) {
+			endpoint_info.interface_number = u8;
+			break;
+		}
+
+		ofono_error("%s: Missing or invalid 'InterfaceNumber'",
 					ofono_modem_get_path(modem));
-		goto error;
-	} else if (!interface_number)
-		u8 = 1;	/* Default for embedded modems */
-	else if (l_safe_atox8(interface_number, &u8) < 0) {
-		ofono_error("%s: Invalid InterfaceNumber",
-					ofono_modem_get_path(modem));
+		/* Fall through */
+	default:
 		goto error;
 	}
 
-	endpoint_info.interface_number = u8;
-
-	DBG("interface_number: %d", u8);
+	DBG("interface_number: %d", endpoint_info.interface_number);
 	DBG("mux_id: %hhx", data->mux_id);
 
 	param = qmi_param_new();
