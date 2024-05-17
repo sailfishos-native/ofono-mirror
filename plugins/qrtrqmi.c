@@ -315,7 +315,7 @@ static int setup_gprs_context(uint8_t mux_id, const char *interface,
 	struct qmi_qrtr_node *node = data->node;
 	struct ofono_gprs_context *gc;
 
-	gc = ofono_gprs_context_create(modem, 0, "qmimodem",
+	gc = ofono_gprs_context_create(modem, 0, "qmimodem", mux_id,
 			qmi_qrtr_node_get_service(node, QMI_SERVICE_WDS));
 	if (!gc) {
 		ofono_warn("Unable to create gprs-context for: %s, %s[%u]",
@@ -344,6 +344,13 @@ static void setup_gprs(struct ofono_modem *modem)
 	if (!gprs) {
 		ofono_warn("Unable to create gprs for: %s",
 					ofono_modem_get_path(modem));
+		return;
+	}
+
+	/* Upstream driver default, single interface, single context */
+	if (!n_premux) {
+		interface = ofono_modem_get_string(modem, "NetworkInterface");
+		setup_gprs_context(0, interface, gprs);
 		return;
 	}
 

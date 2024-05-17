@@ -550,16 +550,17 @@ static int qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc,
 	return -EIO;
 }
 
-static int qmi_gprs_context_probe(struct ofono_gprs_context *gc,
-					unsigned int vendor, void *user_data)
+static int qmi_gprs_context_probev(struct ofono_gprs_context *gc,
+					unsigned int vendor, va_list args)
 {
-	struct qmi_service *wds = user_data;
+	int mux_id = va_arg(args, int);
+	struct qmi_service *wds = va_arg(args, struct qmi_service *);
 	struct gprs_context_data *data;
 
 	DBG("");
 
-	if (vendor) {
-		int r = qmi_gprs_context_bind_mux(gc, wds, vendor);
+	if (mux_id != -1) {
+		int r = qmi_gprs_context_bind_mux(gc, wds, mux_id);
 
 		if (r < 0) {
 			qmi_service_free(wds);
@@ -569,7 +570,7 @@ static int qmi_gprs_context_probe(struct ofono_gprs_context *gc,
 
 	data = l_new(struct gprs_context_data, 1);
 	data->wds = wds;
-	data->mux_id = vendor;
+	data->mux_id = mux_id;
 
 	qmi_service_register(data->wds, QMI_WDS_PACKET_SERVICE_STATUS,
 					pkt_status_notify, gc, NULL);
@@ -593,7 +594,7 @@ static void qmi_gprs_context_remove(struct ofono_gprs_context *gc)
 
 static const struct ofono_gprs_context_driver driver = {
 	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
-	.probe			= qmi_gprs_context_probe,
+	.probev			= qmi_gprs_context_probev,
 	.remove			= qmi_gprs_context_remove,
 	.activate_primary	= qmi_activate_primary,
 	.deactivate_primary	= qmi_deactivate_primary,
