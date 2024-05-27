@@ -163,6 +163,13 @@ static gboolean setup_ppp(struct ofono_gprs_context *gc)
 		g_at_ppp_set_credentials(gcd->ppp, gcd->username,
 								gcd->password);
 
+	/*
+	 * Quectel M95 fails to configure RCN when using ACCM = 0, so set it to
+	 * the protocol default of 0x000a0000.
+	 */
+	if (gcd->vendor == OFONO_VENDOR_QUECTEL_SERIAL)
+		g_at_ppp_set_accm(gcd->ppp, 0x000a0000);
+
 	/* set connect and disconnect callbacks */
 	g_at_ppp_set_connect_function(gcd->ppp, ppp_connect, gc);
 	g_at_ppp_set_disconnect_function(gcd->ppp, ppp_disconnect, gc);
