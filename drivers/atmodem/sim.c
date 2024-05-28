@@ -126,6 +126,7 @@ static void get_response_common_cb(gboolean ok, GAtResult *result,
 		if (!g_at_result_iter_next_number(&iter, &sw2))
 			continue;
 		result_found = TRUE;
+		break;
 	}
 
 	if (!result_found)
