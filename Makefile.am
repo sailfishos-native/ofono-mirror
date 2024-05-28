@@ -991,7 +991,7 @@ dundee_common_sources = $(gatchat_sources) \
 			dundee/dbus.c dundee/manager.c dundee/device.c
 
 dundee_dundee_LDADD = $(builtin_libadd) gdbus/libgdbus-internal.la \
-			@GLIB_LIBS@ @DBUS_LIBS@ -ldl
+			$(ell_ldadd) @GLIB_LIBS@ @DBUS_LIBS@ -ldl
 
 if DATAFILES
 dist_dbusconf_DATA += dundee/dundee.conf
