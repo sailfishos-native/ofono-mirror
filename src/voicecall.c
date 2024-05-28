@@ -2966,6 +2966,7 @@ static void sim_watch(struct ofono_atom *atom,
 
 	if (cond == OFONO_ATOM_WATCH_CONDITION_UNREGISTERED) {
 		voicecall_close_settings(vc);
+		vc->sim_context = NULL;
 		vc->sim_state_watch = 0;
 		vc->sim = NULL;
 		return;
