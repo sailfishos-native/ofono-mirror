@@ -1154,13 +1154,13 @@ static char *get_device_interface(struct qmi_device *device)
 	char * const driver_names[] = { "usbmisc", "usb" };
 	unsigned int i;
 	char file_path[PATH_MAX];
-	char *file_name;
+	const char *file_name;
 	char *interface = NULL;
 
 	if (!get_device_file_name(device, file_path, sizeof(file_path)))
 		return NULL;
 
-	file_name = basename(file_path);
+	file_name = l_basename(file_path);
 
 	for (i = 0; i < L_ARRAY_SIZE(driver_names) && !interface; i++) {
 		char *sysfs_path;
