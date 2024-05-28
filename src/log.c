@@ -28,12 +28,13 @@
 #include <unistd.h>
 #include <stdarg.h>
 #include <stdlib.h>
-#include <string.h>
 #include <syslog.h>
 #ifdef HAVE_BACKTRACE
 #include <execinfo.h>
 #endif
 #include <dlfcn.h>
+
+#include <ell/ell.h>
 
 #include "ofono.h"
 
@@ -309,7 +310,7 @@ int __ofono_log_init(const char *program, const char *debug,
 	signal_setup(signal_handler);
 #endif
 
-	openlog(basename(program), option, LOG_DAEMON);
+	openlog(l_basename(program), option, LOG_DAEMON);
 
 	syslog(LOG_INFO, "oFono version %s", VERSION);
 
