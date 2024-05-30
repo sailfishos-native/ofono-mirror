@@ -2510,17 +2510,16 @@ static void check_device(struct udev_device *device)
 	const char *subsystem = udev_device_get_subsystem(device);
 	const char *bus = udev_device_get_property_value(device, "ID_BUS");
 
-	if (l_streq0(subsystem, "net")) {
-		/* Handle USB-connected network devices in check_usb_device */
-		if (l_streq0(bus, "usb"))
-			check_usb_device(device);
-		else
-			check_net_device(device);
-
+	/* Handle USB-connected devices in check_usb_device */
+	if (l_streq0(bus, "usb")) {
+		check_usb_device(device);
 		return;
 	}
 
-	if (l_streq0(subsystem, "usb") || l_streq0(subsystem, "usbmisc"))
+	/* Check the rest based on the subsystem */
+	if (l_streq0(subsystem, "net"))
+		check_net_device(device);
+	else if (l_streq0(subsystem, "usbmisc"))
 		check_usb_device(device);
 	else if (l_streq0(subsystem, "pci"))
 		check_pci_device(device);
