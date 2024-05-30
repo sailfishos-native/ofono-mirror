@@ -495,7 +495,8 @@ static gboolean setup_sierra(struct modem_info *modem)
 					get_ifname(net));
 done:
 	DBG("modem=%s app=%s net=%s diag=%s qmi=%s",
-			mdm, app, get_ifname(net), diag, qmi->devnode);
+			mdm, app, get_ifname(net), diag,
+			qmi ? qmi->devnode : NULL);
 
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
 	ofono_modem_set_string(modem->modem, "App", app);
@@ -574,7 +575,7 @@ static gboolean setup_huawei(struct modem_info *modem)
 					get_ifname(net));
 done:
 	DBG("mdm=%s pcui=%s diag=%s qmi=%s net=%s",
-		mdm, pcui, diag, qmi->devnode, get_ifname(net));
+		mdm, pcui, diag, qmi ? qmi->devnode : NULL, get_ifname(net));
 
 	ofono_modem_set_string(modem->modem, "Modem", mdm);
 	ofono_modem_set_string(modem->modem, "Pcui", pcui);
