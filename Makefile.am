@@ -65,7 +65,8 @@ ell_headers = ell/util.h \
 			ell/cleanup.h \
 			ell/netconfig.h \
 			ell/sysctl.h \
-			ell/minheap.h
+			ell/minheap.h \
+			ell/notifylist.h
 
 ell_sources = ell/private.h \
 			ell/missing.h \
@@ -148,7 +149,8 @@ ell_sources = ell/private.h \
 			ell/acd.c \
 			ell/netconfig.c \
 			ell/sysctl.c \
-			ell/minheap.c
+			ell/minheap.c \
+			ell/notifylist.c
 
 ell_shared = ell/useful.h ell/asn1-private.h
 
