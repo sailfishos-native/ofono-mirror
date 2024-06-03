@@ -330,21 +330,6 @@ static bool __notify_compare(const void *data, const void *user_data)
 			notify->service_handle == details->service_handle;
 }
 
-struct service_find_by_type_data {
-	unsigned int type;
-	struct service_family *found_family;
-};
-
-static void __family_find_by_type(const void *key, void *value,
-					void *user_data)
-{
-	struct service_family *family = value;
-	struct service_find_by_type_data *data = user_data;
-
-	if (family->info.service_type == data->type)
-		data->found_family = family;
-}
-
 static const char *__service_type_to_string(uint8_t type)
 {
 	switch (type) {
@@ -1403,7 +1388,6 @@ static struct service_family *service_family_ref(struct service_family *family)
 static void service_family_unref(struct service_family *family)
 {
 	struct qmi_device *device;
-	unsigned int hash_id;
 
 	if (--family->ref_count)
 		return;
@@ -1412,9 +1396,15 @@ static void service_family_unref(struct service_family *family)
 	if (!device)
 		goto done;
 
-	hash_id = family_list_create_hash(family->info.service_type,
+	if (family->client_id) {
+		unsigned int hash_id =
+			family_list_create_hash(family->info.service_type,
 							family->client_id);
-	l_hashmap_remove(device->family_list, L_UINT_TO_PTR(hash_id));
+		l_hashmap_remove(device->family_list, L_UINT_TO_PTR(hash_id));
+	}
+
+	l_hashmap_remove(device->family_list,
+				L_UINT_TO_PTR(family->info.service_type));
 
 	if (device->ops->client_release)
 		device->ops->client_release(device, family->info.service_type,
@@ -1799,7 +1789,6 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 	struct qmi_device_qmux *qmux =
 		l_container_of(device, struct qmi_device_qmux, super);
 	struct service_family *family = NULL;
-	struct service_family *old_family = NULL;
 	struct qmi_service_info info;
 	const struct qmi_result_code *result_code;
 	const struct qmi_client_id *client_id;
@@ -1829,16 +1818,13 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 	info.minor = data->minor;
 
 	family = service_family_create(device, &info, client_id->client);
-
+	family = service_family_ref(family);
 	hash_id = family_list_create_hash(family->info.service_type,
 							family->client_id);
-	l_hashmap_replace(device->family_list, L_UINT_TO_PTR(hash_id),
-				family, (void **) &old_family);
-
-	if (old_family)
-		family_destroy(old_family);
-
-	family = service_family_ref(family);
+	l_hashmap_insert(device->family_list, L_UINT_TO_PTR(hash_id), family);
+	l_hashmap_insert(device->family_list,
+				L_UINT_TO_PTR(family->info.service_type),
+				family);
 done:
 	service_create_shared_pending_reply(qmux, data->type, family);
 	if (family)
@@ -2636,28 +2622,7 @@ bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
 	if (type == QMI_SERVICE_CONTROL)
 		return false;
 
-	/*
-	 * First check to see if the bare type is in the hashmap. If it is not
-	 * the family might exist already, but have the client id included in
-	 * the hash id.
-	 */
 	family = l_hashmap_lookup(device->family_list, L_UINT_TO_PTR(type));
-
-	if (!family) {
-		struct service_find_by_type_data find_data;
-
-		/*
-		 * There is no way to find in an l_hashmap using a custom
-		 * function. Instead we use a temporary struct to store the
-		 * found service family.
-		 */
-		find_data.type = type;
-		find_data.found_family = NULL;
-		l_hashmap_foreach(device->family_list,	__family_find_by_type,
-						&find_data);
-		family = find_data.found_family;
-	}
-
 	if (!family) {
 		const struct qmi_service_info *info;
 
