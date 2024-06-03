@@ -2037,10 +2037,6 @@ struct qmi_device *qmi_device_new_qmux(const char *device)
 
 struct qmi_device_qrtr {
 	struct qmi_device super;
-	qmi_shutdown_func_t shutdown_func;
-	void *shutdown_user_data;
-	qmi_destroy_func_t shutdown_destroy;
-	struct l_idle *shutdown_idle;
 };
 
 static int qmi_device_qrtr_write(struct qmi_device *device,
