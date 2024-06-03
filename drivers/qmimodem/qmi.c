@@ -2332,6 +2332,32 @@ struct qmi_device *qmi_device_new_qrtr(void)
 	return &qrtr->super;
 }
 
+struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,
+						uint32_t type)
+{
+	struct service_family *family;
+	const struct qmi_service_info *info;
+
+	if (!device)
+		return NULL;
+
+	if (type == QMI_SERVICE_CONTROL)
+		return NULL;
+
+	family = l_hashmap_lookup(device->family_list, L_UINT_TO_PTR(type));
+	if (family)
+		goto done;
+
+	info = __find_service_info_by_type(device, type);
+	if (!info)
+		return NULL;
+
+	family = service_family_create(device, info, 0);
+	l_hashmap_insert(device->family_list, L_UINT_TO_PTR(type), family);
+done:
+	return service_create(family);
+}
+
 struct qmi_param *qmi_param_new(void)
 {
 	return l_new(struct qmi_param, 1);

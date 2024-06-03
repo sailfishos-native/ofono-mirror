@@ -58,9 +58,9 @@ enum qmi_data_endpoint_type {
 
 typedef void (*qmi_destroy_func_t)(void *user_data);
 
-
 struct qmi_device;
 struct qmi_result;
+struct qmi_service;
 
 typedef void (*qmi_debug_func_t)(const char *str, void *user_data);
 typedef void (*qmi_shutdown_func_t)(void *user_data);
@@ -89,6 +89,9 @@ bool qmi_device_set_expected_data_format(struct qmi_device *device,
 
 struct qmi_device *qmi_device_new_qmux(const char *device);
 struct qmi_device *qmi_device_new_qrtr(void);
+
+struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,
+						uint32_t type);
 
 struct qmi_param;
 
@@ -127,8 +130,6 @@ bool qmi_result_get_uint64(struct qmi_result *result, uint8_t type,
 void qmi_result_print_tlvs(struct qmi_result *result);
 
 int qmi_error_to_ofono_cme(int qmi_error);
-
-struct qmi_service;
 
 typedef void (*qmi_create_func_t)(struct qmi_service *service, void *user_data);
 
