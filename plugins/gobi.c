@@ -709,22 +709,17 @@ static void gobi_set_online(struct ofono_modem *modem, ofono_bool_t online,
 static void gobi_pre_sim(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
-	const char *sim_driver = NULL;
+	bool legacy = ofono_modem_get_boolean(modem, "ForceSimLegacy");
 
 	DBG("%p", modem);
 
 	ofono_devinfo_create(modem, 0, "qmimodem", qmi_service_clone(data->dms));
 
-	if (data->features & GOBI_UIM)
-		sim_driver = "qmimodem";
-	else if (data->features & GOBI_DMS)
-		sim_driver = "qmimodem_legacy";
-
-	if (ofono_modem_get_boolean(modem, "ForceSimLegacy"))
-		sim_driver = "qmimodem_legacy";
-
-	if (sim_driver)
-		ofono_sim_create(modem, 0, sim_driver, data->device);
+	if ((data->features & GOBI_UIM) && !legacy)
+		ofono_sim_create(modem, 0, "qmimodem", data->device);
+	else /* DMS always available */
+		ofono_sim_create(modem, 0, "qmimodem_legacy",
+						qmi_service_clone(data->dms));
 
 	if (data->features & GOBI_VOICE)
 		ofono_voicecall_create(modem, 0, "qmimodem", data->device);

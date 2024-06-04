@@ -27,7 +27,6 @@
 struct sim_data {
 	struct qmi_service *dms;
 	int retries[OFONO_SIM_PASSWORD_INVALID];
-	uint16_t event_indication_id;
 };
 
 static void qmi_read_file_info(struct ofono_sim *sim, int fileid,
@@ -295,59 +294,37 @@ done:
 	ofono_sim_register(sim);
 }
 
-static void create_dms_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_sim *sim = user_data;
-	struct sim_data *data = ofono_sim_get_data(sim);
-	struct qmi_param *param;
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request DMS service");
-		ofono_sim_remove(sim);
-		return;
-	}
-
-	data->dms = service;
-
-	data->event_indication_id =
-		qmi_service_register(data->dms, QMI_DMS_EVENT,
-					event_notify, sim, NULL);
-
-	param = qmi_param_new();
-
-	qmi_param_append_uint8(param, QMI_DMS_PARAM_REPORT_PIN_STATUS, 0x01);
-	qmi_param_append_uint8(param, QMI_DMS_PARAM_REPORT_OPER_MODE, 0x01);
-	qmi_param_append_uint8(param, QMI_DMS_PARAM_REPORT_UIM_STATE, 0x01);
-
-	if (qmi_service_send(data->dms, QMI_DMS_SET_EVENT, param,
-					set_event_cb, sim, NULL) > 0)
-		return;
-
-	qmi_param_free(param);
-
-	ofono_sim_register(sim);
-}
-
 static int qmi_sim_probe(struct ofono_sim *sim,
 				unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *dms = user_data;
+	struct qmi_param *param;
 	struct sim_data *data;
 	int i;
 
 	DBG("");
 
+	param = qmi_param_new();
+	qmi_param_append_uint8(param, QMI_DMS_PARAM_REPORT_PIN_STATUS, 0x01);
+	qmi_param_append_uint8(param, QMI_DMS_PARAM_REPORT_OPER_MODE, 0x01);
+	qmi_param_append_uint8(param, QMI_DMS_PARAM_REPORT_UIM_STATE, 0x01);
+
+	if (!qmi_service_send(dms, QMI_DMS_SET_EVENT, param,
+					set_event_cb, sim, NULL)) {
+		qmi_param_free(param);
+		qmi_service_free(dms);
+		return -EIO;
+	}
+
 	data = l_new(struct sim_data, 1);
+	data->dms = dms;
 
 	for (i = 0; i < OFONO_SIM_PASSWORD_INVALID; i++)
 		data->retries[i] = -1;
 
-	ofono_sim_set_data(sim, data);
+	qmi_service_register(dms, QMI_DMS_EVENT, event_notify, sim, NULL);
 
-	qmi_service_create_shared(device, QMI_SERVICE_DMS,
-						create_dms_cb, sim, NULL);
+	ofono_sim_set_data(sim, data);
 
 	return 0;
 }
@@ -360,13 +337,7 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 
 	ofono_sim_set_data(sim, NULL);
 
-	if (data->event_indication_id) {
-		qmi_service_unregister(data->dms, data->event_indication_id);
-		data->event_indication_id = 0;
-	}
-
 	qmi_service_free(data->dms);
-
 	l_free(data);
 }
 
