@@ -713,7 +713,7 @@ static void gobi_pre_sim(struct ofono_modem *modem)
 
 	DBG("%p", modem);
 
-	ofono_devinfo_create(modem, 0, "qmimodem", data->device);
+	ofono_devinfo_create(modem, 0, "qmimodem", qmi_service_clone(data->dms));
 
 	if (data->features & GOBI_UIM)
 		sim_driver = "qmimodem";

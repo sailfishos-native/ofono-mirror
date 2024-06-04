@@ -192,52 +192,24 @@ error:
 	ofono_devinfo_register(devinfo);
 }
 
-static void qmi_query_caps(struct ofono_devinfo *devinfo)
-{
-	struct devinfo_data *data = ofono_devinfo_get_data(devinfo);
-
-	DBG("");
-
-	if (qmi_service_send(data->dms, QMI_DMS_GET_CAPS, NULL,
-					get_caps_cb, devinfo, NULL) > 0)
-		return;
-
-	ofono_devinfo_register(devinfo);
-}
-
-static void create_dms_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_devinfo *devinfo = user_data;
-	struct devinfo_data *data = ofono_devinfo_get_data(devinfo);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request DMS service");
-		ofono_devinfo_remove(devinfo);
-		return;
-	}
-
-	data->dms = service;
-	data->device_is_3gpp = false;
-
-	qmi_query_caps(devinfo);
-}
-
 static int qmi_devinfo_probe(struct ofono_devinfo *devinfo,
 				unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *dms = user_data;
 	struct devinfo_data *data;
 
 	DBG("");
 
+	if (!qmi_service_send(dms, QMI_DMS_GET_CAPS, NULL,
+					get_caps_cb, devinfo, NULL)) {
+		qmi_service_free(dms);
+		return -EIO;
+	}
+
 	data = l_new(struct devinfo_data, 1);
+	data->dms = dms;
 
 	ofono_devinfo_set_data(devinfo, data);
-
-	qmi_service_create_shared(device, QMI_SERVICE_DMS,
-					create_dms_cb, devinfo, NULL);
 
 	return 0;
 }
@@ -251,7 +223,6 @@ static void qmi_devinfo_remove(struct ofono_devinfo *devinfo)
 	ofono_devinfo_set_data(devinfo, NULL);
 
 	qmi_service_free(data->dms);
-
 	l_free(data);
 }
 
