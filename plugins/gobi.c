@@ -716,7 +716,9 @@ static void gobi_pre_sim(struct ofono_modem *modem)
 	ofono_devinfo_create(modem, 0, "qmimodem", qmi_service_clone(data->dms));
 
 	if ((data->features & GOBI_UIM) && !legacy)
-		ofono_sim_create(modem, 0, "qmimodem", data->device);
+		ofono_sim_create(modem, 0, "qmimodem",
+						qmi_service_clone(data->dms),
+						qmi_service_clone(data->uim));
 	else /* DMS always available */
 		ofono_sim_create(modem, 0, "qmimodem_legacy",
 						qmi_service_clone(data->dms));

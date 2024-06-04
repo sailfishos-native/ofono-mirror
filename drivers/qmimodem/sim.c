@@ -44,14 +44,12 @@ struct sim_status {
 };
 
 struct sim_data {
-	struct qmi_device *qmi_dev;
 	struct qmi_service *dms;
 	struct qmi_service *uim;
 	uint32_t event_mask;
 	uint8_t app_type;
 	uint32_t retry_count;
 	struct l_timeout *retry_timer;
-	uint16_t card_status_indication_id;
 };
 
 static int create_fileid_data(uint8_t app_type, int fileid,
@@ -827,9 +825,7 @@ static void event_registration_cb(struct qmi_result *result, void *user_data)
 	DBG("event mask 0x%04x", data->event_mask);
 
 	if (data->event_mask & 0x0001) {
-		data->card_status_indication_id =
-			qmi_service_register(data->uim,
-						QMI_UIM_GET_CARD_STATUS_EVENT,
+		qmi_service_register(data->uim, QMI_UIM_GET_CARD_STATUS_EVENT,
 						card_status_notify, sim, NULL);
 	}
 
@@ -841,67 +837,31 @@ error:
 	ofono_sim_remove(sim);
 }
 
-static void create_uim_cb(struct qmi_service *service, void *user_data)
+static int qmi_sim_probev(struct ofono_sim *sim,
+				unsigned int vendor, va_list args)
 {
-	struct ofono_sim *sim = user_data;
-	struct sim_data *data = ofono_sim_get_data(sim);
-	struct qmi_param *param;
-	uint32_t mask = 0x0003;
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request UIM service");
-		goto error;
-	}
-
-	data->uim = service;
-
-	param = qmi_param_new_uint32(QMI_UIM_PARAM_EVENT_MASK, mask);
-
-	if (qmi_service_send(data->uim, QMI_UIM_EVENT_REGISTRATION, param,
-					event_registration_cb, sim, NULL) > 0)
-		return;
-
-error:
-	ofono_sim_remove(sim);
-}
-
-static void create_dms_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_sim *sim = user_data;
-	struct sim_data *data = ofono_sim_get_data(sim);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request DMS service");
-		ofono_sim_remove(sim);
-		return;
-	}
-
-	data->dms = service;
-
-	qmi_service_create_shared(data->qmi_dev, QMI_SERVICE_UIM, create_uim_cb,
-					sim, NULL);
-}
-
-static int qmi_sim_probe(struct ofono_sim *sim,
-				unsigned int vendor, void *user_data)
-{
-	struct qmi_device *device = user_data;
+	struct qmi_service *dms = va_arg(args, struct qmi_service *);
+	struct qmi_service *uim = va_arg(args, struct qmi_service *);
+	static const uint32_t mask = 0x0003;
+	struct qmi_param *param =
+		qmi_param_new_uint32(QMI_UIM_PARAM_EVENT_MASK, mask);
 	struct sim_data *data;
 
 	DBG("");
 
-	data = l_new(struct sim_data, 1);
+	if (!qmi_service_send(uim, QMI_UIM_EVENT_REGISTRATION, param,
+					event_registration_cb, sim, NULL)) {
+		qmi_param_free(param);
+		qmi_service_free(dms);
+		qmi_service_free(uim);
+		return -EIO;
+	}
 
-	data->qmi_dev = device;
+	data = l_new(struct sim_data, 1);
+	data->uim = uim;
+	data->dms = dms;
 
 	ofono_sim_set_data(sim, data);
-
-	qmi_service_create_shared(device, QMI_SERVICE_DMS,
-						create_dms_cb, sim, NULL);
 
 	return 0;
 }
@@ -915,29 +875,13 @@ static void qmi_sim_remove(struct ofono_sim *sim)
 	ofono_sim_set_data(sim, NULL);
 
 	l_timeout_remove(data->retry_timer);
-	data->retry_timer = NULL;
-
-	if (data->uim) {
-		if (data->card_status_indication_id) {
-			qmi_service_unregister(data->uim,
-					data->card_status_indication_id);
-			data->card_status_indication_id = 0;
-		}
-
-		qmi_service_free(data->uim);
-		data->uim = NULL;
-	}
-
-	if (data->dms) {
-		qmi_service_free(data->dms);
-		data->dms = NULL;
-	}
-
+	qmi_service_free(data->uim);
+	qmi_service_free(data->dms);
 	l_free(data);
 }
 
 static const struct ofono_sim_driver driver = {
-	.probe			= qmi_sim_probe,
+	.probev			= qmi_sim_probev,
 	.remove			= qmi_sim_remove,
 	.read_file_info		= qmi_read_attributes,
 	.read_file_transparent	= qmi_read_transparent,
