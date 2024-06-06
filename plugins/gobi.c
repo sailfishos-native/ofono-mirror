@@ -752,7 +752,7 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 		interface = ofono_modem_get_string(modem, "NetworkInterface");
 
 		gc = ofono_gprs_context_create(modem, 0, "qmimodem",
-							data->device);
+						qmi_service_clone(data->wds));
 		if (!gc) {
 			ofono_warn("Unable to create gprs-context for: %s",
 					ofono_modem_get_path(modem));
@@ -778,7 +778,7 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 		mux_id = ofono_modem_get_integer(modem, buf);
 
 		gc = ofono_gprs_context_create(modem, mux_id, "qmimodem",
-							data->device);
+						qmi_service_clone(data->wds));
 
 		if (!gc) {
 			ofono_warn("gprs-context creation failed for [%d] %s",

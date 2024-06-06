@@ -22,7 +22,6 @@
 
 struct gprs_context_data {
 	struct qmi_service *wds;
-	struct qmi_device *dev;
 	unsigned int active_context;
 	uint32_t pkt_handle;
 	uint8_t mux_id;
@@ -480,9 +479,10 @@ static void bind_mux_data_port_cb(struct qmi_result *result, void *user_data)
 	}
 }
 
-static void qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc)
+static int qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc,
+					struct qmi_service *wds,
+					uint8_t mux_id)
 {
-	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
 	struct ofono_modem *modem = ofono_gprs_context_get_modem(gc);
 	struct qmi_param *param;
 	const char *interface_number;
@@ -496,7 +496,7 @@ static void qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc)
 	bus = ofono_modem_get_string(modem, "Bus");
 	if (!bus) {
 		ofono_error("%s: Missing 'Bus'", ofono_modem_get_path(modem));
-		goto error;
+		return -EINVAL;
 	}
 
 	if (!strcmp(bus, "pcie"))
@@ -508,7 +508,7 @@ static void qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc)
 	else {
 		ofono_error("%s: Invalid 'Bus' value",
 				ofono_modem_get_path(modem));
-		goto error;
+		return -ENOTSUP;
 	}
 
 	switch (endpoint_info.endpoint_type) {
@@ -528,68 +528,54 @@ static void qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc)
 
 		ofono_error("%s: Missing or invalid 'InterfaceNumber'",
 					ofono_modem_get_path(modem));
-		/* Fall through */
+		return -EINVAL;
 	default:
-		goto error;
+		return -ENOTSUP;
 	}
 
 	DBG("interface_number: %d", endpoint_info.interface_number);
-	DBG("mux_id: %hhx", data->mux_id);
+	DBG("mux_id: %hhx", mux_id);
 
 	param = qmi_param_new();
 
 	qmi_param_append(param, 0x10, sizeof(endpoint_info), &endpoint_info);
-	qmi_param_append_uint8(param, 0x11, data->mux_id);
+	qmi_param_append_uint8(param, 0x11, mux_id);
 	qmi_param_append_uint32(param, 0x13, QMI_WDS_CLIENT_TYPE_TETHERED);
 
-	if (qmi_service_send(data->wds, QMI_WDS_BIND_MUX_DATA_PORT, param,
+	if (qmi_service_send(wds, QMI_WDS_BIND_MUX_DATA_PORT, param,
 				bind_mux_data_port_cb, gc, NULL) > 0)
-		return;
+		return 0;
 
 	qmi_param_free(param);
-error:
-	ofono_error("Failed to BIND_MUX_DATA_PORT");
-	ofono_gprs_context_remove(gc);
-}
-
-static void create_wds_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_gprs_context *gc = user_data;
-	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request WDS service");
-		ofono_gprs_context_remove(gc);
-		return;
-	}
-
-	data->wds = service;
-
-	qmi_service_register(data->wds, QMI_WDS_PACKET_SERVICE_STATUS,
-					pkt_status_notify, gc, NULL);
-
-	if (data->mux_id)
-		qmi_gprs_context_bind_mux(gc);
+	return -EIO;
 }
 
 static int qmi_gprs_context_probe(struct ofono_gprs_context *gc,
 					unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *wds = user_data;
 	struct gprs_context_data *data;
 
 	DBG("");
 
-	data = l_new(struct gprs_context_data, 1);
+	if (vendor) {
+		int r = qmi_gprs_context_bind_mux(gc, wds, vendor);
 
-	ofono_gprs_context_set_data(gc, data);
-	data->dev = device;
+		if (r < 0) {
+			qmi_service_free(wds);
+			return r;
+		}
+	}
+
+	data = l_new(struct gprs_context_data, 1);
+	data->wds = wds;
 	data->mux_id = vendor;
 
-	qmi_service_create_shared(data->dev, QMI_SERVICE_WDS, create_wds_cb, gc,
-									NULL);
+	qmi_service_register(data->wds, QMI_WDS_PACKET_SERVICE_STATUS,
+					pkt_status_notify, gc, NULL);
+
+	ofono_gprs_context_set_data(gc, data);
+
 	return 0;
 }
 
@@ -601,9 +587,7 @@ static void qmi_gprs_context_remove(struct ofono_gprs_context *gc)
 
 	ofono_gprs_context_set_data(gc, NULL);
 
-	if (data->wds)
-		qmi_service_free(data->wds);
-
+	qmi_service_free(data->wds);
 	l_free(data);
 }
 
