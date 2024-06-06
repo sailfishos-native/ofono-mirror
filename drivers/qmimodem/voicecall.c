@@ -709,48 +709,24 @@ static void send_dtmf(struct ofono_voicecall *vc, const char *dtmf,
 	send_one_dtmf(vc, *dtmf, send_one_dtmf_cb, vd);
 }
 
-static void create_voice_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_voicecall *vc = user_data;
-	struct voicecall_data *data = ofono_voicecall_get_data(vc);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request Voice service");
-		ofono_voicecall_remove(vc);
-		return;
-	}
-
-	if (!qmi_service_get_version(service, &data->major, &data->minor)) {
-		ofono_error("Failed to get Voice service version");
-		ofono_voicecall_remove(vc);
-		return;
-	}
-
-	data->voice = service;
-
-	qmi_service_register(data->voice, QMI_VOICE_ALL_CALL_STATUS_IND,
-				all_call_status_ind, vc, NULL);
-
-	ofono_voicecall_register(vc);
-}
-
 static int qmi_voicecall_probe(struct ofono_voicecall *vc,
 					unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *voice = user_data;
 	struct voicecall_data *data;
 
 	DBG("");
 
 	data = l_new(struct voicecall_data, 1);
+	data->voice = voice;
 	data->call_list = l_queue_new();
 
-	ofono_voicecall_set_data(vc, data);
+	qmi_service_get_version(data->voice, &data->major, &data->minor);
 
-	qmi_service_create_shared(device, QMI_SERVICE_VOICE,
-					create_voice_cb, vc, NULL);
+	qmi_service_register(data->voice, QMI_VOICE_ALL_CALL_STATUS_IND,
+				all_call_status_ind, vc, NULL);
+
+	ofono_voicecall_set_data(vc, data);
 
 	return 0;
 }
@@ -764,13 +740,13 @@ static void qmi_voicecall_remove(struct ofono_voicecall *vc)
 	ofono_voicecall_set_data(vc, NULL);
 
 	qmi_service_free(data->voice);
-
 	l_queue_destroy(data->call_list, l_free);
 	l_free(data->full_dtmf);
 	l_free(data);
 }
 
 static const struct ofono_voicecall_driver driver = {
+	.flags		= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe		= qmi_voicecall_probe,
 	.remove		= qmi_voicecall_remove,
 	.dial		= dial,

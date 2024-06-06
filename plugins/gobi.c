@@ -722,7 +722,8 @@ static void gobi_pre_sim(struct ofono_modem *modem)
 						qmi_service_clone(data->dms));
 
 	if (data->features & GOBI_VOICE)
-		ofono_voicecall_create(modem, 0, "qmimodem", data->device);
+		ofono_voicecall_create(modem, 0, "qmimodem",
+					qmi_service_clone(data->voice));
 
 	if (data->features & GOBI_PDS)
 		ofono_location_reporting_create(modem, 0, "qmimodem",
