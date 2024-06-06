@@ -162,10 +162,10 @@ error:
 	ofono_lte_remove(lte);
 }
 
-static void create_wds_cb(struct qmi_service *service, void *user_data)
+static int qmimodem_lte_probe(struct ofono_lte *lte,
+					unsigned int vendor, void *data)
 {
-	struct ofono_lte *lte = user_data;
-	struct lte_data *ldd = ofono_lte_get_data(lte);
+	struct qmi_service *wds = data;
 	struct qmi_param *param;
 	struct {
 		uint8_t type;
@@ -174,48 +174,24 @@ static void create_wds_cb(struct qmi_service *service, void *user_data)
 		.type = QMI_WDS_PROFILE_TYPE_3GPP,
 		.family = QMI_WDS_PROFILE_FAMILY_EMBEDDED,
 	};
+	struct lte_data *ldd;
 
 	DBG("");
 
-	if (!service) {
-		ofono_error("Failed to request WDS service");
-		ofono_lte_remove(lte);
-		return;
-	}
-
-	ldd->wds = service;
-
-	/* Query the default profile */
 	param = qmi_param_new();
-
-	/* Profile type */
 	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
 
-	/* Get default profile */
-	if (qmi_service_send(ldd->wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
-				param, get_default_profile_cb, lte, NULL) > 0)
-		return;
-
-	qmi_param_free(param);
-
-	ofono_error("Failed to query default profile");
-	ofono_lte_register(lte);
-}
-
-static int qmimodem_lte_probe(struct ofono_lte *lte,
-					unsigned int vendor, void *data)
-{
-	struct qmi_device *device = data;
-	struct lte_data *ldd;
-
-	DBG("qmimodem lte probe");
+	if (!qmi_service_send(wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
+				param, get_default_profile_cb, lte, NULL)) {
+		qmi_param_free(param);
+		qmi_service_free(wds);
+		return -EIO;
+	}
 
 	ldd = l_new(struct lte_data, 1);
+	ldd->wds = wds;
 
 	ofono_lte_set_data(lte, ldd);
-
-	qmi_service_create_shared(device, QMI_SERVICE_WDS,
-					create_wds_cb, lte, NULL);
 
 	return 0;
 }
@@ -229,7 +205,6 @@ static void qmimodem_lte_remove(struct ofono_lte *lte)
 	ofono_lte_set_data(lte, NULL);
 
 	qmi_service_free(ldd->wds);
-
 	l_free(ldd);
 }
 
