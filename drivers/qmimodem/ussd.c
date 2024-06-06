@@ -145,50 +145,25 @@ error:
 	ofono_ussd_notify(ussd, OFONO_USSD_STATUS_TERMINATED, 0, NULL, 0);
 }
 
-static void create_voice_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_ussd *ussd = user_data;
-	struct ussd_data *data = ofono_ussd_get_data(ussd);
-
-	DBG("");
-
-	if (service == NULL) {
-		ofono_error("Failed to request Voice service");
-		ofono_ussd_remove(ussd);
-		return;
-	}
-
-	if (!qmi_service_get_version(service, &data->major, &data->minor)) {
-		ofono_error("Failed to get Voice service version");
-		ofono_ussd_remove(ussd);
-		return;
-	}
-
-	data->voice = service;
-
-	qmi_service_register(data->voice, QMI_VOICE_USSD_IND,
-					async_ind, ussd, NULL);
-
-	qmi_service_register(data->voice, QMI_VOICE_ASYNC_ORIG_USSD,
-					async_orig_ind, ussd, NULL);
-
-	ofono_ussd_register(ussd);
-}
-
 static int qmi_ussd_probe(struct ofono_ussd *ussd,
 				unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *voice = user_data;
 	struct ussd_data *data;
 
 	DBG("");
 
 	data = l_new(struct ussd_data, 1);
+	data->voice = voice;
+
+	qmi_service_get_version(data->voice, &data->major, &data->minor);
+	qmi_service_register(data->voice, QMI_VOICE_USSD_IND,
+					async_ind, ussd, NULL);
+	qmi_service_register(data->voice, QMI_VOICE_ASYNC_ORIG_USSD,
+					async_orig_ind, ussd, NULL);
+
 
 	ofono_ussd_set_data(ussd, data);
-
-	qmi_service_create_shared(device, QMI_SERVICE_VOICE,
-						create_voice_cb, ussd, NULL);
 
 	return 0;
 }
@@ -202,7 +177,6 @@ static void qmi_ussd_remove(struct ofono_ussd *ussd)
 	ofono_ussd_set_data(ussd, NULL);
 
 	qmi_service_free(data->voice);
-
 	l_free(data);
 }
 
@@ -298,6 +272,7 @@ error:
 }
 
 static const struct ofono_ussd_driver driver = {
+	.flags		= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe		= qmi_ussd_probe,
 	.remove		= qmi_ussd_remove,
 	.request	= qmi_ussd_request,
