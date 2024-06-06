@@ -21,7 +21,6 @@
 #include "util.h"
 
 struct gprs_data {
-	struct qmi_device *dev;
 	struct qmi_service *nas;
 	struct qmi_service *wds;
 	unsigned int default_profile;
@@ -405,9 +404,12 @@ error:
 	ofono_gprs_remove(gprs);
 }
 
-static int get_default_profile_number_request(struct ofono_gprs *gprs)
+static int qmi_gprs_probev(struct ofono_gprs *gprs,
+				unsigned int vendor, va_list args)
 {
-	struct gprs_data *data = ofono_gprs_get_data(gprs);
+	struct qmi_service *wds = va_arg(args, struct qmi_service *);
+	struct qmi_service *nas = va_arg(args, struct qmi_service *);
+	struct gprs_data *data;
 	struct {
 		uint8_t type;
 		uint8_t family;
@@ -423,76 +425,28 @@ static int get_default_profile_number_request(struct ofono_gprs *gprs)
 	 */
 	qmi_param_append(param, QMI_WDS_PARAM_PROFILE_TYPE, sizeof(p), &p);
 
-	if (qmi_service_send(data->wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
+	if (!qmi_service_send(wds, QMI_WDS_GET_DEFAULT_PROFILE_NUMBER,
 				param, get_default_profile_number_cb,
-				gprs, NULL) > 0)
-		return 0;
+				gprs, NULL)) {
+		qmi_param_free(param);
+		qmi_service_free(nas);
+		qmi_service_free(wds);
 
-	qmi_param_free(param);
-	return -EIO;
-}
-
-static void create_wds_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_gprs *gprs = user_data;
-	struct gprs_data *data = ofono_gprs_get_data(gprs);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request WDS service");
-		goto error;
+		return -EIO;
 	}
-
-	data->wds = service;
-	qmi_service_register(data->wds, QMI_WDS_EVENT_REPORT,
-				event_report_notify, gprs, NULL);
-	qmi_service_register(data->wds, QMI_WDS_PROFILE_CHANGED,
-				profile_changed_notify, gprs, NULL);
-
-	if (get_default_profile_number_request(gprs) >= 0)
-		return;
-error:
-	ofono_gprs_remove(gprs);
-}
-
-static void create_nas_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_gprs *gprs = user_data;
-	struct gprs_data *data = ofono_gprs_get_data(gprs);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request NAS service");
-		ofono_gprs_remove(gprs);
-		return;
-	}
-
-	data->nas = service;
-	qmi_service_register(data->nas, QMI_NAS_SERVING_SYSTEM_INDICATION,
-					ss_info_notify, gprs, NULL);
-
-	qmi_service_create_shared(data->dev, QMI_SERVICE_WDS,
-						create_wds_cb, gprs, NULL);
-}
-
-static int qmi_gprs_probe(struct ofono_gprs *gprs,
-				unsigned int vendor, void *user_data)
-{
-	struct qmi_device *device = user_data;
-	struct gprs_data *data;
-
-	DBG("");
 
 	data = l_new(struct gprs_data, 1);
+	data->wds = wds;
+	data->nas = nas;
+
+	qmi_service_register(data->nas, QMI_NAS_SERVING_SYSTEM_INDICATION,
+					ss_info_notify, gprs, NULL);
+	qmi_service_register(data->wds, QMI_WDS_EVENT_REPORT,
+					event_report_notify, gprs, NULL);
+	qmi_service_register(data->wds, QMI_WDS_PROFILE_CHANGED,
+					profile_changed_notify, gprs, NULL);
 
 	ofono_gprs_set_data(gprs, data);
-
-	data->dev = device;
-
-	qmi_service_create_shared(device, QMI_SERVICE_NAS,
-						create_nas_cb, gprs, NULL);
 
 	return 0;
 }
@@ -507,12 +461,11 @@ static void qmi_gprs_remove(struct ofono_gprs *gprs)
 
 	qmi_service_free(data->wds);
 	qmi_service_free(data->nas);
-
 	l_free(data);
 }
 
 static const struct ofono_gprs_driver driver = {
-	.probe			= qmi_gprs_probe,
+	.probev			= qmi_gprs_probev,
 	.remove			= qmi_gprs_remove,
 	.set_attached		= qmi_set_attached,
 	.attached_status	= qmi_attached_status,

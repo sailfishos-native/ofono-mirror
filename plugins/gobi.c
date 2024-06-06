@@ -742,7 +742,9 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 	char buf[256];
 	int i;
 
-	gprs = ofono_gprs_create(modem, 0, "qmimodem", data->device);
+	gprs = ofono_gprs_create(modem, 0, "qmimodem",
+					qmi_service_clone(data->wds),
+					qmi_service_clone(data->nas));
 	if (!gprs) {
 		ofono_warn("Unable to create gprs for: %s",
 					ofono_modem_get_path(modem));
