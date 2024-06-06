@@ -34,7 +34,6 @@ struct test_info {
 	int service_fds[TEST_SERVICE_COUNT];
 	struct qmi_device *node;
 	struct l_timeout *timeout;
-	struct l_queue *services;
 
 	/* Data sent to our test service */
 	struct sockaddr_qrtr sender;
@@ -159,7 +158,6 @@ static struct test_info *test_setup(void)
 	/* Enable ofono logging */
 	qmi_device_set_debug(info->node, debug_log, NULL);
 
-	info->services = l_queue_new();
 	info->timeout = l_timeout_create(TEST_TIMEOUT, test_timeout_cb, info,
 								NULL);
 
@@ -172,8 +170,6 @@ static void test_cleanup(struct test_info *info)
 
 	l_free(info->received);
 	l_timeout_remove(info->timeout);
-	l_queue_destroy(info->services,
-				(l_queue_destroy_func_t) qmi_service_free);
 	qmi_device_free(info->node);
 
 	/* The qrtr services will be destroyed automatically. */
@@ -216,13 +212,6 @@ static void test_discovery(const void *data)
 	test_cleanup(info);
 }
 
-static void create_service_cb(struct qmi_service *service, void *user_data)
-{
-	struct test_info *info = user_data;
-
-	l_queue_push_tail(info->services, service);
-}
-
 /* Callbacks could queue other callbacks so continue until there are no more. */
 static void perform_all_pending_work(void)
 {
@@ -246,12 +235,7 @@ static void test_create_services(const void *data)
 		uint16_t major, minor;
 
 		service_type = unique_service_type(i);
-		assert(qmi_service_create_shared(info->node, service_type,
-						create_service_cb, info, NULL));
-		perform_all_pending_work();
-
-		assert(l_queue_length(info->services) == 1);
-		service = l_queue_pop_head(info->services);
+		service = qmi_qrtr_node_get_service(info->node, service_type);
 		assert(service);
 
 		assert(qmi_service_get_version(service, &major, &minor));
@@ -266,21 +250,14 @@ static void test_create_services(const void *data)
 	 * call the callback.
 	 */
 	service_type = unique_service_type(TEST_SERVICE_COUNT);
-	assert(!qmi_service_create_shared(info->node, service_type,
-					create_service_cb, info, NULL));
-	perform_all_pending_work();
-	assert(l_queue_isempty(info->services));
+	assert(!qmi_qrtr_node_get_service(info->node, service_type));
 
 	/* Confirm that multiple services may be created for the same type */
 	service_type = unique_service_type(0);
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
-		assert(qmi_service_create_shared(info->node, service_type,
-						create_service_cb, info, NULL));
-		perform_all_pending_work();
-
-		assert(l_queue_length(info->services) == 1);
-		services[i] = l_queue_pop_head(info->services);
+		services[i] = qmi_qrtr_node_get_service(info->node,
+								service_type);
 		assert(services[i]);
 	}
 
@@ -455,10 +432,7 @@ static void test_send_data(const void *data)
 	perform_discovery(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
-	assert(qmi_service_create_shared(info->node, service_type,
-					create_service_cb, info, NULL));
-	perform_all_pending_work();
-	service = l_queue_pop_head(info->services);
+	service = qmi_qrtr_node_get_service(info->node, service_type);
 	assert(service);
 
 	io = l_io_new(info->service_fds[0]);
@@ -505,10 +479,7 @@ static void test_notifications(const void *data)
 	perform_discovery(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
-	assert(qmi_service_create_shared(info->node, service_type,
-					create_service_cb, info, NULL));
-	perform_all_pending_work();
-	service = l_queue_pop_head(info->services);
+	service = qmi_qrtr_node_get_service(info->node, service_type);
 	assert(service);
 
 	io = l_io_new(info->service_fds[0]);
@@ -567,10 +538,8 @@ static void test_service_notification_independence(const void *data)
 	l_io_set_read_handler(io, received_data, info, NULL);
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
-		assert(qmi_service_create_shared(info->node, service_type,
-						create_service_cb, info, NULL));
-		perform_all_pending_work();
-		services[i] = l_queue_pop_head(info->services);
+		services[i] = qmi_qrtr_node_get_service(info->node,
+								service_type);
 		assert(services[i]);
 
 		send_request_via_qmi(info, services[i]);
