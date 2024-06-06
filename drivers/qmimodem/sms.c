@@ -725,57 +725,32 @@ static void set_event_cb(struct qmi_result *result, void *user_data)
 	ofono_sms_register(sms);
 }
 
-static void create_wms_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_sms *sms = user_data;
-	struct sms_data *data = ofono_sms_get_data(sms);
-	struct qmi_param *param;
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request WMS service");
-		ofono_sms_remove(sms);
-		return;
-	}
-
-	if (!qmi_service_get_version(service, &data->major, &data->minor)) {
-		ofono_error("Failed to get WMS service version");
-		ofono_sms_remove(sms);
-		return;
-	}
-
-	data->wms = service;
-
-	memset(&data->rd_msg_id, 0, sizeof(data->rd_msg_id));
-	data->msg_mode = QMI_WMS_MESSAGE_MODE_GSMWCDMA;
-
-	qmi_service_register(data->wms, QMI_WMS_EVENT,
-					event_notify, sms, NULL);
-
-	param = qmi_param_new_uint8(QMI_WMS_PARAM_NEW_MSG_REPORT, 0x01);
-
-	if (qmi_service_send(data->wms, QMI_WMS_SET_EVENT, param,
-					set_event_cb, sms, NULL) > 0)
-		return;
-
-	ofono_sms_register(sms);
-}
-
 static int qmi_sms_probe(struct ofono_sms *sms,
 				unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *wms = user_data;
+	struct qmi_param *param;
 	struct sms_data *data;
 
 	DBG("");
 
+	param = qmi_param_new_uint8(QMI_WMS_PARAM_NEW_MSG_REPORT, 0x01);
+
+	if (!qmi_service_send(wms, QMI_WMS_SET_EVENT, param,
+					set_event_cb, sms, NULL)) {
+		qmi_param_free(param);
+		qmi_service_free(wms);
+		return -EIO;
+	}
+
 	data = l_new(struct sms_data, 1);
+	data->wms = wms;
+	memset(&data->rd_msg_id, 0, sizeof(data->rd_msg_id));
+	data->msg_mode = QMI_WMS_MESSAGE_MODE_GSMWCDMA;
+	qmi_service_get_version(data->wms, &data->major, &data->minor);
+	qmi_service_register(data->wms, QMI_WMS_EVENT, event_notify, sms, NULL);
 
 	ofono_sms_set_data(sms, data);
-
-	qmi_service_create_shared(device, QMI_SERVICE_WMS, create_wms_cb, sms,
-					NULL);
 
 	return 0;
 }
@@ -788,11 +763,10 @@ static void qmi_sms_remove(struct ofono_sms *sms)
 
 	ofono_sms_set_data(sms, NULL);
 
-	qmi_service_free(data->wms);
-
 	if (data->msg_list)
 		l_free(data->msg_list);
 
+	qmi_service_free(data->wms);
 	l_free(data);
 }
 

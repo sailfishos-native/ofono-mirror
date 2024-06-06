@@ -806,7 +806,8 @@ static void gobi_post_sim(struct ofono_modem *modem)
 		ofono_radio_settings_create(modem, 0, "qmimodem", data->device);
 
 	if (data->features & GOBI_WMS)
-		ofono_sms_create(modem, 0, "qmimodem", data->device);
+		ofono_sms_create(modem, 0, "qmimodem",
+					qmi_service_clone(data->wms));
 
 	if ((data->features & GOBI_WMS) && (data->features & GOBI_UIM) &&
 			!ofono_modem_get_boolean(modem, "ForceSimLegacy")) {
