@@ -190,38 +190,18 @@ error:
 	CALLBACK_WITH_FAILURE(cb, data);
 }
 
-static void create_voice_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_call_barring *barr = user_data;
-	struct call_barring_data *bd = ofono_call_barring_get_data(barr);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request Voice service");
-		ofono_call_barring_remove(barr);
-		return;
-	}
-
-	bd->voice = service;
-
-	ofono_call_barring_register(barr);
-}
-
 static int qmi_call_barring_probe(struct ofono_call_barring *barr,
 					unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *voice = user_data;
 	struct call_barring_data *bd;
 
 	DBG("");
 
 	bd = l_new(struct call_barring_data, 1);
+	bd->voice = voice;
 
 	ofono_call_barring_set_data(barr, bd);
-
-	qmi_service_create_shared(device, QMI_SERVICE_VOICE,
-					create_voice_cb, barr, NULL);
 
 	return 0;
 }
@@ -234,13 +214,12 @@ static void qmi_call_barring_remove(struct ofono_call_barring *barr)
 
 	ofono_call_barring_set_data(barr, NULL);
 
-	if (bd->voice)
-		qmi_service_free(bd->voice);
-
+	qmi_service_free(bd->voice);
 	l_free(bd);
 }
 
 static const struct ofono_call_barring_driver driver = {
+	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe			= qmi_call_barring_probe,
 	.remove			= qmi_call_barring_remove,
 	.set			= qmi_set,
