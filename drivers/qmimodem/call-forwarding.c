@@ -276,38 +276,18 @@ static void qmi_erase(struct ofono_call_forwarding *cf, int type, int cls,
 	qmi_set(cf, type, cls, QMI_VOICE_SS_ACTION_ERASE, cb, data);
 }
 
-static void create_voice_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_call_forwarding *cf = user_data;
-	struct call_forwarding_data *cfd = ofono_call_forwarding_get_data(cf);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request Voice service");
-		ofono_call_forwarding_remove(cf);
-		return;
-	}
-
-	cfd->voice = service;
-
-	ofono_call_forwarding_register(cf);
-}
-
 static int qmi_call_forwarding_probe(struct ofono_call_forwarding *cf,
 					unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *voice = user_data;
 	struct call_forwarding_data *cfd;
 
 	DBG("");
 
 	cfd = l_new(struct call_forwarding_data, 1);
+	cfd->voice = voice;
 
 	ofono_call_forwarding_set_data(cf, cfd);
-
-	qmi_service_create_shared(device, QMI_SERVICE_VOICE,
-					create_voice_cb, cf, NULL);
 
 	return 0;
 }
@@ -320,13 +300,12 @@ static void qmi_call_forwarding_remove(struct ofono_call_forwarding *cf)
 
 	ofono_call_forwarding_set_data(cf, NULL);
 
-	if (cfd->voice)
-		qmi_service_free(cfd->voice);
-
+	qmi_service_free(cfd->voice);
 	l_free(cfd);
 }
 
 static const struct ofono_call_forwarding_driver driver = {
+	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe			= qmi_call_forwarding_probe,
 	.remove			= qmi_call_forwarding_remove,
 	.registration		= qmi_register,
