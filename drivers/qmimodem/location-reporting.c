@@ -174,44 +174,14 @@ static void qmi_location_reporting_disable(struct ofono_location_reporting *lr,
 static void set_event_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_location_reporting *lr = user_data;
-
-	DBG("");
-
-	ofono_location_reporting_register(lr);
-}
-
-static void create_pds_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_location_reporting *lr = user_data;
 	struct location_data *data = ofono_location_reporting_get_data(lr);
-	struct qmi_param *param;
 
 	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request PDS service");
-		ofono_location_reporting_remove(lr);
-		return;
-	}
-
-	data->pds = service;
 
 	qmi_service_register(data->pds, QMI_PDS_EVENT,
 					event_notify, lr, NULL);
-
 	qmi_service_register(data->pds, QMI_PDS_STATE_IND,
 					state_notify, lr, NULL);
-
-	param = qmi_param_new();
-
-	qmi_param_append_uint8(param, QMI_PDS_PARAM_REPORT_NMEA, 0x01);
-	qmi_param_append_uint8(param, QMI_PDS_PARAM_REPORT_NMEA_DEBUG, 0x00);
-
-	if (qmi_service_send(data->pds, QMI_PDS_SET_EVENT, param,
-					set_event_cb, lr, NULL) > 0)
-		return;
-
-	qmi_param_free(param);
 
 	ofono_location_reporting_register(lr);
 }
@@ -219,19 +189,28 @@ static void create_pds_cb(struct qmi_service *service, void *user_data)
 static int qmi_location_reporting_probe(struct ofono_location_reporting *lr,
 					unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *pds = user_data;
 	struct location_data *data;
+	struct qmi_param *param;
 
 	DBG("");
 
-	data = l_new(struct location_data, 1);
+	param = qmi_param_new();
+	qmi_param_append_uint8(param, QMI_PDS_PARAM_REPORT_NMEA, 0x01);
+	qmi_param_append_uint8(param, QMI_PDS_PARAM_REPORT_NMEA_DEBUG, 0x00);
 
+	if (!qmi_service_send(pds, QMI_PDS_SET_EVENT, param,
+					set_event_cb, lr, NULL)) {
+		qmi_param_free(param);
+		qmi_service_free(pds);
+		return -EIO;
+	}
+
+	data = l_new(struct location_data, 1);
+	data->pds = pds;
 	data->fd = -1;
 
 	ofono_location_reporting_set_data(lr, data);
-
-	qmi_service_create_shared(device, QMI_SERVICE_PDS, create_pds_cb, lr,
-					NULL);
 
 	return 0;
 }
@@ -245,7 +224,6 @@ static void qmi_location_reporting_remove(struct ofono_location_reporting *lr)
 	ofono_location_reporting_set_data(lr, NULL);
 
 	qmi_service_free(data->pds);
-
 	l_free(data);
 }
 
