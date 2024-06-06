@@ -834,7 +834,8 @@ static void gobi_post_online(struct ofono_modem *modem)
 
 	if (data->features & GOBI_VOICE) {
 		ofono_ussd_create(modem, 0, "qmimodem", data->device);
-		ofono_call_settings_create(modem, 0, "qmimodem", data->device);
+		ofono_call_settings_create(modem, 0, "qmimodem",
+						qmi_service_clone(data->voice));
 		ofono_call_barring_create(modem, 0, "qmimodem",
 						qmi_service_clone(data->voice));
 		ofono_call_forwarding_create(modem, 0, "qmimodem",

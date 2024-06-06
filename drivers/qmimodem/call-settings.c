@@ -21,7 +21,6 @@
 
 struct call_settings_data {
 	struct qmi_service *voice;
-	uint16_t sups_ind_id;
 };
 
 static void query_status(struct ofono_call_settings *cs, uint16_t message,
@@ -262,41 +261,20 @@ static void sups_ind(struct qmi_result *result, void *user_data)
 					clip->active, clip->provisioned);
 }
 
-static void create_voice_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_call_settings *cs = user_data;
-	struct call_settings_data *csd = ofono_call_settings_get_data(cs);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request Voice service");
-		ofono_call_settings_remove(cs);
-		return;
-	}
-
-	csd->voice = service;
-
-	csd->sups_ind_id = qmi_service_register(csd->voice, QMI_VOICE_SUPS_IND,
-						sups_ind, cs, NULL);
-
-	ofono_call_settings_register(cs);
-}
-
 static int qmi_call_settings_probe(struct ofono_call_settings *cs,
 					unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *voice = user_data;
 	struct call_settings_data *csd;
 
 	DBG("");
 
 	csd = l_new(struct call_settings_data, 1);
+	csd->voice = voice;
+
+	qmi_service_register(csd->voice, QMI_VOICE_SUPS_IND, sups_ind, cs, NULL);
 
 	ofono_call_settings_set_data(cs, csd);
-
-	qmi_service_create_shared(device, QMI_SERVICE_VOICE,
-					create_voice_cb, cs, NULL);
 
 	return 0;
 }
@@ -309,15 +287,12 @@ static void qmi_call_settings_remove(struct ofono_call_settings *cs)
 
 	ofono_call_settings_set_data(cs, NULL);
 
-	if (csd->voice) {
-		qmi_service_unregister(csd->voice, csd->sups_ind_id);
-		qmi_service_free(csd->voice);
-	}
-
+	qmi_service_free(csd->voice);
 	l_free(csd);
 }
 
 static const struct ofono_call_settings_driver driver = {
+	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe			= qmi_call_settings_probe,
 	.remove			= qmi_call_settings_remove,
 	.clip_query		= qmi_clip_query,
