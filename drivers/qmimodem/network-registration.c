@@ -31,10 +31,6 @@ struct netreg_data {
 	int lac;
 	int cellid;
 	bool is_roaming;
-	uint16_t event_indication_id;
-	uint16_t signal_info_indication_id;
-	uint16_t system_info_indication_id;
-	uint16_t serving_system_indication_id;
 };
 
 enum roaming_status {
@@ -587,23 +583,16 @@ static void register_indications_cb(struct qmi_result *result,
 
 	ofono_netreg_register(netreg);
 
-	data->event_indication_id =
-		qmi_service_register(data->nas, QMI_NAS_EVENT_REPORT,
+	qmi_service_register(data->nas, QMI_NAS_EVENT_REPORT,
 					event_notify, netreg, NULL);
 
-	data->serving_system_indication_id =
-		qmi_service_register(data->nas,
-					QMI_NAS_SERVING_SYSTEM_INDICATION,
+	qmi_service_register(data->nas, QMI_NAS_SERVING_SYSTEM_INDICATION,
 					ss_info_notify, netreg, NULL);
 
-	data->system_info_indication_id =
-		qmi_service_register(data->nas,
-					QMI_NAS_SYSTEM_INFO_INDICATION,
+	qmi_service_register(data->nas, QMI_NAS_SYSTEM_INFO_INDICATION,
 					system_info_notify, netreg, NULL);
 
-	data->signal_info_indication_id =
-		qmi_service_register(data->nas,
-					QMI_NAS_SIGNAL_INFO_INDICATION,
+	qmi_service_register(data->nas, QMI_NAS_SIGNAL_INFO_INDICATION,
 					signal_info_notify, netreg, NULL);
 }
 
@@ -636,10 +625,10 @@ error:
 	ofono_netreg_remove(netreg);
 }
 
-static void create_nas_cb(struct qmi_service *service, void *user_data)
+static int qmi_netreg_probe(struct ofono_netreg *netreg,
+				unsigned int vendor, void *user_data)
 {
-	struct ofono_netreg *netreg = user_data;
-	struct netreg_data *data = ofono_netreg_get_data(netreg);
+	struct qmi_service *nas = user_data;
 	struct qmi_param *param;
 	static const uint8_t PARAM_REPORT_SIGNAL_STRENGTH = 0x10;
 	static const uint8_t PARAM_REPORT_RF_INFO = 0x11;
@@ -650,55 +639,34 @@ static void create_nas_cb(struct qmi_service *service, void *user_data)
 	} __attribute__((__packed__)) ss = { .report = 0x01,
 			.count = 5, .dbm[0] = -55, .dbm[1] = -65,
 			.dbm[2] = -75, .dbm[3] = -85, .dbm[4] = -95 };
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request NAS service");
-		goto error;
-	}
-
-	data->nas = service;
-
-	param = qmi_param_new();
-
-	qmi_param_append(param, PARAM_REPORT_SIGNAL_STRENGTH, sizeof(ss), &ss);
-	qmi_param_append_uint8(param, PARAM_REPORT_RF_INFO, 0x01);
-
-	if (qmi_service_send(data->nas, QMI_NAS_SET_EVENT_REPORT, param,
-					set_event_report_cb, netreg, NULL) > 0)
-		return;
-
-	qmi_param_free(param);
-error:
-	ofono_netreg_remove(netreg);
-}
-
-static int qmi_netreg_probe(struct ofono_netreg *netreg,
-				unsigned int vendor, void *user_data)
-{
-	struct qmi_device *device = user_data;
 	struct netreg_data *data;
 
 	DBG("");
 
-	data = l_new(struct netreg_data, 1);
+	param = qmi_param_new();
+	qmi_param_append(param, PARAM_REPORT_SIGNAL_STRENGTH, sizeof(ss), &ss);
+	qmi_param_append_uint8(param, PARAM_REPORT_RF_INFO, 0x01);
 
+	if (!qmi_service_send(nas, QMI_NAS_SET_EVENT_REPORT, param,
+					set_event_report_cb, netreg, NULL)) {
+		qmi_param_free(param);
+		qmi_service_free(nas);
+		return -EIO;
+	}
+
+	data = l_new(struct netreg_data, 1);
+	data->nas = nas;
 	data->operator.name[0] = '\0';
 	data->operator.mcc[0] = '\0';
 	data->operator.mnc[0] = '\0';
 	data->operator.status = -1;
 	data->operator.tech = -1;
-
 	data->current_rat = QMI_NAS_NETWORK_RAT_NO_CHANGE;
 	data->is_roaming = false;
 	data->lac = -1;
 	data->cellid = -1;
 
 	ofono_netreg_set_data(netreg, data);
-
-	qmi_service_create_shared(device, QMI_SERVICE_NAS,
-					create_nas_cb, netreg, NULL);
 
 	return 0;
 }
@@ -711,31 +679,7 @@ static void qmi_netreg_remove(struct ofono_netreg *netreg)
 
 	ofono_netreg_set_data(netreg, NULL);
 
-	if (data->event_indication_id) {
-		qmi_service_unregister(data->nas, data->event_indication_id);
-		data->event_indication_id = 0;
-	}
-
-	if (data->serving_system_indication_id) {
-		qmi_service_unregister(data->nas,
-					data->serving_system_indication_id);
-		data->serving_system_indication_id = 0;
-	}
-
-	if (data->system_info_indication_id) {
-		qmi_service_unregister(data->nas,
-					data->system_info_indication_id);
-		data->system_info_indication_id = 0;
-	}
-
-	if (data->signal_info_indication_id) {
-		qmi_service_unregister(data->nas,
-					data->signal_info_indication_id);
-		data->signal_info_indication_id = 0;
-	}
-
 	qmi_service_free(data->nas);
-
 	l_free(data);
 }
 
