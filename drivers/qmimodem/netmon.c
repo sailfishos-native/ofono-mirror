@@ -195,38 +195,18 @@ static void qmi_netmon_request_update(struct ofono_netmon *netmon,
 	l_free(cbd);
 }
 
-static void create_nas_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_netmon *netmon = user_data;
-	struct netmon_data *nmd = ofono_netmon_get_data(netmon);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request NAS service");
-		ofono_netmon_remove(netmon);
-		return;
-	}
-
-	nmd->nas = service;
-
-	ofono_netmon_register(netmon);
-}
-
 static int qmi_netmon_probe(struct ofono_netmon *netmon,
 					unsigned int vendor, void *user_data)
 {
-	struct qmi_device *device = user_data;
+	struct qmi_service *nas = user_data;
 	struct netmon_data *nmd;
 
 	DBG("");
 
 	nmd = l_new(struct netmon_data, 1);
+	nmd->nas = nas;
 
 	ofono_netmon_set_data(netmon, nmd);
-
-	qmi_service_create_shared(device, QMI_SERVICE_NAS,
-					create_nas_cb, netmon, NULL);
 
 	return 0;
 }
@@ -240,11 +220,11 @@ static void qmi_netmon_remove(struct ofono_netmon *netmon)
 	ofono_netmon_set_data(netmon, NULL);
 
 	qmi_service_free(nmd->nas);
-
 	l_free(nmd);
 }
 
 static const struct ofono_netmon_driver driver = {
+	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe			= qmi_netmon_probe,
 	.remove			= qmi_netmon_remove,
 	.request_update		= qmi_netmon_request_update,

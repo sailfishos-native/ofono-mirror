@@ -831,7 +831,8 @@ static void gobi_post_online(struct ofono_modem *modem)
 	if (data->features & GOBI_NAS) {
 		ofono_netreg_create(modem, 0, "qmimodem",
 						qmi_service_clone(data->nas));
-		ofono_netmon_create(modem, 0, "qmimodem", data->device);
+		ofono_netmon_create(modem, 0, "qmimodem",
+						qmi_service_clone(data->nas));
 	}
 
 	if (data->features & GOBI_VOICE) {
