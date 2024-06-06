@@ -198,59 +198,22 @@ error:
 	CALLBACK_WITH_FAILURE(cb, -1, data);
 }
 
-static void create_dms_cb(struct qmi_service *service, void *user_data)
+static int qmi_radio_settings_probev(struct ofono_radio_settings *rs,
+					unsigned int vendor, va_list args)
 {
-	struct ofono_radio_settings *rs = user_data;
-	struct settings_data *data = ofono_radio_settings_get_data(rs);
-
-	DBG("");
-
-	if (!service)
-		return;
-
-	data->dms = service;
-}
-
-static void create_nas_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_radio_settings *rs = user_data;
-	struct settings_data *data = ofono_radio_settings_get_data(rs);
-
-	DBG("");
-
-	if (!service) {
-		ofono_error("Failed to request NAS service");
-		ofono_radio_settings_remove(rs);
-		return;
-	}
-
-	if (!qmi_service_get_version(service, &data->major, &data->minor)) {
-		ofono_error("Failed to get NAS service version");
-		ofono_radio_settings_remove(rs);
-		return;
-	}
-
-	data->nas = service;
-
-	ofono_radio_settings_register(rs);
-}
-
-static int qmi_radio_settings_probe(struct ofono_radio_settings *rs,
-					unsigned int vendor, void *user_data)
-{
-	struct qmi_device *device = user_data;
+	struct qmi_service *dms = va_arg(args, struct qmi_service *);
+	struct qmi_service *nas = va_arg(args, struct qmi_service *);
 	struct settings_data *data;
 
 	DBG("");
 
 	data = l_new(struct settings_data, 1);
+	data->dms = dms;
+	data->nas = nas;
+
+	qmi_service_get_version(data->nas, &data->major, &data->minor);
 
 	ofono_radio_settings_set_data(rs, data);
-
-	qmi_service_create_shared(device, QMI_SERVICE_DMS,
-						create_dms_cb, rs, NULL);
-	qmi_service_create_shared(device, QMI_SERVICE_NAS,
-						create_nas_cb, rs, NULL);
 
 	return 0;
 }
@@ -270,7 +233,8 @@ static void qmi_radio_settings_remove(struct ofono_radio_settings *rs)
 }
 
 static const struct ofono_radio_settings_driver driver = {
-	.probe		= qmi_radio_settings_probe,
+	.flags		= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
+	.probev		= qmi_radio_settings_probev,
 	.remove		= qmi_radio_settings_remove,
 	.set_rat_mode	= qmi_set_rat_mode,
 	.query_rat_mode = qmi_query_rat_mode,

@@ -809,7 +809,9 @@ static void gobi_post_sim(struct ofono_modem *modem)
 					qmi_service_clone(data->wds));
 
 	if (data->features & GOBI_NAS)
-		ofono_radio_settings_create(modem, 0, "qmimodem", data->device);
+		ofono_radio_settings_create(modem, 0, "qmimodem",
+					qmi_service_clone(data->dms),
+					qmi_service_clone(data->nas));
 
 	if (data->features & GOBI_WMS)
 		ofono_sms_create(modem, 0, "qmimodem",
