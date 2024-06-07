@@ -383,11 +383,16 @@ extern struct ofono_driver_desc __start___call_settings[];
 struct ofono_call_settings *ofono_call_settings_create(struct ofono_modem *modem,
 							unsigned int vendor,
 							const char *driver,
-							void *data)
+							...)
 {
-	struct rilmodem_cs_data *rcd = data;
+	struct rilmodem_cs_data *rcd;
 	struct ofono_call_settings *cs = g_new0(struct ofono_call_settings, 1);
 	int retval;
+	va_list args;
+
+	va_start(args, driver);
+	rcd = va_arg(args, void *);
+	va_end(args);
 
 	csdriver = __start___call_settings[0].driver;
 

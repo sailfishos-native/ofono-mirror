@@ -407,11 +407,16 @@ extern struct ofono_driver_desc __start___call_barring[];
 struct ofono_call_barring *ofono_call_barring_create(struct ofono_modem *modem,
 							unsigned int vendor,
 							const char *driver,
-							void *data)
+							...)
 {
-	struct rilmodem_cb_data *rsd = data;
+	struct rilmodem_cb_data *rsd;
 	struct ofono_call_barring *cb = g_new0(struct ofono_call_barring, 1);
 	int retval;
+	va_list args;
+
+	va_start(args, driver);
+	rsd = va_arg(args, void *);
+	va_end(args);
 
 	cbdriver = __start___call_barring[0].driver;
 

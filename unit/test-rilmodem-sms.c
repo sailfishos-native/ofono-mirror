@@ -414,11 +414,16 @@ extern struct ofono_driver_desc __start___sms[];
 struct ofono_sms *ofono_sms_create(struct ofono_modem *modem,
 					unsigned int vendor,
 					const char *driver,
-					void *data)
+					...)
 {
-	struct rilmodem_sms_data *rsd = data;
+	struct rilmodem_sms_data *rsd;
 	struct ofono_sms *sms = g_new0(struct ofono_sms, 1);
 	int retval;
+	va_list args;
+
+	va_start(args, driver);
+	rsd = va_arg(args, void *);
+	va_end(args);
 
 	smsdriver = __start___sms[0].driver;
 
