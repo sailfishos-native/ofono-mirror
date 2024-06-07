@@ -51,12 +51,9 @@
 #define GOBI_WMS	(1 << 2)
 #define GOBI_WDS	(1 << 3)
 #define GOBI_PDS	(1 << 4)
-#define GOBI_PBM	(1 << 5)
-#define GOBI_UIM	(1 << 6)
-#define GOBI_CAT	(1 << 7)
-#define GOBI_CAT_OLD	(1 << 8)
-#define GOBI_VOICE	(1 << 9)
-#define GOBI_WDA	(1 << 10)
+#define GOBI_UIM	(1 << 5)
+#define GOBI_VOICE	(1 << 6)
+#define GOBI_WDA	(1 << 7)
 
 enum qmi_protocol {
 	QMI_PROTOCOL_QMUX,
@@ -411,7 +408,6 @@ static void discover_cb(void *user_data)
 {
 	struct ofono_modem *modem = user_data;
 	struct gobi_data *data = ofono_modem_get_data(modem);
-	uint16_t major, minor;
 
 	DBG("");
 
@@ -427,16 +423,8 @@ static void discover_cb(void *user_data)
 		data->features |= GOBI_WDA;
 	if (qmi_device_has_service(data->device, QMI_SERVICE_PDS))
 		data->features |= GOBI_PDS;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_PBM))
-		data->features |= GOBI_PBM;
 	if (qmi_device_has_service(data->device, QMI_SERVICE_UIM))
 		data->features |= GOBI_UIM;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_CAT))
-		data->features |= GOBI_CAT;
-	if (qmi_device_get_service_version(data->device,
-				QMI_SERVICE_CAT_OLD, &major, &minor))
-		if (major > 0)
-			data->features |= GOBI_CAT_OLD;
 	if (qmi_device_has_service(data->device, QMI_SERVICE_VOICE))
 			data->features |= GOBI_VOICE;
 
@@ -747,14 +735,6 @@ static void gobi_post_sim(struct ofono_modem *modem)
 	DBG("%p", modem);
 
 	ofono_lte_create(modem, 0, "qmimodem", data->device);
-
-	if (data->features & GOBI_CAT)
-		ofono_stk_create(modem, 0, "qmimodem", data->device);
-	else if (data->features & GOBI_CAT_OLD)
-		ofono_stk_create(modem, 1, "qmimodem", data->device);
-
-	if (data->features & GOBI_PBM)
-		ofono_phonebook_create(modem, 0, "qmimodem", data->device);
 
 	if (data->features & GOBI_NAS)
 		ofono_radio_settings_create(modem, 0, "qmimodem", data->device);
