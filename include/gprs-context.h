@@ -42,6 +42,7 @@ typedef void (*ofono_gprs_context_cb_t)(const struct ofono_error *error,
 					void *data);
 
 struct ofono_gprs_context_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_gprs_context *gc, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_gprs_context *gc, unsigned int vendor,

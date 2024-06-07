@@ -30,6 +30,7 @@ typedef void (*ofono_handsfree_cnum_query_cb_t)(const struct ofono_error *error,
 				void *data);
 
 struct ofono_handsfree_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_handsfree *hf, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_handsfree *hf, unsigned int vendor,

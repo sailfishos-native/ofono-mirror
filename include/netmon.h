@@ -21,6 +21,7 @@ struct ofono_netmon;
 typedef void (*ofono_netmon_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_netmon_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_netmon *netmon, unsigned int vendor,
 					void *data);
 	int (*probev)(struct ofono_netmon *netmon, unsigned int vendor,

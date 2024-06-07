@@ -327,6 +327,7 @@ static void gemalto_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
+	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe			= gemalto_gprs_context_probe,
 	.remove			= gemalto_gprs_context_remove,
 	.activate_primary	= gemalto_gprs_activate_primary,

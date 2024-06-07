@@ -30,6 +30,7 @@ struct ofono_lte_default_attach_info {
 typedef void (*ofono_lte_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_lte_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_lte *lte, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_lte *lte, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_lte *lte);

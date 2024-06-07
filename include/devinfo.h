@@ -22,6 +22,7 @@ typedef void (*ofono_devinfo_query_cb_t)(const struct ofono_error *error,
 					const char *attribute, void *data);
 
 struct ofono_devinfo_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_devinfo *info, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_devinfo *info, unsigned int vendor,

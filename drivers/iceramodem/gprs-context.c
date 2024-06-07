@@ -389,6 +389,7 @@ static void icera_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
+	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe			= icera_gprs_context_probe,
 	.remove			= icera_gprs_context_remove,
 	.activate_primary	= icera_gprs_activate_primary,

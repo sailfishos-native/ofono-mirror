@@ -31,6 +31,7 @@ struct ofono_ussd;
 typedef void (*ofono_ussd_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_ussd_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_ussd *ussd, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_ussd *ussd, unsigned int vendor,
 			va_list args);

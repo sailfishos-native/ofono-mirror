@@ -19,6 +19,7 @@ extern "C" {
 struct ofono_audio_settings;
 
 struct ofono_audio_settings_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_audio_settings *as,
 				unsigned int vendor, void *data);
 	int (*probev)(struct ofono_audio_settings *as,

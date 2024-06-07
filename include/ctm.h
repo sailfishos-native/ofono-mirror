@@ -25,6 +25,7 @@ typedef void (*ofono_ctm_query_cb_t)(const struct ofono_error *error,
 					ofono_bool_t enable, void *data);
 
 struct ofono_ctm_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_ctm *ctm, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_ctm *ctm, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_ctm *ctm);

@@ -57,6 +57,7 @@ typedef void (*ofono_netreg_strength_cb_t)(const struct ofono_error *error,
  * vendor extensions for signal strength notification.
  */
 struct ofono_netreg_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_netreg *netreg, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_netreg *netreg, unsigned int vendor,

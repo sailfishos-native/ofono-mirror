@@ -73,6 +73,7 @@ typedef void (*ofono_radio_settings_available_rats_query_cb_t)(
 						void *data);
 
 struct ofono_radio_settings_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_radio_settings *rs, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_radio_settings *rs, unsigned int vendor,

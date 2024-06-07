@@ -23,6 +23,7 @@ typedef void (*ofono_call_volume_cb_t)(const struct ofono_error *error,
 					void *data);
 
 struct ofono_call_volume_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_call_volume *cv, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_call_volume *cv, unsigned int vendor,

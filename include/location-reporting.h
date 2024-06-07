@@ -31,6 +31,7 @@ typedef void (*ofono_location_reporting_disable_cb_t)(
 						void *data);
 
 struct ofono_location_reporting_driver {
+	unsigned int flags;
 	enum ofono_location_reporting_type type;
 	int (*probe)(struct ofono_location_reporting *lr, unsigned int vendor,
 								void *data);

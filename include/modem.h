@@ -41,6 +41,8 @@ struct ofono_driver_desc {
 	const void *driver;
 } __attribute__((aligned(8)));
 
+#define OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE	0x1
+
 #define OFONO_ATOM_DRIVER_BUILTIN(type, name, driver)			\
 	_Pragma("GCC diagnostic push")					\
 	_Pragma("GCC diagnostic ignored \"-Wattributes\"")		\

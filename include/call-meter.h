@@ -30,6 +30,7 @@ typedef void(*ofono_call_meter_set_cb_t)(const struct ofono_error *error,
 						void *data);
 
 struct ofono_call_meter_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_call_meter *cm, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_call_meter *cm, unsigned int vendor,

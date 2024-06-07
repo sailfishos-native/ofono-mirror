@@ -28,6 +28,7 @@ typedef void (*ofono_call_settings_clir_cb_t)(const struct ofono_error *error,
 					int override, int network, void *data);
 
 struct ofono_call_settings_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_call_settings *cs, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_call_settings *cs, unsigned int vendor,

@@ -29,6 +29,7 @@ typedef void (*ofono_voicecall_cb_t)(const struct ofono_error *error,
  * not support vendor extensions for call progress indication.
  */
 struct ofono_voicecall_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_voicecall *vc, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_voicecall *vc, unsigned int vendor,

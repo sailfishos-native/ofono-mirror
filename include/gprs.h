@@ -25,6 +25,7 @@ typedef void (*ofono_gprs_status_cb_t)(const struct ofono_error *error,
 typedef void (*ofono_gprs_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_gprs_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_gprs *gprs, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_gprs *gprs, unsigned int vendor,

@@ -22,6 +22,7 @@ typedef void (*ofono_siri_cb_t)(const struct ofono_error *error,
 					struct ofono_siri *siri);
 
 struct ofono_siri_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_siri *siri, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_siri *siri, unsigned int vendor,
 			va_list args);

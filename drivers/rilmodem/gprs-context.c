@@ -842,6 +842,7 @@ static void ril_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
+	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe			= ril_gprs_context_probe,
 	.remove			= ril_gprs_context_remove,
 	.activate_primary       = ril_gprs_context_activate_primary,

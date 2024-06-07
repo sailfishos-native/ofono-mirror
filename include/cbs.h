@@ -22,6 +22,7 @@ typedef void (*ofono_cbs_set_cb_t)(const struct ofono_error *error,
 					void *data);
 
 struct ofono_cbs_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_cbs *cbs, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_cbs *cbs, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_cbs *cbs);

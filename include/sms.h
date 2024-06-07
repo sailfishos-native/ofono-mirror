@@ -31,6 +31,7 @@ typedef void (*ofono_sms_bearer_query_cb_t)(const struct ofono_error *error,
 						int bearer, void *data);
 
 struct ofono_sms_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_sms *sms, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_sms *sms, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_sms *sms);

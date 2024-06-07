@@ -24,6 +24,7 @@ typedef void (*ofono_call_barring_query_cb_t)(const struct ofono_error *error,
 					int status, void *data);
 
 struct ofono_call_barring_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_call_barring *cb, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_call_barring *cb, unsigned int vendor,

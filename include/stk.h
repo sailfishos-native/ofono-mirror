@@ -26,6 +26,7 @@ typedef void (*ofono_stk_generic_cb_t)(const struct ofono_error *error,
 					void *data);
 
 struct ofono_stk_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_stk *stk, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_stk *stk, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_stk *stk);

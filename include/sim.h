@@ -125,6 +125,7 @@ typedef void (*ofono_sim_set_active_card_slot_cb_t)(
 					void *data);
 
 struct ofono_sim_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_sim *sim, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_sim *sim, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_sim *sim);

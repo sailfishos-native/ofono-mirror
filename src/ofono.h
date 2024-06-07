@@ -263,6 +263,11 @@ struct ofono_ ## type *ofono_ ## type ##_create(			\
 	}								\
 									\
 	atom->driver = drv;						\
+									\
+	if (atom->driver->flags &					\
+			OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE)	\
+		ofono_ ## type ##_register(atom);			\
+									\
 	return atom;							\
 }
 

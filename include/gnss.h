@@ -22,6 +22,7 @@ struct ofono_gnss;
 typedef void (*ofono_gnss_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_gnss_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_gnss *gnss, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_gnss *gnss, unsigned int vendor,
 			va_list args);

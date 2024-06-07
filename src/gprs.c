@@ -2806,6 +2806,10 @@ static void gprs_context_remove(struct ofono_atom *atom)
 	g_free(gc);
 }
 
+static void ofono_gprs_context_register(struct ofono_gprs_context *gc)
+{
+}
+
 OFONO_DEFINE_ATOM_CREATE(gprs_context, OFONO_ATOM_TYPE_GPRS_CONTEXT, {
 	atom->type = OFONO_GPRS_CONTEXT_TYPE_ANY;
 })

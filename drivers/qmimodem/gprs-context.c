@@ -608,6 +608,7 @@ static void qmi_gprs_context_remove(struct ofono_gprs_context *gc)
 }
 
 static const struct ofono_gprs_context_driver driver = {
+	.flags			= OFONO_ATOM_DRIVER_FLAG_REGISTER_ON_PROBE,
 	.probe			= qmi_gprs_context_probe,
 	.remove			= qmi_gprs_context_remove,
 	.activate_primary	= qmi_activate_primary,

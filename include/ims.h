@@ -25,6 +25,7 @@ typedef void (*ofono_ims_status_cb_t)(const struct ofono_error *error,
 						void *data);
 
 struct ofono_ims_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_ims *ims, unsigned int vendor, void *data);
 	int (*probev)(struct ofono_ims *ims, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_ims *ims);

@@ -34,6 +34,7 @@ typedef void (*ofono_call_forwarding_query_cb_t)(
 			void *data);
 
 struct ofono_call_forwarding_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_call_forwarding *cf, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_call_forwarding *cf, unsigned int vendor,

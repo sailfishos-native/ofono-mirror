@@ -39,6 +39,7 @@ typedef void (*ofono_phonebook_cb_t)(const struct ofono_error *error,
  * occurs, ofono_phonebook_entry should not be called
  */
 struct ofono_phonebook_driver {
+	unsigned int flags;
 	int (*probe)(struct ofono_phonebook *pb, unsigned int vendor,
 			void *data);
 	int (*probev)(struct ofono_phonebook *pb, unsigned int vendor,
