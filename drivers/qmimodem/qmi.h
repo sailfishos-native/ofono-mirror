@@ -139,6 +139,7 @@ typedef void (*qmi_create_func_t)(struct qmi_service *service, void *user_data);
 bool qmi_service_create_shared(struct qmi_device *device,
 				uint16_t type, qmi_create_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
+struct qmi_service *qmi_service_clone(struct qmi_service *service);
 void qmi_service_free(struct qmi_service *service);
 
 const char *qmi_service_get_identifier(struct qmi_service *service);

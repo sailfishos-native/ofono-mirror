@@ -2918,6 +2918,14 @@ static bool qmi_service_unregister_all(struct qmi_service *service)
 	return true;
 }
 
+struct qmi_service *qmi_service_clone(struct qmi_service *service)
+{
+	if (!service)
+		return NULL;
+
+	return service_create(service->family);
+}
+
 void qmi_service_free(struct qmi_service *service)
 {
 	if (!service)
