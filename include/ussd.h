@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 /* 3GPP TS 27.007 section 7.15, values for <m> */
@@ -30,6 +32,8 @@ typedef void (*ofono_ussd_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_ussd_driver {
 	int (*probe)(struct ofono_ussd *ussd, unsigned int vendor, void *data);
+	int (*probev)(struct ofono_ussd *ussd, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_ussd *ussd);
 	void (*request)(struct ofono_ussd *ussd, int dcs,
 			const unsigned char *pdu, int len,
@@ -43,7 +47,7 @@ void ofono_ussd_notify(struct ofono_ussd *ussd, int status, int dcs,
 
 struct ofono_ussd *ofono_ussd_create(struct ofono_modem *modem,
 					unsigned int vendor,
-					const char *driver, void *data);
+					const char *driver, ...);
 
 void ofono_ussd_register(struct ofono_ussd *ussd);
 void ofono_ussd_remove(struct ofono_ussd *ussd);

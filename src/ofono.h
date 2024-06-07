@@ -5,6 +5,7 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#include <stdarg.h>
 #include <glib.h>
 #include <ell/ell.h>
 
@@ -231,15 +232,17 @@ extern struct ofono_driver_desc __stop___ ## type[];			\
 struct ofono_ ## type *ofono_ ## type ##_create(			\
 				struct ofono_modem *modem,		\
 				unsigned int vendor, const char *driver,\
-				void *data)				\
+				...)					\
 {									\
 	const struct ofono_ ## type ## _driver *drv =			\
 		__ofono_driver_builtin_find(driver,			\
 				__start___ ## type,			\
 				__stop___ ## type);			\
+	va_list args;							\
 	struct ofono_ ## type *atom;					\
+	int r;								\
 									\
-	if (!drv || !drv->probe)					\
+	if (!drv || (!drv->probe && !drv->probev))			\
 		return NULL;						\
 									\
 	atom = g_new0(struct ofono_ ##type, 1);				\
@@ -247,7 +250,14 @@ struct ofono_ ## type *ofono_ ## type ##_create(			\
 				type ##_remove, atom);			\
 	__VA_ARGS__							\
 									\
-	if (drv->probe(atom, vendor, data) < 0)	{			\
+	va_start(args, driver);						\
+	if (drv->probev)						\
+		r = drv->probev(atom, vendor, args);			\
+	else								\
+		r = drv->probe(atom, vendor, va_arg(args, void *));	\
+	va_end(args);							\
+									\
+	if (r < 0) {							\
 		ofono_ ## type ##_remove(atom);				\
 		return NULL;						\
 	}								\

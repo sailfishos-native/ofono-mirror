@@ -13,6 +13,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_ctm;
@@ -24,6 +26,7 @@ typedef void (*ofono_ctm_query_cb_t)(const struct ofono_error *error,
 
 struct ofono_ctm_driver {
 	int (*probe)(struct ofono_ctm *ctm, unsigned int vendor, void *data);
+	int (*probev)(struct ofono_ctm *ctm, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_ctm *ctm);
 	void (*query_tty)(struct ofono_ctm *ctm,
 				ofono_ctm_query_cb_t cb, void *data);
@@ -33,7 +36,7 @@ struct ofono_ctm_driver {
 
 struct ofono_ctm *ofono_ctm_create(struct ofono_modem *modem,
 					unsigned int vendor,
-					const char *driver, void *data);
+					const char *driver, ...);
 
 void ofono_ctm_register(struct ofono_ctm *ctm);
 void ofono_ctm_remove(struct ofono_ctm *ctm);

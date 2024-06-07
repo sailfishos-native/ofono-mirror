@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_sim;
@@ -124,6 +126,7 @@ typedef void (*ofono_sim_set_active_card_slot_cb_t)(
 
 struct ofono_sim_driver {
 	int (*probe)(struct ofono_sim *sim, unsigned int vendor, void *data);
+	int (*probev)(struct ofono_sim *sim, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_sim *sim);
 	void (*read_file_info)(struct ofono_sim *sim, int fileid,
 			const unsigned char *path, unsigned int path_len,
@@ -200,7 +203,7 @@ struct ofono_sim_driver {
 
 struct ofono_sim *ofono_sim_create(struct ofono_modem *modem,
 					unsigned int vendor,
-					const char *driver, void *data);
+					const char *driver, ...);
 
 void ofono_sim_register(struct ofono_sim *sim);
 void ofono_sim_remove(struct ofono_sim *sim);

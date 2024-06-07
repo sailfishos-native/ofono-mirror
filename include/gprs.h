@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_gprs;
@@ -25,6 +27,8 @@ typedef void (*ofono_gprs_cb_t)(const struct ofono_error *error, void *data);
 struct ofono_gprs_driver {
 	int (*probe)(struct ofono_gprs *gprs, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_gprs *gprs, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_gprs *gprs);
 	void (*set_attached)(struct ofono_gprs *gprs, int attached,
 				ofono_gprs_cb_t cb, void *data);
@@ -52,7 +56,7 @@ struct ofono_modem *ofono_gprs_get_modem(struct ofono_gprs *gprs);
 
 struct ofono_gprs *ofono_gprs_create(struct ofono_modem *modem,
 					unsigned int vendor, const char *driver,
-					void *data);
+					...);
 void ofono_gprs_register(struct ofono_gprs *gprs);
 void ofono_gprs_remove(struct ofono_gprs *gprs);
 

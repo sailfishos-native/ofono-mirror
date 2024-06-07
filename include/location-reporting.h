@@ -13,6 +13,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_location_reporting;
@@ -32,6 +34,8 @@ struct ofono_location_reporting_driver {
 	enum ofono_location_reporting_type type;
 	int (*probe)(struct ofono_location_reporting *lr, unsigned int vendor,
 								void *data);
+	int (*probev)(struct ofono_location_reporting *lr, unsigned int vendor,
+								va_list args);
 	void (*remove)(struct ofono_location_reporting *lr);
 	void (*enable)(struct ofono_location_reporting *lr,
 			ofono_location_reporting_enable_cb_t cb, void *data);
@@ -42,7 +46,7 @@ struct ofono_location_reporting_driver {
 struct ofono_location_reporting *ofono_location_reporting_create(
 						struct ofono_modem *modem,
 						unsigned int vendor,
-						const char *driver, void *data);
+						const char *driver, ...);
 
 void ofono_location_reporting_register(struct ofono_location_reporting *lr);
 void ofono_location_reporting_remove(struct ofono_location_reporting *lr);

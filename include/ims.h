@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_ims;
@@ -24,6 +26,7 @@ typedef void (*ofono_ims_status_cb_t)(const struct ofono_error *error,
 
 struct ofono_ims_driver {
 	int (*probe)(struct ofono_ims *ims, unsigned int vendor, void *data);
+	int (*probev)(struct ofono_ims *ims, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_ims *ims);
 	void (*ims_register)(struct ofono_ims *ims,
 				ofono_ims_register_cb_t cb, void *data);
@@ -38,7 +41,7 @@ void ofono_ims_status_notify(struct ofono_ims *ims, int reg_info,
 
 struct ofono_ims *ofono_ims_create(struct ofono_modem *modem,
 					unsigned int vendor,
-					const char *driver, void *data);
+					const char *driver, ...);
 
 void ofono_ims_register(struct ofono_ims *ims);
 void ofono_ims_remove(struct ofono_ims *ims);

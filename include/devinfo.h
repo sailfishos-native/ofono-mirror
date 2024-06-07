@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_devinfo;
@@ -22,6 +24,8 @@ typedef void (*ofono_devinfo_query_cb_t)(const struct ofono_error *error,
 struct ofono_devinfo_driver {
 	int (*probe)(struct ofono_devinfo *info, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_devinfo *info, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_devinfo *info);
 	void (*query_manufacturer)(struct ofono_devinfo *info,
 			ofono_devinfo_query_cb_t cb, void *data);
@@ -38,7 +42,7 @@ struct ofono_devinfo_driver {
 struct ofono_devinfo *ofono_devinfo_create(struct ofono_modem *modem,
 							unsigned int vendor,
 							const char *driver,
-							void *data);
+							...);
 void ofono_devinfo_register(struct ofono_devinfo *info);
 void ofono_devinfo_remove(struct ofono_devinfo *info);
 

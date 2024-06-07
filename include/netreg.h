@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_netreg;
@@ -57,6 +59,8 @@ typedef void (*ofono_netreg_strength_cb_t)(const struct ofono_error *error,
 struct ofono_netreg_driver {
 	int (*probe)(struct ofono_netreg *netreg, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_netreg *netreg, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_netreg *netreg);
 	void (*registration_status)(struct ofono_netreg *netreg,
 			ofono_netreg_status_cb_t cb, void *data);
@@ -81,8 +85,7 @@ void ofono_netreg_time_notify(struct ofono_netreg *netreg,
 
 struct ofono_netreg *ofono_netreg_create(struct ofono_modem *modem,
 						unsigned int vendor,
-						const char *driver,
-						void *data);
+						const char *driver, ...);
 
 void ofono_netreg_register(struct ofono_netreg *netreg);
 void ofono_netreg_remove(struct ofono_netreg *netreg);

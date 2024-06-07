@@ -13,6 +13,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_lte;
@@ -29,6 +31,7 @@ typedef void (*ofono_lte_cb_t)(const struct ofono_error *error, void *data);
 
 struct ofono_lte_driver {
 	int (*probe)(struct ofono_lte *lte, unsigned int vendor, void *data);
+	int (*probev)(struct ofono_lte *lte, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_lte *lte);
 	void (*set_default_attach_info)(const struct ofono_lte *lte,
 			const struct ofono_lte_default_attach_info *info,
@@ -37,7 +40,7 @@ struct ofono_lte_driver {
 
 struct ofono_lte *ofono_lte_create(struct ofono_modem *modem,
 					unsigned int vendor,
-					const char *driver, void *data);
+					const char *driver, ...);
 
 void ofono_lte_register(struct ofono_lte *lte);
 

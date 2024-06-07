@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_modem;
@@ -29,6 +31,8 @@ typedef void (*ofono_voicecall_cb_t)(const struct ofono_error *error,
 struct ofono_voicecall_driver {
 	int (*probe)(struct ofono_voicecall *vc, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_voicecall *vc, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_voicecall *vc);
 
 	/* According to 22.030 the dial is expected to do the following:
@@ -149,7 +153,7 @@ struct ofono_modem *ofono_voicecall_get_modem(struct ofono_voicecall *vc);
 
 struct ofono_voicecall *ofono_voicecall_create(struct ofono_modem *modem,
 					unsigned int vendor,
-					const char *driver, void *data);
+					const char *driver, ...);
 
 void ofono_voicecall_register(struct ofono_voicecall *vc);
 void ofono_voicecall_remove(struct ofono_voicecall *vc);

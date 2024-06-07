@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_call_settings;
@@ -28,6 +30,8 @@ typedef void (*ofono_call_settings_clir_cb_t)(const struct ofono_error *error,
 struct ofono_call_settings_driver {
 	int (*probe)(struct ofono_call_settings *cs, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_call_settings *cs, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_call_settings *cs);
 	void (*clip_query)(struct ofono_call_settings *cs,
 				ofono_call_settings_status_cb_t cb, void *data);
@@ -52,7 +56,7 @@ struct ofono_call_settings_driver {
 struct ofono_call_settings *ofono_call_settings_create(
 						struct ofono_modem *modem,
 						unsigned int vendor,
-						const char *driver, void *data);
+						const char *driver, ...);
 
 void ofono_call_settings_register(struct ofono_call_settings *cs);
 void ofono_call_settings_remove(struct ofono_call_settings *cs);

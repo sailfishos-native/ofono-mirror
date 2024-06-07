@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_call_forwarding;
@@ -34,6 +36,8 @@ typedef void (*ofono_call_forwarding_query_cb_t)(
 struct ofono_call_forwarding_driver {
 	int (*probe)(struct ofono_call_forwarding *cf, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_call_forwarding *cf, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_call_forwarding *cf);
 	void (*activation)(struct ofono_call_forwarding *cf,
 				int type, int cls,
@@ -56,7 +60,7 @@ struct ofono_call_forwarding_driver {
 struct ofono_call_forwarding *ofono_call_forwarding_create(
 						struct ofono_modem *modem,
 						unsigned int vendor,
-						const char *driver, void *data);
+						const char *driver, ...);
 
 void ofono_call_forwarding_register(struct ofono_call_forwarding *cf);
 void ofono_call_forwarding_remove(struct ofono_call_forwarding *cf);

@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_gprs_context;
@@ -42,6 +44,8 @@ typedef void (*ofono_gprs_context_cb_t)(const struct ofono_error *error,
 struct ofono_gprs_context_driver {
 	int (*probe)(struct ofono_gprs_context *gc, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_gprs_context *gc, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_gprs_context *gc);
 	void (*activate_primary)(struct ofono_gprs_context *gc,
 				const struct ofono_gprs_primary_context *ctx,
@@ -61,7 +65,7 @@ void ofono_gprs_context_deactivated(struct ofono_gprs_context *gc,
 
 struct ofono_gprs_context *ofono_gprs_context_create(struct ofono_modem *modem,
 						unsigned int vendor,
-						const char *driver, void *data);
+						const char *driver, ...);
 void ofono_gprs_context_remove(struct ofono_gprs_context *gc);
 
 void ofono_gprs_context_set_data(struct ofono_gprs_context *gc, void *data);

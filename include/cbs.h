@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_cbs;
@@ -21,6 +23,7 @@ typedef void (*ofono_cbs_set_cb_t)(const struct ofono_error *error,
 
 struct ofono_cbs_driver {
 	int (*probe)(struct ofono_cbs *cbs, unsigned int vendor, void *data);
+	int (*probev)(struct ofono_cbs *cbs, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_cbs *cbs);
 	void (*set_topics)(struct ofono_cbs *cbs, const char *topics,
 				ofono_cbs_set_cb_t cb, void *data);
@@ -32,7 +35,7 @@ void ofono_cbs_notify(struct ofono_cbs *cbs, const unsigned char *pdu, int len);
 
 struct ofono_cbs *ofono_cbs_create(struct ofono_modem *modem,
 					unsigned int vendor,
-					const char *driver, void *data);
+					const char *driver, ...);
 
 void ofono_cbs_register(struct ofono_cbs *cbs);
 void ofono_cbs_remove(struct ofono_cbs *cbs);

@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_audio_settings;
@@ -19,6 +21,8 @@ struct ofono_audio_settings;
 struct ofono_audio_settings_driver {
 	int (*probe)(struct ofono_audio_settings *as,
 				unsigned int vendor, void *data);
+	int (*probev)(struct ofono_audio_settings *as,
+				unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_audio_settings *as);
 };
 
@@ -30,7 +34,7 @@ void ofono_audio_settings_mode_notify(struct ofono_audio_settings *as,
 struct ofono_audio_settings *ofono_audio_settings_create(
 						struct ofono_modem *modem,
 						unsigned int vendor,
-						const char *driver, void *data);
+						const char *driver, ...);
 
 void ofono_audio_settings_register(struct ofono_audio_settings *as);
 void ofono_audio_settings_remove(struct ofono_audio_settings *as);

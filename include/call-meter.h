@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_call_meter;
@@ -30,6 +32,8 @@ typedef void(*ofono_call_meter_set_cb_t)(const struct ofono_error *error,
 struct ofono_call_meter_driver {
 	int (*probe)(struct ofono_call_meter *cm, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_call_meter *cm, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_call_meter *cm);
 	void (*call_meter_query)(struct ofono_call_meter *cm,
 				ofono_call_meter_query_cb_t cb, void *data);
@@ -52,7 +56,7 @@ struct ofono_call_meter_driver {
 struct ofono_call_meter *ofono_call_meter_create(struct ofono_modem *modem,
 							unsigned int vendor,
 							const char *driver,
-							void *data);
+							...);
 
 void ofono_call_meter_register(struct ofono_call_meter *cm);
 void ofono_call_meter_remove(struct ofono_call_meter *cm);

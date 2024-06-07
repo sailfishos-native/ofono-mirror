@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_sms;
@@ -30,6 +32,7 @@ typedef void (*ofono_sms_bearer_query_cb_t)(const struct ofono_error *error,
 
 struct ofono_sms_driver {
 	int (*probe)(struct ofono_sms *sms, unsigned int vendor, void *data);
+	int (*probev)(struct ofono_sms *sms, unsigned int vendor, va_list args);
 	void (*remove)(struct ofono_sms *sms);
 	void (*sca_query)(struct ofono_sms *sms, ofono_sms_sca_query_cb_t cb,
 				void *data);
@@ -52,7 +55,7 @@ void ofono_sms_status_notify(struct ofono_sms *sms, const unsigned char *pdu,
 
 struct ofono_sms *ofono_sms_create(struct ofono_modem *modem,
 					unsigned int vendor,
-					const char *driver, void *data);
+					const char *driver, ...);
 
 void ofono_sms_register(struct ofono_sms *sms);
 void ofono_sms_remove(struct ofono_sms *sms);

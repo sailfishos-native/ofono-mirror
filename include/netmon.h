@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_netmon;
@@ -21,6 +23,8 @@ typedef void (*ofono_netmon_cb_t)(const struct ofono_error *error, void *data);
 struct ofono_netmon_driver {
 	int (*probe)(struct ofono_netmon *netmon, unsigned int vendor,
 					void *data);
+	int (*probev)(struct ofono_netmon *netmon, unsigned int vendor,
+					va_list args);
 	void (*remove)(struct ofono_netmon *netmon);
 	void (*request_update)(struct ofono_netmon *netmon,
 					ofono_netmon_cb_t cb, void *data);
@@ -80,7 +84,7 @@ void ofono_netmon_serving_cell_notify(struct ofono_netmon *netmon,
 
 struct ofono_netmon *ofono_netmon_create(struct ofono_modem *modem,
 						unsigned int vendor,
-						const char *driver, void *data);
+						const char *driver, ...);
 
 void ofono_netmon_register(struct ofono_netmon *netmon);
 

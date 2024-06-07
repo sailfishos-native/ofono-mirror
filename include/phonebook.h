@@ -26,6 +26,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_phonebook;
@@ -39,6 +41,8 @@ typedef void (*ofono_phonebook_cb_t)(const struct ofono_error *error,
 struct ofono_phonebook_driver {
 	int (*probe)(struct ofono_phonebook *pb, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_phonebook *pb, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_phonebook *pb);
 	void (*export_entries)(struct ofono_phonebook *pb, const char *storage,
 				ofono_phonebook_cb_t cb, void *data);
@@ -55,7 +59,7 @@ void ofono_phonebook_entry(struct ofono_phonebook *pb, int index,
 struct ofono_phonebook *ofono_phonebook_create(struct ofono_modem *modem,
 							unsigned int vendor,
 							const char *driver,
-							void *data);
+							...);
 
 void ofono_phonebook_register(struct ofono_phonebook *pb);
 void ofono_phonebook_remove(struct ofono_phonebook *pb);

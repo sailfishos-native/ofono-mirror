@@ -12,6 +12,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 enum ofono_radio_access_mode {
@@ -73,6 +75,8 @@ typedef void (*ofono_radio_settings_available_rats_query_cb_t)(
 struct ofono_radio_settings_driver {
 	int (*probe)(struct ofono_radio_settings *rs, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_radio_settings *rs, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_radio_settings *rs);
 	void (*query_rat_mode)(struct ofono_radio_settings *rs,
 				ofono_radio_settings_rat_mode_query_cb_t cb,
@@ -103,7 +107,7 @@ struct ofono_radio_settings_driver {
 struct ofono_radio_settings *ofono_radio_settings_create(
 						struct ofono_modem *modem,
 						unsigned int vendor,
-						const char *driver, void *data);
+						const char *driver, ...);
 
 void ofono_radio_settings_register(struct ofono_radio_settings *rs);
 void ofono_radio_settings_remove(struct ofono_radio_settings *rs);

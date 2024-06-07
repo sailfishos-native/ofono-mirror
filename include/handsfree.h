@@ -13,6 +13,8 @@
 extern "C" {
 #endif
 
+#include <stdarg.h>
+
 #include <ofono/types.h>
 
 struct ofono_handsfree;
@@ -30,6 +32,8 @@ typedef void (*ofono_handsfree_cnum_query_cb_t)(const struct ofono_error *error,
 struct ofono_handsfree_driver {
 	int (*probe)(struct ofono_handsfree *hf, unsigned int vendor,
 			void *data);
+	int (*probev)(struct ofono_handsfree *hf, unsigned int vendor,
+			va_list args);
 	void (*remove)(struct ofono_handsfree *hf);
 	void (*cnum_query)(struct ofono_handsfree *hf,
 				ofono_handsfree_cnum_query_cb_t cb, void *data);
@@ -66,7 +70,7 @@ void ofono_handsfree_battchg_notify(struct ofono_handsfree *hf,
 					unsigned char level);
 
 struct ofono_handsfree *ofono_handsfree_create(struct ofono_modem *modem,
-			unsigned int vendor, const char *driver, void *data);
+			unsigned int vendor, const char *driver, ...);
 
 void ofono_handsfree_register(struct ofono_handsfree *hf);
 void ofono_handsfree_remove(struct ofono_handsfree *hf);
