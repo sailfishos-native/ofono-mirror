@@ -60,10 +60,24 @@ enum qmi_protocol {
 	QMI_PROTOCOL_QRTR,
 };
 
+struct service_request {
+	struct qmi_service **member;
+	uint32_t service_type;
+};
+
 struct gobi_data {
 	struct qmi_device *device;
 	struct qmi_service *dms;
 	struct qmi_service *wda;
+	struct qmi_service *nas;
+	struct qmi_service *wds;
+	struct qmi_service *wms;
+	struct qmi_service *voice;
+	struct qmi_service *pds;
+	struct qmi_service *uim;
+	struct service_request service_requests[16];
+	int cur_service_request;
+	int num_service_requests;
 	unsigned long features;
 	unsigned int discover_attempts;
 	uint8_t oper_mode;
@@ -161,6 +175,24 @@ static void cleanup_services(struct gobi_data *data)
 
 	qmi_service_free(data->wda);
 	data->wda = NULL;
+
+	qmi_service_free(data->nas);
+	data->nas = NULL;
+
+	qmi_service_free(data->wds);
+	data->wds = NULL;
+
+	qmi_service_free(data->wms);
+	data->wms = NULL;
+
+	qmi_service_free(data->voice);
+	data->voice = NULL;
+
+	qmi_service_free(data->pds);
+	data->pds = NULL;
+
+	qmi_service_free(data->uim);
+	data->uim = NULL;
 }
 
 static void gobi_remove(struct ofono_modem *modem)
@@ -181,6 +213,21 @@ static void gobi_remove(struct ofono_modem *modem)
 	qmi_device_free(data->device);
 
 	l_free(data);
+}
+
+static void add_service_request(struct gobi_data *data,
+					struct qmi_service **member,
+					uint32_t service_type)
+{
+	struct service_request req = { .member = member,
+					.service_type = service_type };
+
+	if (data->num_service_requests == L_ARRAY_SIZE(data->service_requests)) {
+		ofono_error("No room to add service request");
+		return;
+	}
+
+	data->service_requests[data->num_service_requests++] = req;
 }
 
 static void shutdown_cb(void *user_data)
@@ -376,32 +423,40 @@ error:
 	shutdown_device(modem);
 }
 
-static void create_dms_cb(struct qmi_service *service, void *user_data)
+static void request_service_cb(struct qmi_service *service, void *user_data)
 {
 	struct ofono_modem *modem = user_data;
 	struct gobi_data *data = ofono_modem_get_data(modem);
+	struct service_request *req =
+		&data->service_requests[data->cur_service_request];
 
 	DBG("");
 
 	if (!service)
 		goto error;
 
-	data->dms = service;
+	*req->member = service;
 
-	if (qmi_service_create_shared(data->device, QMI_SERVICE_WDA,
-					create_wda_cb, modem, NULL))
+	data->cur_service_request += 1;
+	if (data->cur_service_request == data->num_service_requests) {
+		DBG("All services requested, proceeding to create WDA");
+
+		if (qmi_service_create_shared(data->device, QMI_SERVICE_WDA,
+						create_wda_cb, modem, NULL))
+			return;
+
+		goto error;
+	}
+
+	req = &data->service_requests[data->cur_service_request];
+	DBG("Requesting: %u", req->service_type);
+
+	if (qmi_service_create_shared(data->device, req->service_type,
+					request_service_cb, modem, NULL))
 		return;
 
 error:
 	shutdown_device(modem);
-}
-
-static void create_shared_dms(struct ofono_modem *modem)
-{
-	struct gobi_data *data = ofono_modem_get_data(modem);
-
-	qmi_service_create_shared(data->device, QMI_SERVICE_DMS,
-						create_dms_cb, modem, NULL);
 }
 
 static void discover_cb(void *user_data)
@@ -434,11 +489,26 @@ static void discover_cb(void *user_data)
 								modem, NULL))
 			return;
 
-		shutdown_device(modem);
-		return;
+		goto error;
 	}
 
-	create_shared_dms(modem);
+	add_service_request(data, &data->dms, QMI_SERVICE_DMS);
+	if (data->features & GOBI_NAS)
+		add_service_request(data, &data->nas, QMI_SERVICE_NAS);
+	if (data->features & GOBI_WDS)
+		add_service_request(data, &data->wds, QMI_SERVICE_WDS);
+	if (data->features & GOBI_WMS)
+		add_service_request(data, &data->wms, QMI_SERVICE_WMS);
+	if (data->features & GOBI_VOICE)
+		add_service_request(data, &data->voice, QMI_SERVICE_VOICE);
+	if (data->features & GOBI_UIM)
+		add_service_request(data, &data->uim, QMI_SERVICE_UIM);
+
+	if (qmi_service_create_shared(data->device, QMI_SERVICE_DMS,
+					request_service_cb, modem, NULL) > 0)
+		return;
+error:
+	shutdown_device(modem);
 }
 
 static int gobi_enable(struct ofono_modem *modem)
