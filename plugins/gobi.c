@@ -55,11 +55,6 @@
 #define GOBI_VOICE	(1 << 6)
 #define GOBI_WDA	(1 << 7)
 
-enum qmi_protocol {
-	QMI_PROTOCOL_QMUX,
-	QMI_PROTOCOL_QRTR,
-};
-
 struct service_request {
 	struct qmi_service **member;
 	uint32_t service_type;
@@ -87,7 +82,6 @@ struct gobi_data {
 	char main_net_name[IFNAMSIZ];
 	uint32_t max_aggregation_size;
 	uint32_t set_powered_id;
-	enum qmi_protocol protocol;
 };
 
 static void gobi_debug(const char *str, void *user_data)
@@ -100,10 +94,6 @@ static void gobi_debug(const char *str, void *user_data)
 /*
  * Probe the modem.  The following modem properties are expected to be set
  * in order to initialize the driver properly:
- *
- * DeviceProtocol
- *   Can be "qrtr" or "qmux", tells the driver which QMI encapsulation protocol
- *   is being used.
  *
  * NetworkInterface
  *   The string that contains the 'main' network device.  This can be
@@ -122,23 +112,12 @@ static void gobi_debug(const char *str, void *user_data)
 static int gobi_probe(struct ofono_modem *modem)
 {
 	struct gobi_data *data;
-	const char *value;
-	enum qmi_protocol protocol;
 	const char *if_driver;
 	const char *ifname;
 	int ifindex;
 	const char *bus;
 
 	DBG("%p", modem);
-
-	value = ofono_modem_get_string(modem, "DeviceProtocol");
-
-	if (l_streq0(value, "qrtr"))
-		protocol = QMI_PROTOCOL_QRTR;
-	else if (l_streq0(value, "qmux"))
-		protocol = QMI_PROTOCOL_QMUX;
-	else
-		return -EPROTO;
 
 	if_driver = ofono_modem_get_string(modem,
 						"NetworkInterfaceKernelDriver");
@@ -152,7 +131,6 @@ static int gobi_probe(struct ofono_modem *modem)
 		return -EPROTO;
 
 	data = l_new(struct gobi_data, 1);
-	data->protocol = protocol;
 
 	if (!strcmp(if_driver, "qmi_wwan_q"))
 		data->using_qmi_wwan_q = true;
@@ -519,19 +497,11 @@ static int gobi_enable(struct ofono_modem *modem)
 
 	DBG("%p", modem);
 
-	switch (data->protocol) {
-	case QMI_PROTOCOL_QRTR:
-		data->device = qmi_device_new_qrtr();
-		break;
-	case QMI_PROTOCOL_QMUX:
-		device = ofono_modem_get_string(modem, "Device");
-		if (!device)
-			return -EINVAL;
+	device = ofono_modem_get_string(modem, "Device");
+	if (!device)
+		return -EINVAL;
 
-		data->device = qmi_device_new_qmux(device);
-		break;
-	}
-
+	data->device = qmi_device_new_qmux(device);
 	if (!data->device)
 		return -EIO;
 
