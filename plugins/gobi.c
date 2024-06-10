@@ -501,7 +501,7 @@ static int gobi_enable(struct ofono_modem *modem)
 	if (!device)
 		return -EINVAL;
 
-	data->device = qmi_device_new_qmux(device);
+	data->device = qmi_qmux_device_new(device);
 	if (!data->device)
 		return -EIO;
 

@@ -68,6 +68,7 @@ typedef void (*qmi_discover_func_t)(void *user_data);
 
 typedef void (*qmi_service_result_func_t)(struct qmi_result *, void *);
 
+struct qmi_device *qmi_qmux_device_new(const char *device);
 void qmi_device_free(struct qmi_device *device);
 
 void qmi_device_set_debug(struct qmi_device *device,
@@ -86,8 +87,6 @@ enum qmi_device_expected_data_format qmi_device_get_expected_data_format(
 						struct qmi_device *device);
 bool qmi_device_set_expected_data_format(struct qmi_device *device,
 			enum qmi_device_expected_data_format format);
-
-struct qmi_device *qmi_device_new_qmux(const char *device);
 
 struct qmi_device *qmi_qrtr_node_new(uint32_t node);
 struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,

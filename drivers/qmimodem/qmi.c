@@ -1991,7 +1991,7 @@ static const struct qmi_device_ops qmux_ops = {
 	.destroy = qmi_device_qmux_destroy,
 };
 
-struct qmi_device *qmi_device_new_qmux(const char *device)
+struct qmi_device *qmi_qmux_device_new(const char *device)
 {
 	struct qmi_device_qmux *qmux;
 	int fd;
