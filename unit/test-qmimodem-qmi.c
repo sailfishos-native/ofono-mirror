@@ -32,7 +32,7 @@
 
 struct test_info {
 	int service_fds[TEST_SERVICE_COUNT];
-	struct qmi_device *device;
+	struct qmi_device *node;
 	struct l_timeout *timeout;
 	struct l_queue *services;
 
@@ -153,11 +153,11 @@ static struct test_info *test_setup(void)
 
 	info = l_new(struct test_info, 1);
 	setup_test_qrtr_services(info);
-	info->device = qmi_device_new_qrtr();
-	assert(info->device);
+	info->node = qmi_device_new_qrtr();
+	assert(info->node);
 
 	/* Enable ofono logging */
-	qmi_device_set_debug(info->device, debug_log, NULL);
+	qmi_device_set_debug(info->node, debug_log, NULL);
 
 	info->services = l_queue_new();
 	info->timeout = l_timeout_create(TEST_TIMEOUT, test_timeout_cb, info,
@@ -174,7 +174,7 @@ static void test_cleanup(struct test_info *info)
 	l_timeout_remove(info->timeout);
 	l_queue_destroy(info->services,
 				(l_queue_destroy_func_t) qmi_service_free);
-	qmi_device_free(info->device);
+	qmi_device_free(info->node);
 
 	/* The qrtr services will be destroyed automatically. */
 	for (i = 0; i < TEST_SERVICE_COUNT; ++i)
@@ -185,7 +185,7 @@ static void test_cleanup(struct test_info *info)
 	l_main_exit();
 }
 
-static void test_create_qrtr_device(const void *data)
+static void test_create_qrtr_node(const void *data)
 {
 	struct test_info *info = test_setup();
 
@@ -201,7 +201,7 @@ static void discovery_complete_cb(void *user_data)
 
 static void perform_discovery(struct test_info *info)
 {
-	qmi_device_discover(info->device, discovery_complete_cb, info, NULL);
+	qmi_device_discover(info->node, discovery_complete_cb, info, NULL);
 
 	while (!info->discovery_callback_called)
 		l_main_iterate(-1);
@@ -246,7 +246,7 @@ static void test_create_services(const void *data)
 		uint16_t major, minor;
 
 		service_type = unique_service_type(i);
-		assert(qmi_service_create_shared(info->device, service_type,
+		assert(qmi_service_create_shared(info->node, service_type,
 						create_service_cb, info, NULL));
 		perform_all_pending_work();
 
@@ -266,7 +266,7 @@ static void test_create_services(const void *data)
 	 * call the callback.
 	 */
 	service_type = unique_service_type(TEST_SERVICE_COUNT);
-	assert(!qmi_service_create_shared(info->device, service_type,
+	assert(!qmi_service_create_shared(info->node, service_type,
 					create_service_cb, info, NULL));
 	perform_all_pending_work();
 	assert(l_queue_isempty(info->services));
@@ -275,7 +275,7 @@ static void test_create_services(const void *data)
 	service_type = unique_service_type(0);
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
-		assert(qmi_service_create_shared(info->device, service_type,
+		assert(qmi_service_create_shared(info->node, service_type,
 						create_service_cb, info, NULL));
 		perform_all_pending_work();
 
@@ -455,7 +455,7 @@ static void test_send_data(const void *data)
 	perform_discovery(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
-	assert(qmi_service_create_shared(info->device, service_type,
+	assert(qmi_service_create_shared(info->node, service_type,
 					create_service_cb, info, NULL));
 	perform_all_pending_work();
 	service = l_queue_pop_head(info->services);
@@ -505,7 +505,7 @@ static void test_notifications(const void *data)
 	perform_discovery(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
-	assert(qmi_service_create_shared(info->device, service_type,
+	assert(qmi_service_create_shared(info->node, service_type,
 					create_service_cb, info, NULL));
 	perform_all_pending_work();
 	service = l_queue_pop_head(info->services);
@@ -567,7 +567,7 @@ static void test_service_notification_independence(const void *data)
 	l_io_set_read_handler(io, received_data, info, NULL);
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
-		assert(qmi_service_create_shared(info->device, service_type,
+		assert(qmi_service_create_shared(info->node, service_type,
 						create_service_cb, info, NULL));
 		perform_all_pending_work();
 		services[i] = l_queue_pop_head(info->services);
@@ -623,7 +623,7 @@ int main(int argc, char **argv)
 	__ofono_log_init(argv[0], "*", FALSE);
 
 	l_test_init(&argc, &argv);
-	l_test_add("QRTR device creation", test_create_qrtr_device, NULL);
+	l_test_add("QRTR node creation", test_create_qrtr_node, NULL);
 	l_test_add("QRTR discovery", test_discovery, NULL);
 	l_test_add("QRTR services may be created", test_create_services, NULL);
 	l_test_add("QRTR service sends/responses", test_send_data, NULL);
