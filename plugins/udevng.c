@@ -252,7 +252,6 @@ static int setup_qmi_qmux(struct modem_info *modem,
 
 	ofono_modem_set_driver(modem->modem, "gobi");
 	ofono_modem_set_string(modem->modem, "Device", qmi->devnode);
-	ofono_modem_set_string(modem->modem, "DeviceProtocol", "qmux");
 	ofono_modem_set_string(modem->modem, "InterfaceNumber", net->number);
 
 	ofono_modem_set_string(modem->modem, "Bus", "usb");
