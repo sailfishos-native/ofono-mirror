@@ -153,7 +153,7 @@ static struct test_info *test_setup(void)
 
 	info = l_new(struct test_info, 1);
 	setup_test_qrtr_services(info);
-	info->node = qmi_device_new_qrtr();
+	info->node = qmi_qrtr_node_new(0);
 	assert(info->node);
 
 	/* Enable ofono logging */

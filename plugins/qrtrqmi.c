@@ -208,7 +208,7 @@ static int qrtrqmi_enable(struct ofono_modem *modem)
 
 	DBG("%p", modem);
 
-	data->node = qmi_device_new_qrtr();
+	data->node = qmi_qrtr_node_new(0);
 	if (!data->node)
 		return -EIO;
 

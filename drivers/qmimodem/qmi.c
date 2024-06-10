@@ -2310,7 +2310,7 @@ static const struct qmi_device_ops qrtr_ops = {
 	.destroy = qmi_device_qrtr_destroy,
 };
 
-struct qmi_device *qmi_device_new_qrtr(void)
+struct qmi_device *qmi_qrtr_node_new(uint32_t node)
 {
 	struct qmi_device_qrtr *qrtr;
 	int fd;
