@@ -278,8 +278,7 @@ static int setup_qmi_qrtr(struct modem_info *modem,
 		return -ENOTSUP;
 	}
 
-	ofono_modem_set_driver(modem->modem, "gobi");
-	ofono_modem_set_string(modem->modem, "DeviceProtocol", "qrtr");
+	ofono_modem_set_driver(modem->modem, "qrtrqmi");
 
 	return setup_qmi_netdev(modem, net);
 }
@@ -309,7 +308,7 @@ static gboolean setup_gobi_qrtr_premux(struct modem_info *modem,
 	return TRUE;
 }
 
-static gboolean setup_gobi_qrtr(struct modem_info *modem)
+static gboolean setup_qrtrsoc(struct modem_info *modem)
 {
 	const struct device_info *ipa_info = NULL;
 	int premux_count = 0;
@@ -1798,7 +1797,7 @@ static struct {
 	{ "wavecom",	setup_wavecom		},
 	{ "tc65",	setup_tc65		},
 	{ "ehs6",	setup_ehs6		},
-	{ "gobiqrtr",	setup_gobi_qrtr		},
+	{ "qrtrsoc",	setup_qrtrsoc		},
 	{ "mhi",	setup_mhi		},
 	{ }
 };
@@ -2487,7 +2486,7 @@ static void check_net_device(struct udev_device *device)
 
 	/* Collect all rmnet devices with this iflink under a common path. */
 	sprintf(path, "/embedded/qrtr/%s", iflink);
-	add_device(path, NULL, "gobiqrtr", NULL, NULL, MODEM_TYPE_EMBEDDED,
+	add_device(path, NULL, "qrtrsoc", NULL, NULL, MODEM_TYPE_EMBEDDED,
 							device, "qrtr");
 }
 
