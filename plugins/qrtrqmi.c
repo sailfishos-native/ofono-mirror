@@ -113,7 +113,7 @@ static void qrtrqmi_deinit(struct qrtrqmi_data *data)
 {
 	qmi_service_free(data->dms);
 	data->dms = NULL;
-	qmi_device_free(data->node);
+	qmi_qrtr_node_free(data->node);
 	data->node = NULL;
 }
 

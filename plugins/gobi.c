@@ -188,7 +188,7 @@ static void gobi_remove(struct ofono_modem *modem)
 
 	cleanup_services(data);
 
-	qmi_device_free(data->device);
+	qmi_qmux_device_free(data->device);
 
 	l_free(data);
 }
@@ -217,7 +217,7 @@ static void shutdown_cb(void *user_data)
 
 	data->discover_attempts = 0;
 
-	qmi_device_free(data->device);
+	qmi_qmux_device_free(data->device);
 	data->device = NULL;
 
 	ofono_modem_set_powered(modem, FALSE);

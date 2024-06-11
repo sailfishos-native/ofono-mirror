@@ -69,7 +69,6 @@ struct qmi_device_ops {
 	int (*shutdown)(struct qmi_device *device,
 			qmi_shutdown_func_t shutdown_func,
 			void *user, qmi_destroy_func_t destroy);
-	void (*destroy)(struct qmi_device *device);
 };
 
 struct qmi_device {
@@ -86,8 +85,6 @@ struct qmi_device {
 	struct l_hashmap *family_list;
 	const struct qmi_device_ops *ops;
 	bool writer_active : 1;
-	bool shutting_down : 1;
-	bool destroyed : 1;
 };
 
 struct qmi_device_qmux {
@@ -102,6 +99,8 @@ struct qmi_device_qmux {
 	unsigned int release_users;
 	uint8_t next_control_tid;
 	struct l_queue *control_queue;
+	bool shutting_down : 1;
+	bool destroyed : 1;
 };
 
 struct service_family {
@@ -890,17 +889,8 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 	return 0;
 }
 
-static void __qmi_device_shutdown_finished(struct qmi_device *device)
+static void __qmi_device_free(struct qmi_device *device)
 {
-	if (device->destroyed)
-		device->ops->destroy(device);
-}
-
-void qmi_device_free(struct qmi_device *device)
-{
-	if (!device)
-		return;
-
 	__debug_device(device, "device %p free", device);
 
 	l_queue_destroy(device->service_queue, __request_free);
@@ -912,11 +902,6 @@ void qmi_device_free(struct qmi_device *device)
 	l_hashmap_destroy(device->family_list, family_destroy);
 
 	l_queue_destroy(device->service_infos, l_free);
-
-	if (device->shutting_down)
-		device->destroyed = true;
-	else
-		device->ops->destroy(device);
 }
 
 void qmi_device_set_debug(struct qmi_device *device,
@@ -1816,6 +1801,17 @@ static void qmi_device_qmux_client_release(struct qmi_device *device,
 	__ctl_request_submit(qmux, req);
 }
 
+static void __qmux_device_free(struct qmi_device_qmux *qmux)
+{
+	l_queue_destroy(qmux->control_queue, __request_free);
+
+	if (qmux->shutdown_idle)
+		l_idle_remove(qmux->shutdown_idle);
+
+	l_free(qmux->version_str);
+	l_free(qmux);
+}
+
 static void qmux_shutdown_destroy(void *user_data)
 {
 	struct qmi_device_qmux *qmux = user_data;
@@ -1825,7 +1821,8 @@ static void qmux_shutdown_destroy(void *user_data)
 
 	qmux->shutdown_idle = NULL;
 
-	__qmi_device_shutdown_finished(&qmux->super);
+	if (qmux->destroyed)
+		__qmux_device_free(qmux);
 }
 
 static void qmux_shutdown_callback(struct l_idle *idle, void *user_data)
@@ -1835,12 +1832,12 @@ static void qmux_shutdown_callback(struct l_idle *idle, void *user_data)
 	if (qmux->release_users > 0)
 		return;
 
-	qmux->super.shutting_down = true;
+	qmux->shutting_down = true;
 
 	if (qmux->shutdown_func)
 		qmux->shutdown_func(qmux->shutdown_user_data);
 
-	qmux->super.shutting_down = false;
+	qmux->shutting_down = false;
 
 	l_idle_remove(qmux->shutdown_idle);
 }
@@ -1871,26 +1868,11 @@ static int qmi_device_qmux_shutdown(struct qmi_device *device,
 	return 0;
 }
 
-static void qmi_device_qmux_destroy(struct qmi_device *device)
-{
-	struct qmi_device_qmux *qmux =
-		l_container_of(device, struct qmi_device_qmux, super);
-
-	l_queue_destroy(qmux->control_queue, __request_free);
-
-	if (qmux->shutdown_idle)
-		l_idle_remove(qmux->shutdown_idle);
-
-	l_free(qmux->version_str);
-	l_free(qmux);
-}
-
 static const struct qmi_device_ops qmux_ops = {
 	.write = qmi_device_qmux_write,
 	.discover = qmi_device_qmux_discover,
 	.client_release = qmi_device_qmux_client_release,
 	.shutdown = qmi_device_qmux_shutdown,
-	.destroy = qmi_device_qmux_destroy,
 };
 
 struct qmi_device *qmi_qmux_device_new(const char *device)
@@ -1915,6 +1897,24 @@ struct qmi_device *qmi_qmux_device_new(const char *device)
 	l_io_set_read_handler(qmux->super.io, received_qmux_data, qmux, NULL);
 
 	return &qmux->super;
+}
+
+void qmi_qmux_device_free(struct qmi_device *device)
+{
+	struct qmi_device_qmux *qmux;
+
+	if (!device)
+		return;
+
+	__qmi_device_free(device);
+
+	qmux = l_container_of(device, struct qmi_device_qmux, super);
+	if (qmux->shutting_down) {
+		qmux->destroyed = true;
+		return;
+	}
+
+	__qmux_device_free(qmux);
 }
 
 struct qmi_device_qrtr {
@@ -2194,20 +2194,11 @@ error:
 	return rc;
 }
 
-static void qmi_device_qrtr_destroy(struct qmi_device *device)
-{
-	struct qmi_device_qrtr *qrtr =
-		l_container_of(device, struct qmi_device_qrtr, super);
-
-	l_free(qrtr);
-}
-
 static const struct qmi_device_ops qrtr_ops = {
 	.write = qmi_device_qrtr_write,
 	.discover = qmi_device_qrtr_discover,
 	.client_release = NULL,
 	.shutdown = NULL,
-	.destroy = qmi_device_qrtr_destroy,
 };
 
 struct qmi_device *qmi_qrtr_node_new(uint32_t node)
@@ -2230,6 +2221,19 @@ struct qmi_device *qmi_qrtr_node_new(uint32_t node)
 	l_io_set_read_handler(qrtr->super.io, qrtr_received_data, qrtr, NULL);
 
 	return &qrtr->super;
+}
+
+void qmi_qrtr_node_free(struct qmi_device *device)
+{
+	struct qmi_device_qrtr *node;
+
+	if (!device)
+		return;
+
+	__qmi_device_free(device);
+
+	node = l_container_of(device, struct qmi_device_qrtr, super);
+	l_free(node);
 }
 
 struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,
