@@ -988,7 +988,8 @@ static const struct qmi_service_info *__find_service_info_by_type(
 	return info;
 }
 
-bool qmi_device_get_service_version(struct qmi_device *device, uint16_t type,
+bool qmi_qmux_device_get_service_version(struct qmi_device *device,
+					uint16_t type,
 					uint16_t *major, uint16_t *minor)
 {
 	const struct qmi_service_info *info;
