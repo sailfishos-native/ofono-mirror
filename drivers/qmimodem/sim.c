@@ -427,7 +427,7 @@ static void get_imsi_cb(struct qmi_result *result, void *user_data)
 
 	CALLBACK_WITH_SUCCESS(cb, str, cbd->data);
 
-	qmi_free(str);
+	l_free(str);
 }
 
 static void qmi_read_imsi(struct ofono_sim *sim,

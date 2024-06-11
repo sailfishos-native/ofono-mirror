@@ -181,11 +181,6 @@ struct qmi_tlv_hdr {
 } __attribute__ ((packed));
 #define QMI_TLV_HDR_SIZE 3
 
-void qmi_free(void *ptr)
-{
-	l_free(ptr);
-}
-
 static bool qmi_service_info_matches(const void *data, const void *user)
 {
 	const struct qmi_service_info *info = data;

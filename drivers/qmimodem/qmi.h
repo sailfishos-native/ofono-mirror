@@ -56,8 +56,6 @@ enum qmi_data_endpoint_type {
 	QMI_DATA_ENDPOINT_TYPE_BAM_DMUX  = 0x05,
 };
 
-void qmi_free(void *ptr);
-
 typedef void (*qmi_destroy_func_t)(void *user_data);
 
 

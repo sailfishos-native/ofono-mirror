@@ -45,7 +45,7 @@ static void string_cb(struct qmi_result *result, void *user_data)
 
 	CALLBACK_WITH_SUCCESS(cb, str, cbd->data);
 
-	qmi_free(str);
+	l_free(str);
 }
 
 static void qmi_query_manufacturer(struct ofono_devinfo *devinfo,
@@ -136,9 +136,9 @@ static void get_ids_cb(struct qmi_result *result, void *user_data)
 	else
 		CALLBACK_WITH_FAILURE(cb, NULL, cbd->data);
 
-	qmi_free(esn);
-	qmi_free(imei);
-	qmi_free(meid);
+	l_free(esn);
+	l_free(imei);
+	l_free(meid);
 }
 
 static void qmi_query_serial(struct ofono_devinfo *devinfo,

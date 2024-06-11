@@ -71,14 +71,14 @@ static void get_iccid_cb(struct qmi_result *result, void *user_data)
 
 	len = strlen(str);
 	if (len > 20) {
-		qmi_free(str);
+		l_free(str);
 		CALLBACK_WITH_FAILURE(cb, NULL, 0, cbd->data);
 		return;
 	}
 
 	sim_encode_bcd_number(str, iccid);
 	iccid_len = len / 2;
-	qmi_free(str);
+	l_free(str);
 
 	CALLBACK_WITH_SUCCESS(cb, iccid, iccid_len, cbd->data);
 }
@@ -128,7 +128,7 @@ static void get_imsi_cb(struct qmi_result *result, void *user_data)
 
 	CALLBACK_WITH_SUCCESS(cb, str, cbd->data);
 
-	qmi_free(str);
+	l_free(str);
 }
 
 static void qmi_read_imsi(struct ofono_sim *sim,
