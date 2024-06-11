@@ -21,8 +21,6 @@
 struct settings_data {
 	struct qmi_service *nas;
 	struct qmi_service *dms;
-	uint16_t major;
-	uint16_t minor;
 };
 
 static void get_system_selection_pref_cb(struct qmi_result *result,
@@ -210,8 +208,6 @@ static int qmi_radio_settings_probev(struct ofono_radio_settings *rs,
 	data = l_new(struct settings_data, 1);
 	data->dms = dms;
 	data->nas = nas;
-
-	qmi_service_get_version(data->nas, &data->major, &data->minor);
 
 	ofono_radio_settings_set_data(rs, data);
 

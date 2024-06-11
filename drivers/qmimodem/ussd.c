@@ -24,8 +24,6 @@
 
 struct ussd_data {
 	struct qmi_service *voice;
-	uint16_t major;
-	uint16_t minor;
 };
 
 static int validate_ussd_data(const struct qmi_ussd_data *data, uint16_t size)
@@ -156,7 +154,6 @@ static int qmi_ussd_probe(struct ofono_ussd *ussd,
 	data = l_new(struct ussd_data, 1);
 	data->voice = voice;
 
-	qmi_service_get_version(data->voice, &data->major, &data->minor);
 	qmi_service_register(data->voice, QMI_VOICE_USSD_IND,
 					async_ind, ussd, NULL);
 	qmi_service_register(data->voice, QMI_VOICE_ASYNC_ORIG_USSD,

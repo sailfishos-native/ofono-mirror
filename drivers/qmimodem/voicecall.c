@@ -24,8 +24,6 @@
 
 struct voicecall_data {
 	struct qmi_service *voice;
-	uint16_t major;
-	uint16_t minor;
 	struct l_queue *call_list;
 	struct ofono_phone_number dialed;
 	char *full_dtmf;
@@ -720,8 +718,6 @@ static int qmi_voicecall_probe(struct ofono_voicecall *vc,
 	data = l_new(struct voicecall_data, 1);
 	data->voice = voice;
 	data->call_list = l_queue_new();
-
-	qmi_service_get_version(data->voice, &data->major, &data->minor);
 
 	qmi_service_register(data->voice, QMI_VOICE_ALL_CALL_STATUS_IND,
 				all_call_status_ind, vc, NULL);
