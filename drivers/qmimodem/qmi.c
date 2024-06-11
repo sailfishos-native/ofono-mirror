@@ -141,7 +141,7 @@ struct qmi_notify {
 	uint16_t id;
 	uint16_t message;
 	unsigned int service_handle;
-	qmi_result_func_t callback;
+	qmi_service_result_func_t callback;
 	void *user_data;
 	qmi_destroy_func_t destroy;
 };
@@ -2678,7 +2678,7 @@ bool qmi_service_get_version(struct qmi_service *service,
 }
 
 struct service_send_data {
-	qmi_result_func_t func;
+	qmi_service_result_func_t func;
 	void *user_data;
 	qmi_destroy_func_t destroy;
 };
@@ -2722,7 +2722,7 @@ done:
 
 uint16_t qmi_service_send(struct qmi_service *service,
 				uint16_t message, struct qmi_param *param,
-				qmi_result_func_t func,
+				qmi_service_result_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
 	struct qmi_device *device;
@@ -2838,7 +2838,7 @@ static bool qmi_service_cancel_all(struct qmi_service *service)
 }
 
 uint16_t qmi_service_register(struct qmi_service *service,
-				uint16_t message, qmi_result_func_t func,
+				uint16_t message, qmi_service_result_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
 	struct qmi_notify *notify;

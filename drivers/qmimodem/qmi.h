@@ -60,10 +60,13 @@ typedef void (*qmi_destroy_func_t)(void *user_data);
 
 
 struct qmi_device;
+struct qmi_result;
 
 typedef void (*qmi_debug_func_t)(const char *str, void *user_data);
 typedef void (*qmi_shutdown_func_t)(void *user_data);
 typedef void (*qmi_discover_func_t)(void *user_data);
+
+typedef void (*qmi_service_result_func_t)(struct qmi_result *, void *);
 
 void qmi_device_free(struct qmi_device *device);
 
@@ -105,9 +108,6 @@ struct qmi_param *qmi_param_new_uint8(uint8_t type, uint8_t value);
 struct qmi_param *qmi_param_new_uint16(uint8_t type, uint16_t value);
 struct qmi_param *qmi_param_new_uint32(uint8_t type, uint32_t value);
 
-
-struct qmi_result;
-
 bool qmi_result_set_error(struct qmi_result *result, uint16_t *error);
 const char *qmi_result_get_error(struct qmi_result *result);
 
@@ -130,8 +130,6 @@ int qmi_error_to_ofono_cme(int qmi_error);
 
 struct qmi_service;
 
-typedef void (*qmi_result_func_t)(struct qmi_result *result, void *user_data);
-
 typedef void (*qmi_create_func_t)(struct qmi_service *service, void *user_data);
 
 bool qmi_service_create_shared(struct qmi_device *device,
@@ -146,11 +144,11 @@ bool qmi_service_get_version(struct qmi_service *service,
 
 uint16_t qmi_service_send(struct qmi_service *service,
 				uint16_t message, struct qmi_param *param,
-				qmi_result_func_t func,
+				qmi_service_result_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
 bool qmi_service_cancel(struct qmi_service *service, uint16_t id);
 
 uint16_t qmi_service_register(struct qmi_service *service,
-				uint16_t message, qmi_result_func_t func,
+				uint16_t message, qmi_service_result_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
 bool qmi_service_unregister(struct qmi_service *service, uint16_t id);

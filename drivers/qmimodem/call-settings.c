@@ -24,7 +24,7 @@ struct call_settings_data {
 };
 
 static void query_status(struct ofono_call_settings *cs, uint16_t message,
-				qmi_result_func_t fn,
+				qmi_service_result_func_t fn,
 				ofono_call_settings_status_cb_t cb, void *data)
 {
 	struct call_settings_data *csd = ofono_call_settings_get_data(cs);

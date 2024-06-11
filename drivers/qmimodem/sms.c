@@ -353,7 +353,7 @@ static void delete_msg(struct ofono_sms *sms, uint8_t tag)
 {
 	struct sms_data *data = ofono_sms_get_data(sms);
 	struct qmi_param *param;
-	qmi_result_func_t func = NULL;
+	qmi_service_result_func_t func = NULL;
 
 	DBG("");
 
