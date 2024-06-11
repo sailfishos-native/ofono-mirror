@@ -2538,17 +2538,25 @@ const char *qmi_service_get_identifier(struct qmi_service *service)
 	return __service_type_to_string(service->family->info.service_type);
 }
 
-bool qmi_service_get_version(struct qmi_service *service,
-					uint16_t *major, uint16_t *minor)
+/**
+ * qmi_service_get_version:
+ * @service: lightweight service handle
+ * @out_version: version output
+ *
+ * Returns the version of the service this handle is currently referring to.
+ * On QMUX this corresponds to the 'major' version of the service.  On QRTR,
+ * this corresponds to the lower 8 bits of the 'instance' attribute and is thus
+ * limited to uint8_t.
+ *
+ * Returns: #false if the service handle is NULL, #true on success.
+ */
+bool qmi_service_get_version(struct qmi_service *service, uint8_t *out_version)
 {
 	if (!service)
 		return false;
 
-	if (major)
-		*major = service->family->info.major;
-
-	if (minor)
-		*minor = service->family->info.minor;
+	if (out_version)
+		*out_version = service->family->info.major;
 
 	return true;
 }

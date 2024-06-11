@@ -142,8 +142,7 @@ struct qmi_service *qmi_service_clone(struct qmi_service *service);
 void qmi_service_free(struct qmi_service *service);
 
 const char *qmi_service_get_identifier(struct qmi_service *service);
-bool qmi_service_get_version(struct qmi_service *service,
-					uint16_t *major, uint16_t *minor);
+bool qmi_service_get_version(struct qmi_service *service, uint8_t *out_version);
 
 uint16_t qmi_service_send(struct qmi_service *service,
 				uint16_t message, struct qmi_param *param,

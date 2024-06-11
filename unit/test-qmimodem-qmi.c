@@ -232,15 +232,14 @@ static void test_create_services(const void *data)
 
 	for (i = 0; i < TEST_SERVICE_COUNT; i++) {
 		struct qmi_service *service;
-		uint16_t major, minor;
+		uint8_t version;
 
 		service_type = unique_service_type(i);
 		service = qmi_qrtr_node_get_service(info->node, service_type);
 		assert(service);
 
-		assert(qmi_service_get_version(service, &major, &minor));
-		assert(major == unique_service_version(i));
-		assert(minor == 0);
+		assert(qmi_service_get_version(service, &version));
+		assert(version == unique_service_version(i));
 
 		qmi_service_free(service);
 	}
