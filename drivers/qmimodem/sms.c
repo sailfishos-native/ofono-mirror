@@ -22,8 +22,6 @@
 
 struct sms_data {
 	struct qmi_service *wms;
-	uint16_t major;
-	uint16_t minor;
 	struct qmi_wms_read_msg_id rd_msg_id;
 	struct qmi_wms_result_msg_list *msg_list;
 	uint32_t rd_msg_num;
@@ -263,16 +261,11 @@ static void qmi_bearer_query(struct ofono_sms *sms,
 
 	DBG("");
 
-	if (data->major < 1 || (data->major == 1 && data->minor < 2))
-		goto error;
-
 	if (qmi_service_send(data->wms, QMI_WMS_GET_DOMAIN_PREF, NULL,
 					get_domain_pref_cb, cbd, l_free) > 0)
 		return;
 
-error:
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
-
 	l_free(cbd);
 }
 
@@ -301,9 +294,6 @@ static void qmi_bearer_set(struct ofono_sms *sms, int bearer,
 
 	DBG("bearer %d", bearer);
 
-	if (data->major < 1 || (data->major == 1 && data->minor < 2))
-		goto error;
-
 	domain = bearer_to_domain(bearer);
 
 	param = qmi_param_new_uint8(QMI_WMS_PARAM_DOMAIN, domain);
@@ -314,7 +304,6 @@ static void qmi_bearer_set(struct ofono_sms *sms, int bearer,
 
 	qmi_param_free(param);
 
-error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 	l_free(cbd);
 }
@@ -747,7 +736,6 @@ static int qmi_sms_probe(struct ofono_sms *sms,
 	data->wms = wms;
 	memset(&data->rd_msg_id, 0, sizeof(data->rd_msg_id));
 	data->msg_mode = QMI_WMS_MESSAGE_MODE_GSMWCDMA;
-	qmi_service_get_version(data->wms, &data->major, &data->minor);
 	qmi_service_register(data->wms, QMI_WMS_EVENT, event_notify, sms, NULL);
 
 	ofono_sms_set_data(sms, data);

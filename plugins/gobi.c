@@ -441,6 +441,8 @@ static void discover_cb(void *user_data)
 {
 	struct ofono_modem *modem = user_data;
 	struct gobi_data *data = ofono_modem_get_data(modem);
+	uint16_t major;
+	uint16_t minor;
 
 	DBG("");
 
@@ -448,8 +450,6 @@ static void discover_cb(void *user_data)
 		data->features |= GOBI_DMS;
 	if (qmi_device_has_service(data->device, QMI_SERVICE_NAS))
 		data->features |= GOBI_NAS;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_WMS))
-		data->features |= GOBI_WMS;
 	if (qmi_device_has_service(data->device, QMI_SERVICE_WDS))
 		data->features |= GOBI_WDS;
 	if (qmi_device_has_service(data->device, QMI_SERVICE_WDA))
@@ -460,6 +460,15 @@ static void discover_cb(void *user_data)
 		data->features |= GOBI_UIM;
 	if (qmi_device_has_service(data->device, QMI_SERVICE_VOICE))
 			data->features |= GOBI_VOICE;
+
+	if (qmi_qmux_device_get_service_version(data->device, QMI_SERVICE_WMS,
+						&major, &minor)) {
+		if (major < 1 || (major == 1 && minor < 2))
+			ofono_warn("unsupported WMS version: %u.%u, need: 1.2",
+					major, minor);
+		else
+			data->features |= GOBI_WMS;
+	}
 
 	if (!(data->features & GOBI_DMS)) {
 		if (++data->discover_attempts < 3 &&
