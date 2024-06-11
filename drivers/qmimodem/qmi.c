@@ -64,10 +64,6 @@ struct qmi_device_ops {
 	int (*discover)(struct qmi_device *device,
 			qmi_discover_func_t discover_func,
 			void *user, qmi_destroy_func_t destroy);
-	int (*client_create)(struct qmi_device *device,
-				uint16_t service_type,
-				qmi_create_func_t func,
-				void *user, qmi_destroy_func_t destroy);
 	void (*client_release)(struct qmi_device *device,
 				uint16_t service_type, uint16_t client_id);
 	int (*shutdown)(struct qmi_device *device,
@@ -106,7 +102,6 @@ struct qmi_device_qmux {
 	unsigned int release_users;
 	uint8_t next_control_tid;
 	struct l_queue *control_queue;
-	struct l_queue *pending_families;
 };
 
 struct service_family {
@@ -1410,17 +1405,6 @@ done:
 	l_free(family);
 }
 
-struct service_create_shared_data {
-	struct discovery super;
-	uint16_t service_type;
-	struct service_family *family;
-	struct qmi_device *device;
-	qmi_create_func_t func;
-	void *user_data;
-	qmi_destroy_func_t destroy;
-	struct l_idle *idle;
-};
-
 static uint8_t __ctl_request_submit(struct qmi_device_qmux *qmux,
 					struct qmi_request *req)
 {
@@ -1482,79 +1466,6 @@ static struct qmi_service *service_create(struct service_family *family)
 					family->info.service_type);
 
 	return service;
-}
-
-static void service_create_shared_idle_cb(struct l_idle *idle, void *user_data)
-{
-	struct service_create_shared_data *data = user_data;
-	struct qmi_service *service = service_create(data->family);
-
-	DISCOVERY_DONE(data, service, data->user_data);
-}
-
-static void service_create_shared_reply(struct service_create_shared_data *data,
-					struct service_family *family)
-{
-	struct qmi_service *service = NULL;
-
-	if (family)
-		service = service_create(family);
-
-	DISCOVERY_DONE(data, service, data->user_data);
-}
-
-static bool pending_family_match(const void *data, const void *user_data)
-{
-	const struct service_create_shared_data *shared_data = data;
-	uint16_t service_type = L_PTR_TO_UINT(user_data);
-
-	return shared_data->service_type == service_type;
-}
-
-struct pending_family_reply_if_match_info {
-	uint16_t service_type;
-	struct service_family *family;
-};
-
-static bool pending_family_reply_if_match(void *data, void *user_data)
-{
-	struct service_create_shared_data *shared_data = data;
-	const struct pending_family_reply_if_match_info *info = user_data;
-
-	if (pending_family_match(data, L_UINT_TO_PTR(info->service_type))) {
-		service_create_shared_reply(shared_data, info->family);
-		return true;
-	}
-
-	return false;
-}
-
-static void service_create_shared_pending_reply(struct qmi_device_qmux *qmux,
-						uint16_t service_type,
-						struct service_family *family)
-{	struct pending_family_reply_if_match_info info = {
-		.service_type = service_type,
-		.family = family,
-	};
-
-	l_queue_foreach_remove(qmux->pending_families,
-					pending_family_reply_if_match, &info);
-}
-
-static void service_create_shared_data_free(void *user_data)
-{
-	struct service_create_shared_data *data = user_data;
-
-	if (data->idle)
-		l_idle_remove(data->idle);
-
-	if (data->family)
-		service_family_unref(data->family);
-
-	if (data->destroy)
-		data->destroy(data->user_data);
-
-	l_free(data);
 }
 
 static struct qmi_request *find_control_request(struct qmi_device_qmux *qmux,
@@ -1737,7 +1648,9 @@ struct qmux_client_create_data {
 	uint8_t type;
 	uint16_t major;
 	uint16_t minor;
-	qmi_create_func_t func;
+	qmi_qmux_device_create_client_func_t func;
+	void *user_data;
+	qmi_destroy_func_t destroy;
 	struct l_timeout *timeout;
 	uint16_t tid;
 };
@@ -1749,10 +1662,14 @@ static void qmux_client_create_data_free(void *user_data)
 	if (data->timeout)
 		l_timeout_remove(data->timeout);
 
+	if (data->destroy)
+		data->destroy(data->user_data);
+
 	l_free(data);
 }
 
-static void qmux_client_create_reply(struct l_timeout *timeout, void *user_data)
+static void qmux_client_create_timeout(struct l_timeout *timeout,
+							void *user_data)
 {
 	struct qmux_client_create_data *data = user_data;
 	struct qmi_device *device = data->device;
@@ -1760,20 +1677,17 @@ static void qmux_client_create_reply(struct l_timeout *timeout, void *user_data)
 		l_container_of(device, struct qmi_device_qmux, super);
 	struct qmi_request *req;
 
-	DBG("");
-
-	service_create_shared_pending_reply(qmux, data->type, NULL);
-
-	/* remove request from queues */
-	req = find_control_request(qmux, data->tid);
+	__debug_device(device, "client creation timed out");
 
 	l_timeout_remove(data->timeout);
 	data->timeout = NULL;
 
-	DISCOVERY_DONE(data, NULL, NULL);
-
+	/* remove request from queues */
+	req = find_control_request(qmux, data->tid);
 	if (req)
 		__request_free(req);
+
+	DISCOVERY_DONE(data, NULL, data->user_data);
 }
 
 static void qmux_client_create_callback(uint16_t message, uint16_t length,
@@ -1781,9 +1695,8 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 {
 	struct qmux_client_create_data *data = user_data;
 	struct qmi_device *device = data->device;
-	struct qmi_device_qmux *qmux =
-		l_container_of(device, struct qmi_device_qmux, super);
 	struct service_family *family = NULL;
+	struct qmi_service *service = NULL;
 	struct qmi_service_info info;
 	const struct qmi_result_code *result_code;
 	const struct qmi_client_id *client_id;
@@ -1817,59 +1730,51 @@ static void qmux_client_create_callback(uint16_t message, uint16_t length,
 	hash_id = family_list_create_hash(family->info.service_type,
 							family->client_id);
 	l_hashmap_insert(device->family_list, L_UINT_TO_PTR(hash_id), family);
-	l_hashmap_insert(device->family_list,
-				L_UINT_TO_PTR(family->info.service_type),
-				family);
+
 done:
-	service_create_shared_pending_reply(qmux, data->type, family);
+	if (family)
+		service = service_create(family);
+
+	DISCOVERY_DONE(data, service, data->user_data);
+
 	if (family)
 		service_family_unref(family);
-
-	DISCOVERY_DONE(data, NULL, NULL);
 }
 
-static int qmi_device_qmux_client_create(struct qmi_device *device,
-					uint16_t service_type,
-					qmi_create_func_t func, void *user_data,
-					qmi_destroy_func_t destroy)
+bool qmi_qmux_device_create_client(struct qmi_device *device,
+				uint16_t service_type,
+				qmi_qmux_device_create_client_func_t func,
+				void *user_data, qmi_destroy_func_t destroy)
 {
-	struct qmi_device_qmux *qmux =
-		l_container_of(device, struct qmi_device_qmux, super);
 	unsigned char client_req[] = { 0x01, 0x01, 0x00, service_type };
+	const struct qmi_service_info *info;
+	struct qmi_device_qmux *qmux;
 	struct qmi_request *req;
-	struct service_create_shared_data *shared_data;
 	struct qmux_client_create_data *create_data;
-	bool create_in_progress;
 
-	if (!l_queue_length(device->service_infos))
-		return -ENOENT;
+	if (!device || !func)
+		return false;
 
-	create_in_progress = l_queue_find(qmux->pending_families,
-						pending_family_match,
-						L_UINT_TO_PTR(service_type));
+	if (service_type == QMI_SERVICE_CONTROL)
+		return false;
 
-	shared_data = l_new(struct service_create_shared_data, 1);
-	shared_data->super.destroy = service_create_shared_data_free;
-	shared_data->service_type = service_type;
-	shared_data->device = device;
-	shared_data->func = func;
-	shared_data->user_data = user_data;
-	shared_data->destroy = destroy;
-	l_queue_push_tail(qmux->pending_families, shared_data);
+	info = __find_service_info_by_type(device, service_type);
+	if (!info)
+		return false;
 
-	if (create_in_progress)
-		return 0;
+	qmux = l_container_of(device, struct qmi_device_qmux, super);
 
 	create_data = l_new(struct qmux_client_create_data, 1);
 	create_data->super.destroy = qmux_client_create_data_free;
 	create_data->device = device;
 	create_data->type = service_type;
+	create_data->major = info->major;
+	create_data->minor = info->minor;
+	create_data->func = func;
+	create_data->user_data = user_data;
+	create_data->destroy = destroy;
 
 	__debug_device(device, "service create [type=%d]", service_type);
-
-	qmi_device_get_service_version(device, create_data->type,
-						&create_data->major,
-						&create_data->minor);
 
 	req = __control_request_alloc(QMI_CTL_GET_CLIENT_ID,
 					client_req, sizeof(client_req),
@@ -1877,12 +1782,11 @@ static int qmi_device_qmux_client_create(struct qmi_device *device,
 					create_data);
 
 	create_data->tid = __ctl_request_submit(qmux, req);
-	create_data->timeout = l_timeout_create(8, qmux_client_create_reply,
+	create_data->timeout = l_timeout_create(8, qmux_client_create_timeout,
 							create_data, NULL);
 
 	__qmi_device_discovery_started(device, &create_data->super);
-
-	return 0;
+	return true;
 }
 
 static void qmux_client_release_callback(uint16_t message, uint16_t length,
@@ -1971,8 +1875,6 @@ static void qmi_device_qmux_destroy(struct qmi_device *device)
 	struct qmi_device_qmux *qmux =
 		l_container_of(device, struct qmi_device_qmux, super);
 
-	l_queue_destroy(qmux->pending_families,
-		(l_queue_destroy_func_t) service_create_shared_data_free);
 	l_queue_destroy(qmux->control_queue, __request_free);
 
 	if (qmux->shutdown_idle)
@@ -1985,7 +1887,6 @@ static void qmi_device_qmux_destroy(struct qmi_device *device)
 static const struct qmi_device_ops qmux_ops = {
 	.write = qmi_device_qmux_write,
 	.discover = qmi_device_qmux_discover,
-	.client_create = qmi_device_qmux_client_create,
 	.client_release = qmi_device_qmux_client_release,
 	.shutdown = qmi_device_qmux_shutdown,
 	.destroy = qmi_device_qmux_destroy,
@@ -2010,7 +1911,6 @@ struct qmi_device *qmi_qmux_device_new(const char *device)
 
 	qmux->next_control_tid = 1;
 	qmux->control_queue = l_queue_new();
-	qmux->pending_families = l_queue_new();
 	l_io_set_read_handler(qmux->super.io, received_qmux_data, qmux, NULL);
 
 	return &qmux->super;
@@ -2304,7 +2204,6 @@ static void qmi_device_qrtr_destroy(struct qmi_device *device)
 static const struct qmi_device_ops qrtr_ops = {
 	.write = qmi_device_qrtr_write,
 	.discover = qmi_device_qrtr_discover,
-	.client_create = NULL,
 	.client_release = NULL,
 	.shutdown = NULL,
 	.destroy = qmi_device_qrtr_destroy,
@@ -2626,56 +2525,6 @@ bool qmi_result_get_uint64(struct qmi_result *result, uint8_t type,
 
 	if (value)
 		*value = L_LE64_TO_CPU(tmp);
-
-	return true;
-}
-
-bool qmi_service_create_shared(struct qmi_device *device, uint16_t type,
-			qmi_create_func_t func, void *user_data,
-			qmi_destroy_func_t destroy)
-{
-	struct service_create_shared_data *data;
-	struct service_family *family;
-
-	if (!device || !func)
-		return false;
-
-	if (type == QMI_SERVICE_CONTROL)
-		return false;
-
-	family = l_hashmap_lookup(device->family_list, L_UINT_TO_PTR(type));
-	if (!family) {
-		const struct qmi_service_info *info;
-
-		if (device->ops->client_create) {
-			int r;
-
-			r = device->ops->client_create(device, type, func,
-							user_data, destroy);
-			return r == 0;
-		}
-
-		info = __find_service_info_by_type(device, type);
-		if (!info)
-			return false;
-
-		family = service_family_create(device, info, 0);
-		l_hashmap_insert(device->family_list, L_UINT_TO_PTR(type),
-							family);
-	}
-
-	data = l_new(struct service_create_shared_data, 1);
-
-	data->super.destroy = service_create_shared_data_free;
-	data->device = device;
-	data->func = func;
-	data->user_data = user_data;
-	data->destroy = destroy;
-	data->family = service_family_ref(family);
-	data->idle = l_idle_create(service_create_shared_idle_cb, data, NULL);
-
-	/* Not really discovery... just tracking the idle callback. */
-	__qmi_device_discovery_started(device, &data->super);
 
 	return true;
 }

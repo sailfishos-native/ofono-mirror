@@ -419,7 +419,7 @@ static void request_service_cb(struct qmi_service *service, void *user_data)
 	if (data->cur_service_request == data->num_service_requests) {
 		DBG("All services requested, proceeding to create WDA");
 
-		if (qmi_service_create_shared(data->device, QMI_SERVICE_WDA,
+		if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_WDA,
 						create_wda_cb, modem, NULL))
 			return;
 
@@ -429,7 +429,7 @@ static void request_service_cb(struct qmi_service *service, void *user_data)
 	req = &data->service_requests[data->cur_service_request];
 	DBG("Requesting: %u", req->service_type);
 
-	if (qmi_service_create_shared(data->device, req->service_type,
+	if (qmi_qmux_device_create_client(data->device, req->service_type,
 					request_service_cb, modem, NULL))
 		return;
 
@@ -482,7 +482,7 @@ static void discover_cb(void *user_data)
 	if (data->features & GOBI_UIM)
 		add_service_request(data, &data->uim, QMI_SERVICE_UIM);
 
-	if (qmi_service_create_shared(data->device, QMI_SERVICE_DMS,
+	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
 					request_service_cb, modem, NULL) > 0)
 		return;
 error:

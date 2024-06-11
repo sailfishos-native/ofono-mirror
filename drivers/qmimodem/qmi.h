@@ -65,11 +65,18 @@ struct qmi_service;
 typedef void (*qmi_debug_func_t)(const char *str, void *user_data);
 typedef void (*qmi_shutdown_func_t)(void *user_data);
 typedef void (*qmi_discover_func_t)(void *user_data);
+typedef void (*qmi_qmux_device_create_client_func_t)(struct qmi_service *,
+							void *user_data);
 
 typedef void (*qmi_service_result_func_t)(struct qmi_result *, void *);
 
 struct qmi_device *qmi_qmux_device_new(const char *device);
 void qmi_device_free(struct qmi_device *device);
+
+bool qmi_qmux_device_create_client(struct qmi_device *device,
+				uint16_t service_type,
+				qmi_qmux_device_create_client_func_t func,
+				void *user_data, qmi_destroy_func_t destroy);
 
 void qmi_device_set_debug(struct qmi_device *device,
 				qmi_debug_func_t func, void *user_data);
@@ -130,11 +137,6 @@ void qmi_result_print_tlvs(struct qmi_result *result);
 
 int qmi_error_to_ofono_cme(int qmi_error);
 
-typedef void (*qmi_create_func_t)(struct qmi_service *service, void *user_data);
-
-bool qmi_service_create_shared(struct qmi_device *device,
-				uint16_t type, qmi_create_func_t func,
-				void *user_data, qmi_destroy_func_t destroy);
 struct qmi_service *qmi_service_clone(struct qmi_service *service);
 void qmi_service_free(struct qmi_service *service);
 
