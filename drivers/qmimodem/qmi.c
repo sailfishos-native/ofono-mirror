@@ -1915,7 +1915,7 @@ void qmi_qmux_device_set_debug(struct qmi_device *device,
 	__debug_data_init(&qmux->debug, func, user_data);
 }
 
-struct qmi_device_qrtr {
+struct qmi_qrtr_node {
 	struct qmi_device super;
 	struct debug_data debug;
 	struct {
@@ -1926,7 +1926,7 @@ struct qmi_device_qrtr {
 	} lookup;
 };
 
-static void __qrtr_lookup_finished(struct qmi_device_qrtr *node)
+static void __qrtr_lookup_finished(struct qmi_qrtr_node *node)
 {
 	if (!node->lookup.func) {
 		DEBUG(&node->debug, "No lookup in progress");
@@ -1942,11 +1942,11 @@ static void __qrtr_lookup_finished(struct qmi_device_qrtr *node)
 	memset(&node->lookup, 0, sizeof(node->lookup));
 }
 
-static int qmi_device_qrtr_write(struct qmi_device *device,
+static int qmi_qrtr_node_write(struct qmi_device *device,
 					struct qmi_request *req)
 {
-	struct qmi_device_qrtr *node =
-		l_container_of(device, struct qmi_device_qrtr, super);
+	struct qmi_qrtr_node *node =
+		l_container_of(device, struct qmi_qrtr_node, super);
 	struct sockaddr_qrtr addr;
 	uint8_t *data;
 	uint16_t len;
@@ -2001,7 +2001,7 @@ static void qrtr_debug_ctrl_request(const struct qrtr_ctrl_pkt *packet,
 	debug->func(strbuf, debug->user_data);
 }
 
-static void qrtr_received_control_packet(struct qmi_device_qrtr *node,
+static void qrtr_received_control_packet(struct qmi_qrtr_node *node,
 						const void *buf, size_t len)
 {
 	struct qmi_device *device = &node->super;
@@ -2059,7 +2059,7 @@ static void qrtr_received_control_packet(struct qmi_device_qrtr *node,
 	l_timeout_modify(node->lookup.timeout, DISCOVER_TIMEOUT);
 }
 
-static void qrtr_received_service_message(struct qmi_device_qrtr *node,
+static void qrtr_received_service_message(struct qmi_qrtr_node *node,
 						uint32_t qrtr_node,
 						uint32_t qrtr_port,
 						const void *buf, size_t len)
@@ -2091,7 +2091,7 @@ static void qrtr_received_service_message(struct qmi_device_qrtr *node,
 
 static bool qrtr_received_data(struct l_io *io, void *user_data)
 {
-	struct qmi_device_qrtr *qrtr = user_data;
+	struct qmi_qrtr_node *qrtr = user_data;
 	struct sockaddr_qrtr addr;
 	unsigned char buf[2048];
 	ssize_t bytes_read;
@@ -2119,21 +2119,21 @@ static bool qrtr_received_data(struct l_io *io, void *user_data)
 }
 
 static const struct qmi_device_ops qrtr_ops = {
-	.write = qmi_device_qrtr_write,
+	.write = qmi_qrtr_node_write,
 	.client_release = NULL,
 	.shutdown = NULL,
 };
 
-struct qmi_device *qmi_qrtr_node_new(uint32_t node)
+struct qmi_qrtr_node *qmi_qrtr_node_new(uint32_t node)
 {
-	struct qmi_device_qrtr *qrtr;
+	struct qmi_qrtr_node *qrtr;
 	int fd;
 
 	fd = socket(AF_QIPCRTR, SOCK_DGRAM, 0);
 	if (fd < 0)
 		return NULL;
 
-	qrtr = l_new(struct qmi_device_qrtr, 1);
+	qrtr = l_new(struct qmi_qrtr_node, 1);
 
 	if (qmi_device_init(&qrtr->super, fd, &qrtr_ops) < 0) {
 		close(fd);
@@ -2143,19 +2143,15 @@ struct qmi_device *qmi_qrtr_node_new(uint32_t node)
 
 	l_io_set_read_handler(qrtr->super.io, qrtr_received_data, qrtr, NULL);
 
-	return &qrtr->super;
+	return qrtr;
 }
 
-void qmi_qrtr_node_free(struct qmi_device *device)
+void qmi_qrtr_node_free(struct qmi_qrtr_node *node)
 {
-	struct qmi_device_qrtr *node;
-
-	if (!device)
+	if (!node)
 		return;
 
-	__qmi_device_free(device);
-
-	node = l_container_of(device, struct qmi_device_qrtr, super);
+	__qmi_device_free(&node->super);
 
 	if (node->lookup.destroy)
 		node->lookup.destroy(node->lookup.user_data);
@@ -2163,47 +2159,42 @@ void qmi_qrtr_node_free(struct qmi_device *device)
 	l_free(node);
 }
 
-void qmi_qrtr_node_set_debug(struct qmi_device *device,
+void qmi_qrtr_node_set_debug(struct qmi_qrtr_node *node,
 				qmi_debug_func_t func, void *user_data)
 {
-	struct qmi_device_qrtr *node;
-
-	if (device == NULL)
+	if (!node)
 		return;
 
-	node = l_container_of(device, struct qmi_device_qrtr, super);
 	__debug_data_init(&node->debug, func, user_data);
 }
 
 static void qrtr_lookup_reply_timeout(struct l_timeout *timeout,
 							void *user_data)
 {
-	struct qmi_device_qrtr *node = user_data;
+	struct qmi_qrtr_node *node = user_data;
 
 	__qrtr_lookup_finished(node);
 }
 
-int qmi_qrtr_node_lookup(struct qmi_device *device,
+int qmi_qrtr_node_lookup(struct qmi_qrtr_node *node,
 			qmi_qrtr_node_lookup_done_func_t func,
 			void *user_data, qmi_destroy_func_t destroy)
 {
-	struct qmi_device_qrtr *node;
 	struct qrtr_ctrl_pkt packet;
 	struct sockaddr_qrtr addr;
 	socklen_t addr_len;
 	ssize_t bytes_written;
 	int fd;
 
-	if (!device || !func)
+	if (!node || !func)
 		return -EINVAL;
 
-	node = l_container_of(device, struct qmi_device_qrtr, super);
 	if (node->lookup.func)
 		return -EALREADY;
 
 	DEBUG(&node->debug, "node %p", node);
 
-	fd = l_io_get_fd(device->io);
+	fd = l_io_get_fd(node->super.io);
 
 	/*
 	 * The control node is configured by the system. Use getsockname to
@@ -2246,13 +2237,14 @@ int qmi_qrtr_node_lookup(struct qmi_device *device,
 	return 0;
 }
 
-struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,
+struct qmi_service *qmi_qrtr_node_get_service(struct qmi_qrtr_node *node,
 						uint32_t type)
 {
+	struct qmi_device *device = &node->super;
 	struct service_family *family;
 	const struct qmi_service_info *info;
 
-	if (!device)
+	if (!node)
 		return NULL;
 
 	if (type == QMI_SERVICE_CONTROL)
@@ -2272,12 +2264,12 @@ done:
 	return service_create(family);
 }
 
-bool qmi_qrtr_node_has_service(struct qmi_device *device, uint16_t type)
+bool qmi_qrtr_node_has_service(struct qmi_qrtr_node *node, uint16_t type)
 {
-	if (!device)
+	if (!node)
 		return false;
 
-	return __find_service_info_by_type(device, type);
+	return __find_service_info_by_type(&node->super, type);
 }
 
 struct qmi_param *qmi_param_new(void)

@@ -94,16 +94,16 @@ enum qmi_device_expected_data_format qmi_device_get_expected_data_format(
 bool qmi_device_set_expected_data_format(struct qmi_device *device,
 			enum qmi_device_expected_data_format format);
 
-struct qmi_device *qmi_qrtr_node_new(uint32_t node);
-void qmi_qrtr_node_free(struct qmi_device *device);
-void qmi_qrtr_node_set_debug(struct qmi_device *device,
+struct qmi_qrtr_node *qmi_qrtr_node_new(uint32_t node);
+void qmi_qrtr_node_free(struct qmi_qrtr_node *node);
+void qmi_qrtr_node_set_debug(struct qmi_qrtr_node *node,
 				qmi_debug_func_t func, void *user_data);
-int qmi_qrtr_node_lookup(struct qmi_device *device,
+int qmi_qrtr_node_lookup(struct qmi_qrtr_node *node,
 			qmi_qrtr_node_lookup_done_func_t func,
 			void *user_data, qmi_destroy_func_t destroy);
-struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,
+struct qmi_service *qmi_qrtr_node_get_service(struct qmi_qrtr_node *node,
 						uint32_t type);
-bool qmi_qrtr_node_has_service(struct qmi_device *device, uint16_t type);
+bool qmi_qrtr_node_has_service(struct qmi_qrtr_node *node, uint16_t type);
 
 struct qmi_param;
 

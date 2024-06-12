@@ -32,7 +32,7 @@
 
 struct test_info {
 	int service_fds[TEST_SERVICE_COUNT];
-	struct qmi_device *node;
+	struct qmi_qrtr_node *node;
 	struct l_timeout *timeout;
 
 	/* Data sent to our test service */

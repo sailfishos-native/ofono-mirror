@@ -45,7 +45,7 @@
 #include <drivers/qmimodem/util.h>
 
 struct qrtrqmi_data {
-	struct qmi_device *node;
+	struct qmi_qrtr_node *node;
 	struct qmi_service *dms;
 	int main_net_ifindex;
 	char main_net_name[IFNAMSIZ];
@@ -182,7 +182,7 @@ static void lookup_done(void *user_data)
 {
 	struct ofono_modem *modem = user_data;
 	struct qrtrqmi_data *data = ofono_modem_get_data(modem);
-	struct qmi_device *node = data->node;
+	struct qmi_qrtr_node *node = data->node;
 
 	DBG("");
 
@@ -288,7 +288,7 @@ static void qrtrqmi_set_online(struct ofono_modem *modem, ofono_bool_t online,
 static void qrtrqmi_pre_sim(struct ofono_modem *modem)
 {
 	struct qrtrqmi_data *data = ofono_modem_get_data(modem);
-	struct qmi_device *node = data->node;
+	struct qmi_qrtr_node *node = data->node;
 	struct qmi_service *voice;
 
 	DBG("%p", modem);
@@ -363,7 +363,7 @@ static void setup_gprs(struct ofono_modem *modem)
 static void qrtrqmi_post_sim(struct ofono_modem *modem)
 {
 	struct qrtrqmi_data *data = ofono_modem_get_data(modem);
-	struct qmi_device *node = data->node;
+	struct qmi_qrtr_node *node = data->node;
 	struct qmi_service *wms;
 
 	DBG("%p", modem);
@@ -394,7 +394,7 @@ static void qrtrqmi_post_sim(struct ofono_modem *modem)
 static void qrtrqmi_post_online(struct ofono_modem *modem)
 {
 	struct qrtrqmi_data *data = ofono_modem_get_data(modem);
-	struct qmi_device *node = data->node;
+	struct qmi_qrtr_node *node = data->node;
 
 	DBG("%p", modem);
 
