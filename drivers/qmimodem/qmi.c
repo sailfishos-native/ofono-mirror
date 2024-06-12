@@ -988,8 +988,11 @@ bool qmi_qmux_device_get_service_version(struct qmi_device *device,
 	return true;
 }
 
-bool qmi_device_has_service(struct qmi_device *device, uint16_t type)
+bool qmi_qmux_device_has_service(struct qmi_device *device, uint16_t type)
 {
+	if (!device)
+		return false;
+
 	return __find_service_info_by_type(device, type);
 }
 
@@ -2264,6 +2267,14 @@ struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,
 	l_hashmap_insert(device->family_list, L_UINT_TO_PTR(type), family);
 done:
 	return service_create(family);
+}
+
+bool qmi_qrtr_node_has_service(struct qmi_device *device, uint16_t type)
+{
+	if (!device)
+		return false;
+
+	return __find_service_info_by_type(device, type);
 }
 
 struct qmi_param *qmi_param_new(void)

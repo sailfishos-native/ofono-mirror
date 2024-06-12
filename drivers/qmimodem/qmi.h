@@ -81,6 +81,7 @@ bool qmi_qmux_device_create_client(struct qmi_device *device,
 bool qmi_qmux_device_get_service_version(struct qmi_device *device,
 					uint16_t type,
 					uint16_t *major, uint16_t *minor);
+bool qmi_qmux_device_has_service(struct qmi_device *device, uint16_t type);
 
 void qmi_device_set_debug(struct qmi_device *device,
 				qmi_debug_func_t func, void *user_data);
@@ -89,8 +90,6 @@ int qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
 int qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
-
-bool qmi_device_has_service(struct qmi_device *device, uint16_t type);
 
 enum qmi_device_expected_data_format qmi_device_get_expected_data_format(
 						struct qmi_device *device);
@@ -104,6 +103,7 @@ int qmi_qrtr_node_lookup(struct qmi_device *device,
 			void *user_data, qmi_destroy_func_t destroy);
 struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,
 						uint32_t type);
+bool qmi_qrtr_node_has_service(struct qmi_device *device, uint16_t type);
 
 struct qmi_param;
 

@@ -446,20 +446,20 @@ static void discover_cb(void *user_data)
 
 	DBG("");
 
-	if (qmi_device_has_service(data->device, QMI_SERVICE_DMS))
+	if (qmi_qmux_device_has_service(data->device, QMI_SERVICE_DMS))
 		data->features |= GOBI_DMS;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_NAS))
+	if (qmi_qmux_device_has_service(data->device, QMI_SERVICE_NAS))
 		data->features |= GOBI_NAS;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_WDS))
+	if (qmi_qmux_device_has_service(data->device, QMI_SERVICE_WDS))
 		data->features |= GOBI_WDS;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_WDA))
+	if (qmi_qmux_device_has_service(data->device, QMI_SERVICE_WDA))
 		data->features |= GOBI_WDA;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_PDS))
+	if (qmi_qmux_device_has_service(data->device, QMI_SERVICE_PDS))
 		data->features |= GOBI_PDS;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_UIM))
+	if (qmi_qmux_device_has_service(data->device, QMI_SERVICE_UIM))
 		data->features |= GOBI_UIM;
-	if (qmi_device_has_service(data->device, QMI_SERVICE_VOICE))
-			data->features |= GOBI_VOICE;
+	if (qmi_qmux_device_has_service(data->device, QMI_SERVICE_VOICE))
+		data->features |= GOBI_VOICE;
 
 	if (qmi_qmux_device_get_service_version(data->device, QMI_SERVICE_WMS,
 						&major, &minor)) {

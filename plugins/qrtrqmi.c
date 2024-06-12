@@ -186,10 +186,10 @@ static void lookup_done(void *user_data)
 
 	DBG("");
 
-	if (!qmi_device_has_service(node, QMI_SERVICE_DMS) ||
-			!qmi_device_has_service(node, QMI_SERVICE_UIM) ||
-			!qmi_device_has_service(node, QMI_SERVICE_WDS) ||
-			!qmi_device_has_service(node, QMI_SERVICE_NAS))
+	if (!qmi_qrtr_node_has_service(node, QMI_SERVICE_DMS) ||
+			!qmi_qrtr_node_has_service(node, QMI_SERVICE_UIM) ||
+			!qmi_qrtr_node_has_service(node, QMI_SERVICE_WDS) ||
+			!qmi_qrtr_node_has_service(node, QMI_SERVICE_NAS))
 		goto error;
 
 	data->dms = qmi_qrtr_node_get_service(node, QMI_SERVICE_DMS);
@@ -381,7 +381,7 @@ static void qrtrqmi_post_sim(struct ofono_modem *modem)
 
 		ofono_sms_create(modem, 0, "qmimodem", wms);
 
-		if (qmi_device_has_service(node, QMI_SERVICE_UIM))
+		if (qmi_qrtr_node_has_service(node, QMI_SERVICE_UIM))
 			mw = ofono_message_waiting_create(modem);
 
 		if (mw)
