@@ -40,7 +40,7 @@ struct test_info {
 	size_t received_len;
 	void *received;
 
-	bool discovery_callback_called		: 1;
+	bool lookup_callback_called		: 1;
 	bool service_send_callback_called	: 1;
 	bool internal_timeout_callback_called	: 1;
 	bool notify_callback_called		: 1;
@@ -188,26 +188,26 @@ static void test_create_qrtr_node(const void *data)
 	test_cleanup(info);
 }
 
-static void discovery_complete_cb(void *user_data)
+static void lookup_complete_cb(void *user_data)
 {
 	struct test_info *info = user_data;
 
-	info->discovery_callback_called = true;
+	info->lookup_callback_called = true;
 }
 
-static void perform_discovery(struct test_info *info)
+static void perform_lookup(struct test_info *info)
 {
-	qmi_device_discover(info->node, discovery_complete_cb, info, NULL);
+	qmi_qrtr_node_lookup(info->node, lookup_complete_cb, info, NULL);
 
-	while (!info->discovery_callback_called)
+	while (!info->lookup_callback_called)
 		l_main_iterate(-1);
 }
 
-static void test_discovery(const void *data)
+static void test_lookup(const void *data)
 {
 	struct test_info *info = test_setup();
 
-	perform_discovery(info);
+	perform_lookup(info);
 
 	test_cleanup(info);
 }
@@ -228,7 +228,7 @@ static void test_create_services(const void *data)
 	uint32_t service_type;
 	size_t i;
 
-	perform_discovery(info);
+	perform_lookup(info);
 
 	for (i = 0; i < TEST_SERVICE_COUNT; i++) {
 		struct qmi_service *service;
@@ -428,7 +428,7 @@ static void test_send_data(const void *data)
 	uint32_t service_type;
 	struct qmi_service *service;
 
-	perform_discovery(info);
+	perform_lookup(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
 	service = qmi_qrtr_node_get_service(info->node, service_type);
@@ -475,7 +475,7 @@ static void test_notifications(const void *data)
 	struct qmi_service *service;
 	struct l_timeout *receive_timeout;
 
-	perform_discovery(info);
+	perform_lookup(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
 	service = qmi_qrtr_node_get_service(info->node, service_type);
@@ -528,7 +528,7 @@ static void test_service_notification_independence(const void *data)
 	struct qmi_service *services[2];
 	size_t i;
 
-	perform_discovery(info);
+	perform_lookup(info);
 
 	service_type = unique_service_type(0); /* Use the first service */
 
@@ -592,7 +592,7 @@ int main(int argc, char **argv)
 
 	l_test_init(&argc, &argv);
 	l_test_add("QRTR node creation", test_create_qrtr_node, NULL);
-	l_test_add("QRTR discovery", test_discovery, NULL);
+	l_test_add("QRTR lookup", test_lookup, NULL);
 	l_test_add("QRTR services may be created", test_create_services, NULL);
 	l_test_add("QRTR service sends/responses", test_send_data, NULL);
 	l_test_add("QRTR notifications", test_notifications, NULL);

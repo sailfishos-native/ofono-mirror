@@ -1919,7 +1919,29 @@ void qmi_qmux_device_free(struct qmi_device *device)
 
 struct qmi_device_qrtr {
 	struct qmi_device super;
+	struct {
+		qmi_qrtr_node_lookup_done_func_t func;
+		void *user_data;
+		qmi_destroy_func_t destroy;
+		struct l_timeout *timeout;
+	} lookup;
 };
+
+static void __qrtr_lookup_finished(struct qmi_device_qrtr *node)
+{
+	if (!node->lookup.func) {
+		__debug_device(&node->super, "No lookup in progress");
+		return;
+	}
+
+	l_timeout_remove(node->lookup.timeout);
+	node->lookup.func(node->lookup.user_data);
+
+	if (node->lookup.destroy)
+		node->lookup.destroy(node->lookup.user_data);
+
+	memset(&node->lookup, 0, sizeof(node->lookup));
+}
 
 static int qmi_device_qrtr_write(struct qmi_device *device,
 					struct qmi_request *req)
@@ -1980,11 +2002,11 @@ static void qrtr_debug_ctrl_request(const struct qrtr_ctrl_pkt *packet,
 	function(strbuf, user_data);
 }
 
-static void qrtr_received_control_packet(struct qmi_device *device,
+static void qrtr_received_control_packet(struct qmi_device_qrtr *node,
 						const void *buf, size_t len)
 {
+	struct qmi_device *device = &node->super;
 	const struct qrtr_ctrl_pkt *packet = buf;
-	struct discover_data *data;
 	struct qmi_service_info info;
 	uint32_t cmd;
 	uint32_t type;
@@ -2006,18 +2028,11 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 		return;
 	}
 
-	data = l_queue_peek_head(device->discovery_queue);
-
 	if (!packet->server.service && !packet->server.instance &&
 			!packet->server.node && !packet->server.port) {
 		__debug_device(device,
 				"Initial service discovery has completed");
-
-		if (data)
-			DISCOVERY_DONE(data, data->user_data);
-		else
-			DBG("discovery_queue is empty"); /* likely a timeout */
-
+		__qrtr_lookup_finished(node);
 		return;
 	}
 
@@ -2041,12 +2056,10 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 
 	__qmi_service_appeared(device, &info);
 
-	if (!data) {
-		DBG("discovery_queue is empty"); /* likely a timeout */
+	if (!node->lookup.func)
 		return;
-	}
 
-	l_timeout_modify(data->timeout, DISCOVER_TIMEOUT);
+	l_timeout_modify(node->lookup.timeout, DISCOVER_TIMEOUT);
 }
 
 static void qrtr_received_service_message(struct qmi_device *device,
@@ -2101,7 +2114,7 @@ static bool qrtr_received_data(struct l_io *io, void *user_data)
 			qrtr->super.debug_data);
 
 	if (addr.sq_port == QRTR_PORT_CTRL)
-		qrtr_received_control_packet(&qrtr->super, buf, bytes_read);
+		qrtr_received_control_packet(qrtr, buf, bytes_read);
 	else
 		qrtr_received_service_message(&qrtr->super, addr.sq_node,
 						addr.sq_port, buf, bytes_read);
@@ -2109,99 +2122,8 @@ static bool qrtr_received_data(struct l_io *io, void *user_data)
 	return true;
 }
 
-static void qrtr_discover_reply_timeout(struct l_timeout *timeout,
-							void *user_data)
-{
-	struct discover_data *data = user_data;
-
-	l_timeout_remove(data->timeout);
-	data->timeout = NULL;
-
-	DISCOVERY_DONE(data, data->user_data);
-}
-
-static int qmi_device_qrtr_discover(struct qmi_device *device,
-					qmi_discover_func_t func,
-					void *user_data,
-					qmi_destroy_func_t destroy)
-{
-	struct discover_data *data;
-	struct qrtr_ctrl_pkt packet;
-	struct sockaddr_qrtr addr;
-	socklen_t addr_len;
-	int rc;
-	ssize_t bytes_written;
-	int fd;
-
-	__debug_device(device, "device %p discover", device);
-
-	if (l_queue_length(device->discovery_queue) > 0)
-		return -EINPROGRESS;
-
-	data = l_new(struct discover_data, 1);
-
-	data->super.destroy = discover_data_free;
-	data->device = device;
-	data->func = func;
-	data->user_data = user_data;
-	data->destroy = destroy;
-
-	fd = l_io_get_fd(device->io);
-
-	/*
-	 * The control node is configured by the system. Use getsockname to
-	 * get its value.
-	 */
-	addr_len = sizeof(addr);
-	rc = getsockname(fd, (struct sockaddr *) &addr, &addr_len);
-	if (rc) {
-		__debug_device(device, "getsockname failed: %s",
-				strerror(errno));
-		rc = -errno;
-		goto error;
-	}
-
-	if (addr.sq_family != AF_QIPCRTR || addr_len != sizeof(addr)) {
-		__debug_device(device, "Unexpected sockaddr family: %d size: %d",
-				addr.sq_family, addr_len);
-		rc = -EIO;
-		goto error;
-	}
-
-	addr.sq_port = QRTR_PORT_CTRL;
-	memset(&packet, 0, sizeof(packet));
-	packet.cmd = L_CPU_TO_LE32(QRTR_TYPE_NEW_LOOKUP);
-
-	bytes_written = sendto(fd, &packet,
-				sizeof(packet), 0,
-				(struct sockaddr *) &addr, addr_len);
-	if (bytes_written < 0) {
-		__debug_device(device, "Failure sending data: %s",
-				strerror(errno));
-		rc = -errno;
-		goto error;
-	}
-
-	l_util_hexdump(false, &packet, bytes_written,
-			device->debug_func, device->debug_data);
-
-	data->timeout = l_timeout_create(DISCOVER_TIMEOUT,
-						qrtr_discover_reply_timeout,
-						data, NULL);
-
-	__qmi_device_discovery_started(device, &data->super);
-
-	return 0;
-
-error:
-	__discovery_free(&data->super);
-
-	return rc;
-}
-
 static const struct qmi_device_ops qrtr_ops = {
 	.write = qmi_device_qrtr_write,
-	.discover = qmi_device_qrtr_discover,
 	.client_release = NULL,
 	.shutdown = NULL,
 };
@@ -2238,7 +2160,84 @@ void qmi_qrtr_node_free(struct qmi_device *device)
 	__qmi_device_free(device);
 
 	node = l_container_of(device, struct qmi_device_qrtr, super);
+
+	if (node->lookup.destroy)
+		node->lookup.destroy(node->lookup.user_data);
+
 	l_free(node);
+}
+
+static void qrtr_lookup_reply_timeout(struct l_timeout *timeout,
+							void *user_data)
+{
+	struct qmi_device_qrtr *node = user_data;
+
+	__qrtr_lookup_finished(node);
+}
+
+int qmi_qrtr_node_lookup(struct qmi_device *device,
+			qmi_qrtr_node_lookup_done_func_t func,
+			void *user_data, qmi_destroy_func_t destroy)
+{
+	struct qmi_device_qrtr *node;
+	struct qrtr_ctrl_pkt packet;
+	struct sockaddr_qrtr addr;
+	socklen_t addr_len;
+	ssize_t bytes_written;
+	int fd;
+
+	if (!device || !func)
+		return -EINVAL;
+
+	node = l_container_of(device, struct qmi_device_qrtr, super);
+	if (node->lookup.func)
+		return -EALREADY;
+
+	__debug_device(device, "node %p discover", node);
+
+	fd = l_io_get_fd(device->io);
+
+	/*
+	 * The control node is configured by the system. Use getsockname to
+	 * get its value.
+	 */
+	addr_len = sizeof(addr);
+	if (getsockname(fd, (struct sockaddr *) &addr, &addr_len) < 0) {
+		__debug_device(device, "getsockname failed: %s",
+				strerror(errno));
+		return -errno;
+	}
+
+	if (addr.sq_family != AF_QIPCRTR || addr_len != sizeof(addr)) {
+		__debug_device(device, "Unexpected sockaddr family: %d size: %d",
+				addr.sq_family, addr_len);
+		return -EIO;
+	}
+
+	addr.sq_port = QRTR_PORT_CTRL;
+	memset(&packet, 0, sizeof(packet));
+	packet.cmd = L_CPU_TO_LE32(QRTR_TYPE_NEW_LOOKUP);
+
+	bytes_written = sendto(fd, &packet,
+				sizeof(packet), 0,
+				(struct sockaddr *) &addr, addr_len);
+	if (bytes_written < 0) {
+		__debug_device(device, "Failure sending data: %s",
+				strerror(errno));
+		return -errno;
+	}
+
+	l_util_hexdump(false, &packet, bytes_written,
+			device->debug_func, device->debug_data);
+
+	node->lookup.func = func;
+	node->lookup.user_data = user_data;
+	node->lookup.destroy = destroy;
+	node->lookup.timeout = l_timeout_create(DISCOVER_TIMEOUT,
+						qrtr_lookup_reply_timeout,
+						node, NULL);
+
+	return 0;
 }
 
 struct qmi_service *qmi_qrtr_node_get_service(struct qmi_device *device,

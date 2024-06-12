@@ -215,7 +215,7 @@ static int qrtrqmi_enable(struct ofono_modem *modem)
 	if (getenv("OFONO_QMI_DEBUG"))
 		qmi_device_set_debug(data->node, qrtrqmi_debug, "QRTR: ");
 
-	r = qmi_device_discover(data->node, lookup_done, modem, NULL);
+	r = qmi_qrtr_node_lookup(data->node, lookup_done, modem, NULL);
 	if (!r)
 		return -EINPROGRESS;
 
