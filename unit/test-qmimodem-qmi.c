@@ -156,7 +156,7 @@ static struct test_info *test_setup(void)
 	assert(info->node);
 
 	/* Enable ofono logging */
-	qmi_device_set_debug(info->node, debug_log, NULL);
+	qmi_qrtr_node_set_debug(info->node, debug_log, NULL);
 
 	info->timeout = l_timeout_create(TEST_TIMEOUT, test_timeout_cb, info,
 								NULL);

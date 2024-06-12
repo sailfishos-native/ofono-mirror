@@ -73,7 +73,8 @@ typedef void (*qmi_service_result_func_t)(struct qmi_result *, void *);
 
 struct qmi_device *qmi_qmux_device_new(const char *device);
 void qmi_qmux_device_free(struct qmi_device *device);
-
+void qmi_qmux_device_set_debug(struct qmi_device *device,
+				qmi_debug_func_t func, void *user_data);
 bool qmi_qmux_device_create_client(struct qmi_device *device,
 				uint16_t service_type,
 				qmi_qmux_device_create_client_func_t func,
@@ -82,9 +83,6 @@ bool qmi_qmux_device_get_service_version(struct qmi_device *device,
 					uint16_t type,
 					uint16_t *major, uint16_t *minor);
 bool qmi_qmux_device_has_service(struct qmi_device *device, uint16_t type);
-
-void qmi_device_set_debug(struct qmi_device *device,
-				qmi_debug_func_t func, void *user_data);
 
 int qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
@@ -98,6 +96,8 @@ bool qmi_device_set_expected_data_format(struct qmi_device *device,
 
 struct qmi_device *qmi_qrtr_node_new(uint32_t node);
 void qmi_qrtr_node_free(struct qmi_device *device);
+void qmi_qrtr_node_set_debug(struct qmi_device *device,
+				qmi_debug_func_t func, void *user_data);
 int qmi_qrtr_node_lookup(struct qmi_device *device,
 			qmi_qrtr_node_lookup_done_func_t func,
 			void *user_data, qmi_destroy_func_t destroy);
