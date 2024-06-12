@@ -1942,7 +1942,7 @@ static int qmi_device_qrtr_write(struct qmi_device *device,
 	bytes_written = sendto(fd, data, len, 0, (struct sockaddr *) &addr,
 							sizeof(addr));
 	if (bytes_written < 0) {
-		DBG("Failure sending data: %s", strerror(errno));
+		__debug_device(device, "sendto: %s", strerror(errno));
 		return -errno;
 	}
 
@@ -1990,20 +1990,19 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 	uint32_t type;
 	uint32_t instance;
 	uint32_t version;
-	uint32_t node;
-	uint32_t port;
+	uint32_t qrtr_node;
+	uint32_t qrtr_port;
 
 	if (len < sizeof(*packet)) {
-		DBG("qrtr packet is too small");
+		__debug_device(device, "qrtr packet is too small");
 		return;
 	}
 
-	qrtr_debug_ctrl_request(packet, device->debug_func,
-				device->debug_data);
+	qrtr_debug_ctrl_request(packet, device->debug_func, device->debug_data);
 
 	cmd = L_LE32_TO_CPU(packet->cmd);
 	if (cmd != QRTR_TYPE_NEW_SERVER) {
-		DBG("Unknown command: %d", cmd);
+		__debug_device(device, "Unknown command: %d", cmd);
 		return;
 	}
 
@@ -2011,7 +2010,8 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 
 	if (!packet->server.service && !packet->server.instance &&
 			!packet->server.node && !packet->server.port) {
-		DBG("Initial service discovery has completed");
+		__debug_device(device,
+				"Initial service discovery has completed");
 
 		if (data)
 			DISCOVERY_DONE(data, data->user_data);
@@ -2025,16 +2025,17 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 	version = L_LE32_TO_CPU(packet->server.instance) & 0xff;
 	instance = L_LE32_TO_CPU(packet->server.instance) >> 8;
 
-	node = L_LE32_TO_CPU(packet->server.node);
-	port = L_LE32_TO_CPU(packet->server.port);
+	qrtr_node = L_LE32_TO_CPU(packet->server.node);
+	qrtr_port = L_LE32_TO_CPU(packet->server.port);
 
-	DBG("New server: Type: %d Version: %d Instance: %d Node: %d Port: %d",
-		type, version, instance, node, port);
+	__debug_device(device,
+			"New server: %d Version: %d Node/Port: %d/%d",
+			type, version, qrtr_node, qrtr_port);
 
 	memset(&info, 0, sizeof(info));
 	info.service_type = type;
-	info.qrtr_port = port;
-	info.qrtr_node = node;
+	info.qrtr_port = qrtr_port;
+	info.qrtr_node = qrtr_node;
 	info.major = version;
 	info.instance = instance;
 
@@ -2049,7 +2050,8 @@ static void qrtr_received_control_packet(struct qmi_device *device,
 }
 
 static void qrtr_received_service_message(struct qmi_device *device,
-						uint32_t node, uint32_t port,
+						uint32_t qrtr_node,
+						uint32_t qrtr_port,
 						const void *buf, size_t len)
 {
 	const struct l_queue_entry *entry;
@@ -2059,15 +2061,16 @@ static void qrtr_received_service_message(struct qmi_device *device,
 				entry; entry = entry->next) {
 		struct qmi_service_info *info = entry->data;
 
-		if (info->qrtr_node == node && info->qrtr_port == port) {
+		if (info->qrtr_node == qrtr_node &&
+				info->qrtr_port == qrtr_port) {
 			service_type = info->service_type;
 			break;
 		}
 	}
 
 	if (!service_type) {
-		DBG("Received msg from unknown service on node: %d, port: %d",
-			node, port);
+		__debug_device(device, "Message from unknown at node/port %d/%d",
+				qrtr_node, qrtr_port);
 		return;
 	}
 
@@ -2088,8 +2091,8 @@ static bool qrtr_received_data(struct l_io *io, void *user_data)
 	addr_size = sizeof(addr);
 	bytes_read = recvfrom(l_io_get_fd(qrtr->super.io), buf, sizeof(buf), 0,
 				(struct sockaddr *) &addr, &addr_size);
-	DBG("Received %zd bytes from Node: %d Port: %d", bytes_read,
-		addr.sq_node, addr.sq_port);
+	__debug_device(&qrtr->super, "Received %zd bytes from Node: %d Port: %d",
+			bytes_read, addr.sq_node, addr.sq_port);
 
 	if (bytes_read < 0)
 		return true;
@@ -2152,14 +2155,15 @@ static int qmi_device_qrtr_discover(struct qmi_device *device,
 	addr_len = sizeof(addr);
 	rc = getsockname(fd, (struct sockaddr *) &addr, &addr_len);
 	if (rc) {
-		DBG("getsockname failed: %s", strerror(errno));
+		__debug_device(device, "getsockname failed: %s",
+				strerror(errno));
 		rc = -errno;
 		goto error;
 	}
 
 	if (addr.sq_family != AF_QIPCRTR || addr_len != sizeof(addr)) {
-		DBG("Unexpected sockaddr from getsockname. family: %d size: %d",
-			addr.sq_family, addr_len);
+		__debug_device(device, "Unexpected sockaddr family: %d size: %d",
+				addr.sq_family, addr_len);
 		rc = -EIO;
 		goto error;
 	}
@@ -2172,7 +2176,8 @@ static int qmi_device_qrtr_discover(struct qmi_device *device,
 				sizeof(packet), 0,
 				(struct sockaddr *) &addr, addr_len);
 	if (bytes_written < 0) {
-		DBG("Failure sending data: %s", strerror(errno));
+		__debug_device(device, "Failure sending data: %s",
+				strerror(errno));
 		rc = -errno;
 		goto error;
 	}
