@@ -76,12 +76,13 @@ struct gobi_data {
 	unsigned long features;
 	unsigned int discover_attempts;
 	uint8_t oper_mode;
-	bool using_mux;
-	bool using_qmi_wwan_q;
 	int main_net_ifindex;
 	char main_net_name[IFNAMSIZ];
 	uint32_t max_aggregation_size;
 	uint32_t set_powered_id;
+	bool using_mux : 1;
+	bool using_qmi_wwan : 1;
+	bool using_qmi_wwan_q : 1;
 };
 
 static void gobi_debug(const char *str, void *user_data)
@@ -134,6 +135,8 @@ static int gobi_probe(struct ofono_modem *modem)
 
 	if (!strcmp(if_driver, "qmi_wwan_q"))
 		data->using_qmi_wwan_q = true;
+	else if (!strcmp(if_driver, "qmi_wwan"))
+		data->using_qmi_wwan = true;
 
 	data->main_net_ifindex =
 		ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
@@ -332,12 +335,49 @@ error:
 	shutdown_device(modem);
 }
 
+static void setup_qmi_wwan(const char *interface, uint32_t llproto)
+{
+	char raw_ip;
+	char new_raw_ip;
+
+	if (l_sysctl_get_char(&raw_ip, "/sys/class/net/%s/qmi/raw_ip",
+				interface) < 0) {
+		DBG("Couldn't query raw_ip setting");
+		return;
+	}
+
+	if (raw_ip != 'Y' && raw_ip != 'N') {
+		DBG("Unexpected value: %c", raw_ip);
+		return;
+	}
+
+	switch (llproto) {
+	case QMI_WDA_DATA_LINK_PROTOCOL_802_3:
+		new_raw_ip = 'N';
+		break;
+	case QMI_WDA_DATA_LINK_PROTOCOL_RAW_IP:
+		new_raw_ip = 'Y';
+		break;
+	default:
+		DBG("Unknown WDA Link Protocol");
+		return;
+	}
+
+	DBG("raw_ip: %c, want: %c", raw_ip, new_raw_ip);
+
+	if (raw_ip == new_raw_ip)
+		return;
+
+	if (l_sysctl_set_char(new_raw_ip, "/sys/class/net/%s/qmi/raw_ip",
+				interface) < 0)
+		DBG("Fail to set raw_ip to %c", new_raw_ip);
+}
+
 static void get_data_format_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_modem *modem = user_data;
 	struct gobi_data *data = ofono_modem_get_data(modem);
 	uint32_t llproto;
-	enum qmi_device_expected_data_format expected_llproto;
 
 	DBG("");
 
@@ -347,24 +387,11 @@ static void get_data_format_cb(struct qmi_result *result, void *user_data)
 	if (!qmi_result_get_uint32(result, QMI_WDA_LL_PROTOCOL, &llproto))
 		goto done;
 
-	expected_llproto = qmi_device_get_expected_data_format(data->device);
+	if (data->using_qmi_wwan) {
+		const char *interface =
+			ofono_modem_get_string(modem, "NetworkInterface");
 
-	if ((llproto == QMI_WDA_DATA_LINK_PROTOCOL_802_3) &&
-			(expected_llproto ==
-				QMI_DEVICE_EXPECTED_DATA_FORMAT_RAW_IP)) {
-		if (!qmi_device_set_expected_data_format(data->device,
-					QMI_DEVICE_EXPECTED_DATA_FORMAT_802_3))
-			DBG("Fail to set expected data to 802.3");
-		else
-			DBG("expected data set to 802.3");
-	} else if ((llproto == QMI_WDA_DATA_LINK_PROTOCOL_RAW_IP) &&
-			(expected_llproto ==
-				QMI_DEVICE_EXPECTED_DATA_FORMAT_802_3)) {
-		if (!qmi_device_set_expected_data_format(data->device,
-					QMI_DEVICE_EXPECTED_DATA_FORMAT_RAW_IP))
-			DBG("Fail to set expected data to raw-ip");
-		else
-			DBG("expected data set to raw-ip");
+		setup_qmi_wwan(interface, llproto);
 	}
 
 done:
