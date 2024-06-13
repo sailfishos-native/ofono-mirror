@@ -57,10 +57,10 @@ struct qmi_result;
 struct qmi_service;
 
 typedef void (*qmi_debug_func_t)(const char *str, void *user_data);
-typedef void (*qmi_shutdown_func_t)(void *user_data);
 typedef void (*qmi_qmux_device_discover_func_t)(void *user_data);
 typedef void (*qmi_qmux_device_create_client_func_t)(struct qmi_service *,
 							void *user_data);
+typedef void (*qmi_qmux_device_shutdown_func_t)(void *user_data);
 typedef void (*qmi_qrtr_node_lookup_done_func_t)(void *);
 
 typedef void (*qmi_service_result_func_t)(struct qmi_result *, void *);
@@ -80,8 +80,8 @@ bool qmi_qmux_device_get_service_version(struct qmi_device *device,
 					uint16_t type,
 					uint16_t *major, uint16_t *minor);
 bool qmi_qmux_device_has_service(struct qmi_device *device, uint16_t type);
-
-int qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
+int qmi_qmux_device_shutdown(struct qmi_device *device,
+				qmi_qmux_device_shutdown_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
 
 struct qmi_qrtr_node *qmi_qrtr_node_new(uint32_t node);

@@ -234,7 +234,7 @@ static void shutdown_device(struct ofono_modem *modem)
 
 	cleanup_services(data);
 
-	if (qmi_device_shutdown(data->device, shutdown_cb, modem, NULL) < 0)
+	if (qmi_qmux_device_shutdown(data->device, shutdown_cb, modem, NULL) < 0)
 		shutdown_cb(modem);
 }
 
