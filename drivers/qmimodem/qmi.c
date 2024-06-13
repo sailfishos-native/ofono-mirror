@@ -65,9 +65,6 @@ struct qmi_request {
 
 struct qmi_device_ops {
 	int (*write)(struct qmi_device *device, struct qmi_request *req);
-	int (*discover)(struct qmi_device *device,
-			qmi_discover_func_t discover_func,
-			void *user, qmi_destroy_func_t destroy);
 	void (*client_release)(struct qmi_device *device,
 				uint16_t service_type, uint16_t client_id);
 	int (*shutdown)(struct qmi_device *device,
@@ -105,6 +102,13 @@ struct qmi_device_qmux {
 	qmi_destroy_func_t shutdown_destroy;
 	struct l_idle *shutdown_idle;
 	unsigned int release_users;
+	struct {
+		qmi_qmux_device_discover_func_t func;
+		void *user_data;
+		qmi_destroy_func_t destroy;
+		struct l_timeout *timeout;
+		uint16_t tid;
+	} discover;
 	uint8_t next_control_tid;
 	struct l_queue *control_queue;
 	bool shutting_down : 1;
@@ -981,41 +985,6 @@ bool qmi_qmux_device_has_service(struct qmi_device *device, uint16_t type)
 	return __find_service_info_by_type(device, type);
 }
 
-struct discover_data {
-	struct discovery super;
-	struct qmi_device *device;
-	qmi_discover_func_t func;
-	void *user_data;
-	qmi_destroy_func_t destroy;
-	uint16_t tid;
-	struct l_timeout *timeout;
-};
-
-static void discover_data_free(void *user_data)
-{
-	struct discover_data *data = user_data;
-
-	if (data->timeout)
-		l_timeout_remove(data->timeout);
-
-	if (data->destroy)
-		data->destroy(data->user_data);
-
-	l_free(data);
-}
-
-int qmi_device_discover(struct qmi_device *device, qmi_discover_func_t func,
-				void *user_data, qmi_destroy_func_t destroy)
-{
-	if (!device)
-		return -EINVAL;
-
-	if (!device->ops->discover)
-		return -ENOTSUP;
-
-	return device->ops->discover(device, func, user_data, destroy);
-}
-
 int qmi_device_shutdown(struct qmi_device *device, qmi_shutdown_func_t func,
 				void *user_data, qmi_destroy_func_t destroy)
 {
@@ -1255,37 +1224,30 @@ static struct qmi_request *find_control_request(struct qmi_device_qmux *qmux,
 	return req;
 }
 
+static void __qmux_discovery_finished(struct qmi_device_qmux *qmux)
+{
+	l_timeout_remove(qmux->discover.timeout);
+	qmux->discover.func(qmux->discover.user_data);
+
+	if (qmux->discover.destroy)
+		qmux->discover.destroy(qmux->discover.user_data);
+
+	memset(&qmux->discover, 0, sizeof(qmux->discover));
+}
+
 static void qmux_sync_callback(uint16_t message, uint16_t length,
 					const void *buffer, void *user_data)
 {
-	struct discover_data *data = user_data;
+	struct qmi_device_qmux *qmux = user_data;
 
-	DISCOVERY_DONE(data, data->user_data);
-}
-
-/* sync will release all previous clients */
-static bool qmi_device_qmux_sync(struct qmi_device_qmux *qmux,
-					struct discover_data *data)
-{
-	struct qmi_request *req;
-
-	DEBUG(&qmux->debug, "Sending sync to reset QMI");
-
-	req = __control_request_alloc(QMI_CTL_SYNC, NULL, 0,
-					qmux_sync_callback, data);
-
-	__ctl_request_submit(qmux, req);
-
-	return true;
+	__qmux_discovery_finished(qmux);
 }
 
 static void qmux_discover_callback(uint16_t message, uint16_t length,
 					const void *buffer, void *user_data)
 {
-	struct discover_data *data = user_data;
-	struct qmi_device *device = data->device;
-	struct qmi_device_qmux *qmux =
-		l_container_of(device, struct qmi_device_qmux, super);
+	struct qmi_device_qmux *qmux = user_data;
+	struct qmi_device *device = &qmux->super;
 	const struct qmi_result_code *result_code;
 	const struct qmi_service_list *service_list;
 	const void *ptr;
@@ -1344,69 +1306,68 @@ static void qmux_discover_callback(uint16_t message, uint16_t length,
 	DEBUG(&qmux->debug, "version string: %s", qmux->version_str);
 
 done:
-	/* if the device support the QMI call SYNC over the CTL interface */
+	/*
+	 * If the device support the QMI call SYNC over the CTL interface,
+	 * invoke it to reset the state, including release all previously
+	 * allocated clients
+	 */
 	if ((qmux->control_major == 1 && qmux->control_minor >= 5) ||
 			qmux->control_major > 1) {
-		qmi_device_qmux_sync(qmux, data);
+		struct qmi_request *req =
+			__control_request_alloc(QMI_CTL_SYNC, NULL, 0,
+						qmux_sync_callback, qmux);
+
+		DEBUG(&qmux->debug, "Sending sync to reset QMI");
+		qmux->discover.tid = __ctl_request_submit(qmux, req);
 		return;
 	}
 
-	DISCOVERY_DONE(data, data->user_data);
+	__qmux_discovery_finished(qmux);
 }
 
 static void qmux_discover_reply_timeout(struct l_timeout *timeout,
 							void *user_data)
 {
-	struct discover_data *data = user_data;
-	struct qmi_device *device = data->device;
+	struct qmi_device *device = user_data;
 	struct qmi_device_qmux *qmux =
 		l_container_of(device, struct qmi_device_qmux, super);
 	struct qmi_request *req;
-
-	l_timeout_remove(data->timeout);
-	data->timeout = NULL;
 
 	/* remove request from queues */
-	req = find_control_request(qmux, data->tid);
-
-	DISCOVERY_DONE(data, data->user_data);
-
+	req = find_control_request(qmux, qmux->discover.tid);
 	if (req)
 		__request_free(req);
+
+	__qmux_discovery_finished(qmux);
 }
 
-static int qmi_device_qmux_discover(struct qmi_device *device,
-					qmi_discover_func_t func,
-					void *user_data,
-					qmi_destroy_func_t destroy)
+int qmi_qmux_device_discover(struct qmi_device *device,
+				qmi_qmux_device_discover_func_t func,
+				void *user_data, qmi_destroy_func_t destroy)
 {
-	struct qmi_device_qmux *qmux =
-		l_container_of(device, struct qmi_device_qmux, super);
-	struct discover_data *data;
+	struct qmi_device_qmux *qmux;
 	struct qmi_request *req;
+
+	if (!device)
+		return -EINVAL;
+
+	qmux = l_container_of(device, struct qmi_device_qmux, super);
 
 	DEBUG(&qmux->debug, "device %p", qmux);
 
-	if (l_queue_length(device->service_infos) > 0)
+	if (l_queue_length(device->service_infos) > 0 || qmux->discover.tid)
 		return -EALREADY;
 
-	data = l_new(struct discover_data, 1);
-
-	data->super.destroy = discover_data_free;
-	data->device = device;
-	data->func = func;
-	data->user_data = user_data;
-	data->destroy = destroy;
-
 	req = __control_request_alloc(QMI_CTL_GET_VERSION_INFO, NULL, 0,
-						qmux_discover_callback, data);
+						qmux_discover_callback, qmux);
 
-	data->tid = __ctl_request_submit(qmux, req);
-	data->timeout = l_timeout_create(DISCOVER_TIMEOUT,
-						qmux_discover_reply_timeout,
-						data, NULL);
-
-	__qmi_device_discovery_started(device, &data->super);
+	qmux->discover.func = func;
+	qmux->discover.user_data = user_data;
+	qmux->discover.destroy = destroy;
+	qmux->discover.tid = __ctl_request_submit(qmux, req);
+	qmux->discover.timeout =
+		l_timeout_create(DISCOVER_TIMEOUT, qmux_discover_reply_timeout,
+						qmux, NULL);
 
 	return 0;
 }
@@ -1593,6 +1554,11 @@ static void __qmux_device_free(struct qmi_device_qmux *qmux)
 {
 	l_queue_destroy(qmux->control_queue, __request_free);
 
+	l_timeout_remove(qmux->discover.timeout);
+
+	if (qmux->discover.destroy)
+		qmux->discover.destroy(qmux->discover.user_data);
+
 	if (qmux->shutdown_idle)
 		l_idle_remove(qmux->shutdown_idle);
 
@@ -1658,7 +1624,6 @@ static int qmi_device_qmux_shutdown(struct qmi_device *device,
 
 static const struct qmi_device_ops qmux_ops = {
 	.write = qmi_device_qmux_write,
-	.discover = qmi_device_qmux_discover,
 	.client_release = qmi_device_qmux_client_release,
 	.shutdown = qmi_device_qmux_shutdown,
 };

@@ -499,7 +499,8 @@ static void discover_cb(void *user_data)
 
 	if (!(data->features & GOBI_DMS)) {
 		if (++data->discover_attempts < 3 &&
-				!qmi_device_discover(data->device, discover_cb,
+				!qmi_qmux_device_discover(data->device,
+								discover_cb,
 								modem, NULL))
 			return;
 
@@ -544,7 +545,7 @@ static int gobi_enable(struct ofono_modem *modem)
 	if (getenv("OFONO_QMI_DEBUG"))
 		qmi_qmux_device_set_debug(data->device, gobi_debug, "QMI: ");
 
-	r = qmi_device_discover(data->device, discover_cb, modem, NULL);
+	r = qmi_qmux_device_discover(data->device, discover_cb, modem, NULL);
 	if (!r)
 		return -EINPROGRESS;
 
