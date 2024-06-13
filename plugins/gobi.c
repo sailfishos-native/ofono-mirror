@@ -61,7 +61,7 @@ struct service_request {
 };
 
 struct gobi_data {
-	struct qmi_device *device;
+	struct qmi_qmux_device *device;
 	struct qmi_service *dms;
 	struct qmi_service *wda;
 	struct qmi_service *nas;

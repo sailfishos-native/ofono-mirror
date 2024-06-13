@@ -52,9 +52,8 @@ enum qmi_data_endpoint_type {
 
 typedef void (*qmi_destroy_func_t)(void *user_data);
 
-struct qmi_device;
-struct qmi_result;
 struct qmi_service;
+struct qmi_result;
 
 typedef void (*qmi_debug_func_t)(const char *str, void *user_data);
 typedef void (*qmi_qmux_device_discover_func_t)(void *user_data);
@@ -65,22 +64,22 @@ typedef void (*qmi_qrtr_node_lookup_done_func_t)(void *);
 
 typedef void (*qmi_service_result_func_t)(struct qmi_result *, void *);
 
-struct qmi_device *qmi_qmux_device_new(const char *device);
-void qmi_qmux_device_free(struct qmi_device *device);
-void qmi_qmux_device_set_debug(struct qmi_device *device,
+struct qmi_qmux_device *qmi_qmux_device_new(const char *device);
+void qmi_qmux_device_free(struct qmi_qmux_device *qmux);
+void qmi_qmux_device_set_debug(struct qmi_qmux_device *qmux,
 				qmi_debug_func_t func, void *user_data);
-int qmi_qmux_device_discover(struct qmi_device *device,
+int qmi_qmux_device_discover(struct qmi_qmux_device *qmux,
 				qmi_qmux_device_discover_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
-bool qmi_qmux_device_create_client(struct qmi_device *device,
+bool qmi_qmux_device_create_client(struct qmi_qmux_device *qmux,
 				uint16_t service_type,
 				qmi_qmux_device_create_client_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
-bool qmi_qmux_device_get_service_version(struct qmi_device *device,
+bool qmi_qmux_device_get_service_version(struct qmi_qmux_device *qmux,
 					uint16_t type,
 					uint16_t *major, uint16_t *minor);
-bool qmi_qmux_device_has_service(struct qmi_device *device, uint16_t type);
-int qmi_qmux_device_shutdown(struct qmi_device *device,
+bool qmi_qmux_device_has_service(struct qmi_qmux_device *qmux, uint16_t type);
+int qmi_qmux_device_shutdown(struct qmi_qmux_device *qmux,
 				qmi_qmux_device_shutdown_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
 
