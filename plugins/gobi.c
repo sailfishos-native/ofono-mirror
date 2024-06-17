@@ -112,7 +112,7 @@ static void gobi_debug(const char *str, void *user_data)
  * NetworkInterfaceIndex
  *   The index of the main interface given by NetworkInterface
  *
- * NetworkInterfaceDriver
+ * NetworkInterfaceKernelDriver
  *   The kernel driver that is being used by the main network device.  Certain
  *   drivers such as 'qmi_wwan' or 'qmi_wwan_q' are treated specifically.
  *
