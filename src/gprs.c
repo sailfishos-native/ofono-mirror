@@ -3014,9 +3014,6 @@ static void gprs_unregister(struct ofono_atom *atom)
 
 	free_contexts(gprs);
 
-	l_uintset_free(gprs->used_cids);
-	gprs->used_cids = NULL;
-
 	if (gprs->netreg_watch) {
 		if (gprs->status_watch) {
 			__ofono_netreg_remove_status_watch(gprs->netreg,
@@ -3054,6 +3051,9 @@ static void gprs_remove(struct ofono_atom *atom)
 
 	if (gprs->suspend_timeout)
 		g_source_remove(gprs->suspend_timeout);
+
+	l_uintset_free(gprs->used_cids);
+	gprs->used_cids = NULL;
 
 	l_uintset_free(gprs->used_pids);
 	gprs->used_pids = NULL;
