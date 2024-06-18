@@ -359,7 +359,7 @@ static void notify_deferred_indicators(GAtServer *server, void *user_data)
 {
 	struct ofono_emulator *em = user_data;
 	int i;
-	char buf[20];
+	char buf[64];
 	GSList *l;
 	struct indicator *ind;
 
