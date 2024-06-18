@@ -279,8 +279,12 @@ static void indication_register_cb(struct qmi_result *result, void *user_data)
 	DBG("");
 
 	if (qmi_result_set_error(result, &error)) {
-		ofono_error("indication_register_cb: %hd", error);
-		goto error;
+		ofono_error("%s: %s(%hd)", __func__,
+				qmi_result_get_error(result), error);
+
+		/* Some modems do not support indications, ignore */
+		if (error != QMI_ERROR_INVALID_QMI_COMMAND)
+			goto error;
 	}
 
 	/*

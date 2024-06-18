@@ -50,6 +50,10 @@ enum qmi_data_endpoint_type {
 	QMI_DATA_ENDPOINT_TYPE_BAM_DMUX  = 0x05,
 };
 
+enum qmi_error {
+	QMI_ERROR_INVALID_QMI_COMMAND				= 71,
+};
+
 typedef void (*qmi_destroy_func_t)(void *user_data);
 
 struct qmi_service;
