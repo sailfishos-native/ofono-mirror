@@ -90,7 +90,6 @@ struct qmi_device {
 	struct l_queue *req_queue;
 	struct l_queue *service_queue;
 	unsigned int next_group_id;	/* Matches requests with services */
-	unsigned int next_service_handle;
 	uint16_t next_service_tid;
 	struct l_queue *service_infos;
 	struct l_hashmap *family_list;
@@ -129,6 +128,7 @@ struct service_family {
 	unsigned int group_id;
 	uint8_t client_id;
 	uint16_t next_notify_id;
+	unsigned int next_service_handle;
 	struct l_queue *notify_list;
 };
 
@@ -1140,14 +1140,13 @@ static struct service_family *service_family_create(struct qmi_device *device,
 
 static struct qmi_service *service_create(struct service_family *family)
 {
-	struct qmi_device *device = family->device;
 	struct qmi_service *service;
 
-	if (device->next_service_handle == 0) /* 0 is reserved for control */
-		device->next_service_handle = 1;
+	if (family->next_service_handle == 0) /* 0 is reserved for control */
+		family->next_service_handle = 1;
 
 	service = l_new(struct qmi_service, 1);
-	service->handle = device->next_service_handle++;
+	service->handle = family->next_service_handle++;
 	service->family = service_family_ref(family);
 
 	return service;
@@ -2349,11 +2348,32 @@ uint16_t qmi_service_send(struct qmi_service *service,
 	return __service_request_submit(device, service, &sreq->super);
 }
 
+struct request_lookup {
+	uint16_t tid;
+	unsigned int service_handle;
+	unsigned int group_id;
+};
+
+static bool __request_compare_for_cancel(const void *a, const void *b)
+{
+	const struct qmi_request *req = a;
+	const struct request_lookup *lookup = b;
+
+	if (req->service_handle != lookup->service_handle)
+		return false;
+
+	if (req->group_id != lookup->group_id)
+		return false;
+
+	return req->tid == lookup->tid;
+}
+
 bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 {
 	struct qmi_device *device;
 	struct qmi_request *req;
 	struct service_family *family;
+	struct request_lookup lookup = { .tid = id };
 
 	if (!service || !id)
 		return false;
@@ -2367,12 +2387,15 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 	if (!device)
 		return false;
 
-	req = l_queue_remove_if(device->req_queue, __request_compare,
-					L_UINT_TO_PTR(id));
+	lookup.group_id = family->group_id;
+	lookup.service_handle = service->handle;
+
+	req = l_queue_remove_if(device->req_queue, __request_compare_for_cancel,
+					&lookup);
 	if (!req) {
 		req = l_queue_remove_if(device->service_queue,
-						__request_compare,
-						L_UINT_TO_PTR(id));
+						__request_compare_for_cancel,
+						&lookup);
 		if (!req)
 			return false;
 	}
@@ -2385,9 +2408,12 @@ bool qmi_service_cancel(struct qmi_service *service, uint16_t id)
 static bool remove_req_if_match(void *data, void *user_data)
 {
 	struct qmi_request *req = data;
-	unsigned int service_handle = L_PTR_TO_UINT(user_data);
+	struct request_lookup *lookup = user_data;
 
-	if (req->service_handle != service_handle)
+	if (req->service_handle != lookup->service_handle)
+		return false;
+
+	if (req->group_id != lookup->group_id)
 		return false;
 
 	__request_free(req);
@@ -2395,10 +2421,15 @@ static bool remove_req_if_match(void *data, void *user_data)
 	return true;
 }
 
-static void remove_client(struct l_queue *queue, unsigned int service_handle)
+static void remove_client(struct l_queue *queue, unsigned int group_id,
+						unsigned int service_handle)
 {
-	l_queue_foreach_remove(queue, remove_req_if_match,
-				L_UINT_TO_PTR(service_handle));
+	struct request_lookup lookup = {
+		.group_id = group_id,
+		.service_handle = service_handle,
+	};
+
+	l_queue_foreach_remove(queue, remove_req_if_match, &lookup);
 }
 
 static bool qmi_service_cancel_all(struct qmi_service *service)
@@ -2415,8 +2446,10 @@ static bool qmi_service_cancel_all(struct qmi_service *service)
 	if (!device)
 		return false;
 
-	remove_client(device->req_queue, service->handle);
-	remove_client(device->service_queue, service->handle);
+	remove_client(device->req_queue,
+				service->family->group_id, service->handle);
+	remove_client(device->service_queue,
+				service->family->group_id, service->handle);
 
 	return true;
 }
