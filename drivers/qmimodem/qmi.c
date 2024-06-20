@@ -89,7 +89,6 @@ struct qmi_device {
 	struct l_io *io;
 	struct l_queue *req_queue;
 	struct l_queue *service_queue;
-	unsigned int next_group_id;	/* Matches requests with services */
 	uint16_t next_service_tid;
 	struct l_queue *service_infos;
 	struct l_hashmap *family_list;
@@ -116,6 +115,7 @@ struct qmi_qmux_device {
 		unsigned int release_users;
 	} shutdown;
 	uint8_t next_control_tid;
+	unsigned int next_group_id;	/* Matches requests with services */
 	struct l_queue *control_queue;
 	bool shutting_down : 1;
 	bool destroyed : 1;
@@ -193,6 +193,14 @@ struct qmi_tlv_hdr {
 	uint8_t value[0];
 } __attribute__ ((packed));
 #define QMI_TLV_HDR_SIZE 3
+
+static unsigned int next_id(unsigned int *id)
+{
+	if (*id == 0) /* 0 is reserved for control */
+		*id = 1;
+
+	return *id++;
+}
 
 static bool qmi_service_info_matches(const void *data, const void *user)
 {
@@ -1119,6 +1127,7 @@ static uint8_t __ctl_request_submit(struct qmi_qmux_device *qmux,
 }
 
 static struct service_family *service_family_create(struct qmi_device *device,
+			unsigned int group_id,
 			const struct qmi_service_info *info, uint8_t client_id)
 {
 	struct service_family *family = l_new(struct service_family, 1);
@@ -1127,12 +1136,7 @@ static struct service_family *service_family_create(struct qmi_device *device,
 	family->device = device;
 	family->client_id = client_id;
 	family->notify_list = l_queue_new();
-
-	if (device->next_group_id == 0) /* 0 is reserved for control */
-		device->next_group_id = 1;
-
-	family->group_id = device->next_group_id++;
-
+	family->group_id = group_id;
 	memcpy(&family->info, info, sizeof(family->info));
 
 	return family;
@@ -1397,7 +1401,9 @@ static void qmux_create_client_callback(struct qmi_request *r,
 	info.major = req->major;
 	info.minor = req->minor;
 
-	family = service_family_create(&qmux->super, &info, client_id->client);
+	family = service_family_create(&qmux->super,
+					next_id(&qmux->next_group_id),
+					&info, client_id->client);
 	DEBUG(&qmux->debug, "service family created [client=%d,type=%d]",
 			family->client_id, family->info.service_type);
 
@@ -1614,6 +1620,7 @@ void qmi_qmux_device_set_debug(struct qmi_qmux_device *qmux,
 
 struct qmi_qrtr_node {
 	struct qmi_device super;
+	unsigned int next_group_id;	/* Matches requests with services */
 	struct debug_data debug;
 	struct {
 		qmi_qrtr_node_lookup_done_func_t func;
@@ -1954,7 +1961,8 @@ struct qmi_service *qmi_qrtr_node_get_service(struct qmi_qrtr_node *node,
 	if (!info)
 		return NULL;
 
-	family = service_family_create(device, info, 0);
+	family = service_family_create(device, next_id(&node->next_group_id),
+					info, 0);
 	l_hashmap_insert(device->family_list, L_UINT_TO_PTR(type), family);
 done:
 	return service_create(family);
