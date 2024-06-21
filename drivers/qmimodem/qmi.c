@@ -36,6 +36,9 @@
 	l_util_debug((debug)->func, (debug)->user_data, "%s:%i " fmt,	\
 			__func__, __LINE__, ## args)
 
+#define SERVICE_VERSION(major, minor)				\
+	(((major) << 16) | (minor))
+
 struct qmi_device;
 struct qmi_request;
 
@@ -1199,6 +1202,7 @@ static void qmux_discover_callback(struct qmi_request *req, uint16_t message,
 	const void *ptr;
 	uint16_t len;
 	unsigned int i;
+	uint32_t control_version = 0;
 
 	result_code = tlv_get(buffer, length, 0x02, &len);
 	if (!result_code)
@@ -1233,6 +1237,7 @@ static void qmux_discover_callback(struct qmi_request *req, uint16_t message,
 		if (type == QMI_SERVICE_CONTROL) {
 			qmux->control_major = major;
 			qmux->control_minor = minor;
+			control_version = SERVICE_VERSION(major, minor);
 			continue;
 		}
 
@@ -1257,8 +1262,7 @@ done:
 	 * invoke it to reset the state, including release all previously
 	 * allocated clients
 	 */
-	if ((qmux->control_major == 1 && qmux->control_minor >= 5) ||
-			qmux->control_major > 1) {
+	if (control_version >= SERVICE_VERSION(1, 5)) {
 		struct qmi_request *req =
 			__control_request_alloc(QMI_CTL_SYNC, NULL, 0, 0);
 
