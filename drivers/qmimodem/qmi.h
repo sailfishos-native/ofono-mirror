@@ -100,6 +100,9 @@ int qmi_qrtr_node_lookup(struct qmi_qrtr_node *node,
 			void *user_data, qmi_destroy_func_t destroy);
 struct qmi_service *qmi_qrtr_node_get_service(struct qmi_qrtr_node *node,
 						uint32_t type);
+struct qmi_service *qmi_qrtr_node_get_dedicated_service(
+						struct qmi_qrtr_node *node,
+						uint16_t type);
 bool qmi_qrtr_node_has_service(struct qmi_qrtr_node *node, uint16_t type);
 
 struct qmi_param;

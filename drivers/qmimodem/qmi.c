@@ -2039,6 +2039,97 @@ bool qmi_qrtr_node_has_service(struct qmi_qrtr_node *node, uint16_t type)
 	return __qrtr_service_info_find(node, type);
 }
 
+struct qrtr_service_family_dedicated {
+	struct service_family super;
+	struct qmi_transport transport;
+};
+
+static void qrtr_service_family_dedicated_free(struct service_family *family)
+{
+	struct qrtr_service_family_dedicated *dfamily =
+		l_container_of(family,
+				struct qrtr_service_family_dedicated, super);
+
+	qmi_transport_close(&dfamily->transport);
+	l_free(dfamily);
+}
+
+static bool qrtr_service_family_dedicated_rx(struct l_io *io, void *user_data)
+{
+	struct qrtr_service_family_dedicated *family = user_data;
+	struct debug_data *debug = &family->transport.debug;
+	const struct qmi_service_info *info = &family->super.info;
+	struct sockaddr_qrtr addr;
+	unsigned char buf[2048];
+	ssize_t bytes_read;
+	socklen_t addr_size;
+	int fd = l_io_get_fd(family->transport.io);
+
+	addr_size = sizeof(addr);
+	bytes_read = recvfrom(fd, buf, sizeof(buf), 0,
+				(struct sockaddr *) &addr, &addr_size);
+	DEBUG(debug, "fd %d Received %zd bytes from Node: %d Port: %d",
+			fd, bytes_read, addr.sq_node, addr.sq_port);
+
+	if (bytes_read < 0)
+		return true;
+
+	if (addr.sq_port != info->qrtr_port && addr.sq_node != info->qrtr_node)
+		return true;
+
+	l_util_hexdump(true, buf, bytes_read, debug->func, debug->user_data);
+	__qrtr_debug_msg(' ', buf, bytes_read, info->service_type, debug);
+	__rx_message(&family->transport, info->service_type, 0, buf);
+
+	return true;
+}
+
+struct qmi_service *qmi_qrtr_node_get_dedicated_service(
+						struct qmi_qrtr_node *node,
+						uint16_t type)
+{
+	struct qrtr_service_family_dedicated *family;
+	const struct qmi_service_info *info;
+	int fd;
+
+	if (!node)
+		return NULL;
+
+	if (type == QMI_SERVICE_CONTROL)
+		return NULL;
+
+	info = __qrtr_service_info_find(node, type);
+	if (!info)
+		return NULL;
+
+	fd = socket(AF_QIPCRTR, SOCK_DGRAM, 0);
+	if (fd < 0)
+		return NULL;
+
+	family = l_new(struct qrtr_service_family_dedicated, 1);
+
+	if (qmi_transport_open(&family->transport, fd, &qrtr_ops) < 0) {
+		close(fd);
+		l_free(family);
+		return NULL;
+	}
+
+	DEBUG(&node->debug, "Opening dedicated service for %u", type);
+	__service_family_init(&family->super, &family->transport,
+				next_id(&node->next_group_id), info, 0);
+	family->super.free_family = qrtr_service_family_dedicated_free;
+	l_hashmap_insert(family->transport.family_list,
+					L_UINT_TO_PTR(type), family);
+
+	l_io_set_read_handler(family->transport.io,
+					qrtr_service_family_dedicated_rx,
+					family, NULL);
+	memcpy(&family->transport.debug, &node->transport.debug,
+						sizeof(struct debug_data));
+
+	return service_create(&family->super);
+}
+
 struct qmi_param *qmi_param_new(void)
 {
 	return l_new(struct qmi_param, 1);
