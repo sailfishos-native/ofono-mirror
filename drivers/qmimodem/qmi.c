@@ -81,8 +81,6 @@ struct debug_data {
 
 struct qmi_transport_ops {
 	int (*write)(struct qmi_transport *transport, struct qmi_request *req);
-	void (*client_release)(struct qmi_transport *transport,
-				uint16_t service_type, uint16_t client_id);
 };
 
 struct qmi_transport {
@@ -132,6 +130,7 @@ struct service_family {
 	uint16_t next_notify_id;
 	unsigned int next_service_handle;
 	struct l_queue *notify_list;
+	void (*free_family)(struct service_family *family);
 };
 
 struct qmi_service {
@@ -1078,14 +1077,9 @@ static void service_family_unref(struct service_family *family)
 	l_hashmap_remove(transport->family_list,
 				L_UINT_TO_PTR(family->info.service_type));
 
-	if (transport->ops->client_release)
-		transport->ops->client_release(transport,
-						family->info.service_type,
-						family->client_id);
-
 done:
 	l_queue_destroy(family->notify_list, NULL);
-	l_free(family);
+	family->free_family(family);
 }
 
 static uint8_t __ctl_request_submit(struct qmi_qmux_device *qmux,
@@ -1110,21 +1104,18 @@ static uint8_t __ctl_request_submit(struct qmi_qmux_device *qmux,
 	return req->tid;
 }
 
-static struct service_family *service_family_create(
-			struct qmi_transport *transport,
-			unsigned int group_id,
-			const struct qmi_service_info *info, uint8_t client_id)
+static void __service_family_init(struct service_family *family,
+					struct qmi_transport *transport,
+					unsigned int group_id,
+					const struct qmi_service_info *info,
+					uint8_t client_id)
 {
-	struct service_family *family = l_new(struct service_family, 1);
-
 	family->ref_count = 0;
 	family->transport = transport;
 	family->client_id = client_id;
 	family->notify_list = l_queue_new();
 	family->group_id = group_id;
 	memcpy(&family->info, info, sizeof(family->info));
-
-	return family;
 }
 
 static struct qmi_service *service_create(struct service_family *family)
@@ -1308,6 +1299,50 @@ int qmi_qmux_device_discover(struct qmi_qmux_device *qmux,
 	return 0;
 }
 
+static void qmux_client_release_callback(struct qmi_request *req,
+					uint16_t message, uint16_t length,
+					const void *buffer)
+{
+	struct qmi_qmux_device *qmux = req->user_data;
+
+	qmux->shutdown.release_users--;
+}
+
+static void qmux_service_family_free(struct service_family *family)
+{
+	struct qmi_qmux_device *qmux = l_container_of(family->transport,
+							struct qmi_qmux_device,
+							transport);
+	uint8_t release_req[] = { 0x01, 0x02, 0x00,
+				family->info.service_type, family->client_id };
+	struct qmi_request *req;
+
+	if (family->transport) {
+		qmux->shutdown.release_users++;
+		req = __control_request_alloc(QMI_CTL_RELEASE_CLIENT_ID,
+					release_req, sizeof(release_req), 0);
+		req->user_data = qmux;
+
+		__ctl_request_submit(qmux, req, qmux_client_release_callback);
+	}
+
+	l_free(family);
+}
+
+static struct service_family *qmux_service_family_new(
+					struct qmi_transport *transport,
+					unsigned int group_id,
+					const struct qmi_service_info *info,
+					uint8_t client_id)
+{
+	struct service_family *family = l_new(struct service_family, 1);
+
+	__service_family_init(family, transport, group_id, info, client_id);
+	family->free_family = qmux_service_family_free;
+
+	return family;
+}
+
 struct qmux_create_client_request {
 	struct qmi_qmux_device *qmux;
 	uint8_t type;
@@ -1387,7 +1422,7 @@ static void qmux_create_client_callback(struct qmi_request *r,
 	info.major = req->major;
 	info.minor = req->minor;
 
-	family = service_family_create(&qmux->transport,
+	family = qmux_service_family_new(&qmux->transport,
 					next_id(&qmux->next_group_id),
 					&info, client_id->client);
 	DEBUG(&qmux->debug, "service family created [client=%d,type=%d]",
@@ -1449,33 +1484,6 @@ bool qmi_qmux_device_create_client(struct qmi_qmux_device *qmux,
 	__ctl_request_submit(qmux, &req->super, qmux_create_client_callback);
 
 	return true;
-}
-
-static void qmux_client_release_callback(struct qmi_request *req,
-					uint16_t message, uint16_t length,
-					const void *buffer)
-{
-	struct qmi_qmux_device *qmux = req->user_data;
-
-	qmux->shutdown.release_users--;
-}
-
-static void qmi_qmux_device_client_release(struct qmi_transport *transport,
-						uint16_t service_type,
-						uint16_t client_id)
-{
-	struct qmi_qmux_device *qmux =
-		l_container_of(transport, struct qmi_qmux_device, transport);
-	uint8_t release_req[] = { 0x01, 0x02, 0x00, service_type, client_id };
-	struct qmi_request *req;
-
-	qmux->shutdown.release_users++;
-
-	req = __control_request_alloc(QMI_CTL_RELEASE_CLIENT_ID,
-					release_req, sizeof(release_req), 0);
-	req->user_data = qmux;
-
-	__ctl_request_submit(qmux, req, qmux_client_release_callback);
 }
 
 static void __qmux_device_free(struct qmi_qmux_device *qmux)
@@ -1553,7 +1561,6 @@ int qmi_qmux_device_shutdown(struct qmi_qmux_device *qmux,
 
 static const struct qmi_transport_ops qmux_ops = {
 	.write = qmi_qmux_device_write,
-	.client_release = qmi_qmux_device_client_release,
 };
 
 struct qmi_qmux_device *qmi_qmux_device_new(const char *device)
@@ -1668,6 +1675,25 @@ static void __qrtr_lookup_finished(struct qmi_qrtr_node *node)
 		node->lookup.destroy(node->lookup.user_data);
 
 	memset(&node->lookup, 0, sizeof(node->lookup));
+}
+
+static void qrtr_service_family_free(struct service_family *family)
+{
+	l_free(family);
+}
+
+static struct service_family *qrtr_service_family_new(
+					struct qmi_transport *transport,
+					unsigned int group_id,
+					const struct qmi_service_info *info,
+					uint8_t client_id)
+{
+	struct service_family *family = l_new(struct service_family, 1);
+
+	__service_family_init(family, transport, group_id, info, client_id);
+	family->free_family = qrtr_service_family_free;
+
+	return family;
 }
 
 static int qmi_qrtr_node_write(struct qmi_transport *transport,
@@ -1997,8 +2023,9 @@ struct qmi_service *qmi_qrtr_node_get_service(struct qmi_qrtr_node *node,
 	if (!info)
 		return NULL;
 
-	family = service_family_create(transport, next_id(&node->next_group_id),
-					info, 0);
+	family = qrtr_service_family_new(transport,
+						next_id(&node->next_group_id),
+						info, 0);
 	l_hashmap_insert(transport->family_list, L_UINT_TO_PTR(type), family);
 done:
 	return service_create(family);
