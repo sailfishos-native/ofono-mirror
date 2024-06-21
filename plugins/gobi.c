@@ -89,7 +89,14 @@ static void gobi_debug(const char *str, void *user_data)
 {
 	const char *prefix = user_data;
 
-	ofono_info("%s%s", prefix, str);
+	ofono_debug("%s%s", prefix, str);
+}
+
+static void gobi_io_debug(const char *str, void *user_data)
+{
+	const char *prefix = user_data;
+
+	ofono_debug("%s%s", prefix, str);
 }
 
 /*
@@ -543,7 +550,11 @@ static int gobi_enable(struct ofono_modem *modem)
 		return -EIO;
 
 	if (getenv("OFONO_QMI_DEBUG"))
-		qmi_qmux_device_set_debug(data->device, gobi_debug, "QMI: ");
+		qmi_qmux_device_set_debug(data->device, gobi_debug, "");
+
+	if (getenv("OFONO_QMI_IO_DEBUG"))
+		qmi_qmux_device_set_io_debug(data->device,
+						gobi_io_debug, "QMI: ");
 
 	r = qmi_qmux_device_discover(data->device, discover_cb, modem, NULL);
 	if (!r)
