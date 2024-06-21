@@ -1848,13 +1848,13 @@ static bool qrtr_received_data(struct l_io *io, void *user_data)
 	unsigned char buf[2048];
 	ssize_t bytes_read;
 	socklen_t addr_size;
+	int fd = l_io_get_fd(qrtr->transport.io);
 
 	addr_size = sizeof(addr);
-	bytes_read = recvfrom(l_io_get_fd(qrtr->transport.io),
-				buf, sizeof(buf), 0,
+	bytes_read = recvfrom(fd, buf, sizeof(buf), 0,
 				(struct sockaddr *) &addr, &addr_size);
-	DEBUG(debug, "Received %zd bytes from Node: %d Port: %d",
-			bytes_read, addr.sq_node, addr.sq_port);
+	DEBUG(debug, "fd %d Received %zd bytes from Node: %d Port: %d",
+			fd, bytes_read, addr.sq_node, addr.sq_port);
 
 	if (bytes_read < 0)
 		return true;
