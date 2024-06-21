@@ -100,8 +100,6 @@ struct qmi_device {
 
 struct qmi_qmux_device {
 	struct qmi_device super;
-	uint16_t control_major;
-	uint16_t control_minor;
 	char *version_str;
 	struct debug_data debug;
 	struct {
@@ -1235,8 +1233,6 @@ static void qmux_discover_callback(struct qmi_request *req, uint16_t message,
 					type, major, minor);
 
 		if (type == QMI_SERVICE_CONTROL) {
-			qmux->control_major = major;
-			qmux->control_minor = minor;
 			control_version = SERVICE_VERSION(major, minor);
 			continue;
 		}
