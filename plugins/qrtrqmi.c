@@ -52,11 +52,18 @@ struct qrtrqmi_data {
 	bool have_voice : 1;
 };
 
-static void qrtrqmi_debug(const char *str, void *user_data)
+static void qrtrqmi_io_debug(const char *str, void *user_data)
 {
 	const char *prefix = user_data;
 
 	ofono_info("%s%s", prefix, str);
+}
+
+static void qrtrqmi_debug(const char *str, void *user_data)
+{
+	const char *prefix = user_data;
+
+	ofono_debug("%s%s", prefix, str);
 }
 
 /*
@@ -213,7 +220,11 @@ static int qrtrqmi_enable(struct ofono_modem *modem)
 		return -EIO;
 
 	if (getenv("OFONO_QMI_DEBUG"))
-		qmi_qrtr_node_set_debug(data->node, qrtrqmi_debug, "QRTR: ");
+		qmi_qrtr_node_set_debug(data->node, qrtrqmi_debug, "");
+
+	if (getenv("OFONO_QMI_IO_DEBUG"))
+		qmi_qrtr_node_set_io_debug(data->node,
+						qrtrqmi_io_debug, "QRTR: ");
 
 	r = qmi_qrtr_node_lookup(data->node, lookup_done, modem, NULL);
 	if (!r)
