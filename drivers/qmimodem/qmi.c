@@ -90,7 +90,6 @@ struct qmi_device {
 	struct l_queue *req_queue;
 	struct l_queue *service_queue;
 	uint16_t next_service_tid;
-	struct l_queue *service_infos;
 	struct l_hashmap *family_list;
 	const struct qmi_device_ops *ops;
 	bool writer_active : 1;
@@ -98,6 +97,8 @@ struct qmi_device {
 
 struct qmi_qmux_device {
 	struct qmi_device super;
+	struct qmi_service_info *service_list;
+	uint16_t n_services;
 	char *version_str;
 	struct debug_data debug;
 	struct {
@@ -217,16 +218,6 @@ static bool qmi_service_info_matches(const void *data, const void *user)
 		return false;
 
 	return true;
-}
-
-static void __qmi_service_appeared(struct qmi_device *device,
-					const struct qmi_service_info *info)
-{
-	if (l_queue_find(device->service_infos, qmi_service_info_matches, info))
-		return;
-
-	l_queue_push_tail(device->service_infos,
-				l_memdup(info, sizeof(struct qmi_service_info)));
 }
 
 static void *__request_alloc(uint32_t service_type,
@@ -843,7 +834,6 @@ static int qmi_device_init(struct qmi_device *device, int fd,
 
 	device->req_queue = l_queue_new();
 	device->service_queue = l_queue_new();
-	device->service_infos = l_queue_new();
 	device->family_list = l_hashmap_new();
 
 	device->next_service_tid = 256;
@@ -861,8 +851,6 @@ static void __qmi_device_free(struct qmi_device *device)
 	l_io_destroy(device->io);
 
 	l_hashmap_destroy(device->family_list, family_destroy);
-
-	l_queue_destroy(device->service_infos, l_free);
 }
 
 void qmi_result_print_tlvs(struct qmi_result *result)
@@ -905,23 +893,17 @@ static const void *tlv_get(const void *data, uint16_t size,
 	return NULL;
 }
 
-static const struct qmi_service_info *__find_service_info_by_type(
-				struct qmi_device *device, uint16_t type)
+static const struct qmi_service_info *__qmux_service_info_find(
+				struct qmi_qmux_device *qmux, uint16_t type)
 {
-	const struct qmi_service_info *info = NULL;
-	const struct l_queue_entry *entry;
+	unsigned int i;
 
-	for (entry = l_queue_get_entries(device->service_infos);
-						entry; entry = entry->next) {
-		struct qmi_service_info *data = entry->data;
-
-		if (data->service_type == type) {
-			info = data;
-			break;
-		}
+	for (i = 0; i < qmux->n_services; i++) {
+		if (qmux->service_list[i].service_type == type)
+			return qmux->service_list + i;
 	}
 
-	return info;
+	return NULL;
 }
 
 bool qmi_qmux_device_get_service_version(struct qmi_qmux_device *qmux,
@@ -933,7 +915,7 @@ bool qmi_qmux_device_get_service_version(struct qmi_qmux_device *qmux,
 	if (!qmux)
 		return false;
 
-	info = __find_service_info_by_type(&qmux->super, type);
+	info = __qmux_service_info_find(qmux, type);
 	if (!info)
 		return false;
 
@@ -947,7 +929,7 @@ bool qmi_qmux_device_has_service(struct qmi_qmux_device *qmux, uint16_t type)
 	if (!qmux)
 		return false;
 
-	return __find_service_info_by_type(&qmux->super, type);
+	return __qmux_service_info_find(qmux, type);
 }
 
 static int qmi_qmux_device_write(struct qmi_device *device,
@@ -1197,7 +1179,6 @@ static void qmux_discover_callback(struct qmi_request *req, uint16_t message,
 					uint16_t length, const void *buffer)
 {
 	struct qmi_qmux_device *qmux = req->user_data;
-	struct qmi_device *device = &qmux->super;
 	const struct qmi_result_code *result_code;
 	const struct qmi_service_list *service_list;
 	const void *ptr;
@@ -1219,6 +1200,13 @@ static void qmux_discover_callback(struct qmi_request *req, uint16_t message,
 	if (len < QMI_SERVICE_LIST_SIZE)
 		goto done;
 
+	if (!service_list->count)
+		goto done;
+
+	l_free(qmux->service_list);
+	qmux->n_services = 0;
+	qmux->service_list = l_new(struct qmi_service_info, service_list->count);
+
 	for (i = 0; i < service_list->count; i++) {
 		uint16_t major =
 			L_LE16_TO_CPU(service_list->services[i].major);
@@ -1226,7 +1214,6 @@ static void qmux_discover_callback(struct qmi_request *req, uint16_t message,
 			L_LE16_TO_CPU(service_list->services[i].minor);
 		uint8_t type = service_list->services[i].type;
 		const char *name = __service_type_to_string(type);
-		struct qmi_service_info info;
 
 		if (name)
 			DEBUG(&qmux->debug, "discovered service [%s %d.%d]",
@@ -1240,12 +1227,10 @@ static void qmux_discover_callback(struct qmi_request *req, uint16_t message,
 			continue;
 		}
 
-		memset(&info, 0, sizeof(info));
-		info.service_type = type;
-		info.major = major;
-		info.minor = minor;
-
-		__qmi_service_appeared(device, &info);
+		qmux->service_list[qmux->n_services].service_type = type;
+		qmux->service_list[qmux->n_services].major = major;
+		qmux->service_list[qmux->n_services].minor = minor;
+		qmux->n_services += 1;
 	}
 
 	ptr = tlv_get(buffer, length, 0x10, &len);
@@ -1304,7 +1289,7 @@ int qmi_qmux_device_discover(struct qmi_qmux_device *qmux,
 
 	DEBUG(&qmux->debug, "device %p", qmux);
 
-	if (l_queue_length(qmux->super.service_infos) > 0 || qmux->discover.tid)
+	if (qmux->n_services || qmux->discover.tid)
 		return -EALREADY;
 
 	req = __control_request_alloc(QMI_CTL_GET_VERSION_INFO, NULL, 0, 0);
@@ -1439,7 +1424,7 @@ bool qmi_qmux_device_create_client(struct qmi_qmux_device *qmux,
 	if (service_type == QMI_SERVICE_CONTROL)
 		return false;
 
-	info = __find_service_info_by_type(&qmux->super, service_type);
+	info = __qmux_service_info_find(qmux, service_type);
 	if (!info)
 		return false;
 
@@ -1504,6 +1489,7 @@ static void __qmux_device_free(struct qmi_qmux_device *qmux)
 	if (qmux->shutdown.idle)
 		l_idle_remove(qmux->shutdown.idle);
 
+	l_free(qmux->service_list);
 	l_free(qmux->version_str);
 	l_free(qmux);
 }
@@ -1621,6 +1607,7 @@ void qmi_qmux_device_set_debug(struct qmi_qmux_device *qmux,
 struct qmi_qrtr_node {
 	struct qmi_device super;
 	unsigned int next_group_id;	/* Matches requests with services */
+	struct l_queue *service_infos;
 	struct debug_data debug;
 	struct {
 		qmi_qrtr_node_lookup_done_func_t func;
@@ -1629,6 +1616,32 @@ struct qmi_qrtr_node {
 		struct l_timeout *timeout;
 	} lookup;
 };
+
+static const struct qmi_service_info *__qrtr_service_info_find(
+				struct qmi_qrtr_node *node, uint16_t type)
+{
+	const struct l_queue_entry *entry;
+
+	for (entry = l_queue_get_entries(node->service_infos);
+						entry; entry = entry->next) {
+		struct qmi_service_info *info = entry->data;
+
+		if (info->service_type == type)
+			return info;
+	}
+
+	return NULL;
+}
+
+static void __qrtr_service_appeared(struct qmi_qrtr_node *node,
+					const struct qmi_service_info *info)
+{
+	if (l_queue_find(node->service_infos, qmi_service_info_matches, info))
+		return;
+
+	l_queue_push_tail(node->service_infos,
+				l_memdup(info, sizeof(struct qmi_service_info)));
+}
 
 static void __qrtr_lookup_finished(struct qmi_qrtr_node *node)
 {
@@ -1708,7 +1721,6 @@ static void qrtr_debug_ctrl_request(const struct qrtr_ctrl_pkt *packet,
 static void qrtr_received_control_packet(struct qmi_qrtr_node *node,
 						const void *buf, size_t len)
 {
-	struct qmi_device *device = &node->super;
 	const struct qrtr_ctrl_pkt *packet = buf;
 	struct qmi_service_info info;
 	uint32_t cmd;
@@ -1755,7 +1767,7 @@ static void qrtr_received_control_packet(struct qmi_qrtr_node *node,
 	info.major = version;
 	info.instance = instance;
 
-	__qmi_service_appeared(device, &info);
+	__qrtr_service_appeared(node, &info);
 
 	if (!node->lookup.func)
 		return;
@@ -1772,7 +1784,7 @@ static void qrtr_received_service_message(struct qmi_qrtr_node *node,
 	const struct l_queue_entry *entry;
 	uint32_t service_type = 0;
 
-	for (entry = l_queue_get_entries(device->service_infos);
+	for (entry = l_queue_get_entries(node->service_infos);
 				entry; entry = entry->next) {
 		struct qmi_service_info *info = entry->data;
 
@@ -1844,6 +1856,8 @@ struct qmi_qrtr_node *qmi_qrtr_node_new(uint32_t node)
 		return NULL;
 	}
 
+	qrtr->service_infos = l_queue_new();
+
 	l_io_set_read_handler(qrtr->super.io, qrtr_received_data, qrtr, NULL);
 
 	return qrtr;
@@ -1855,6 +1869,7 @@ void qmi_qrtr_node_free(struct qmi_qrtr_node *node)
 		return;
 
 	__qmi_device_free(&node->super);
+	l_queue_destroy(node->service_infos, l_free);
 
 	if (node->lookup.destroy)
 		node->lookup.destroy(node->lookup.user_data);
@@ -1957,7 +1972,7 @@ struct qmi_service *qmi_qrtr_node_get_service(struct qmi_qrtr_node *node,
 	if (family)
 		goto done;
 
-	info = __find_service_info_by_type(device, type);
+	info = __qrtr_service_info_find(node, type);
 	if (!info)
 		return NULL;
 
@@ -1973,7 +1988,7 @@ bool qmi_qrtr_node_has_service(struct qmi_qrtr_node *node, uint16_t type)
 	if (!node)
 		return false;
 
-	return __find_service_info_by_type(&node->super, type);
+	return __qrtr_service_info_find(node, type);
 }
 
 struct qmi_param *qmi_param_new(void)
