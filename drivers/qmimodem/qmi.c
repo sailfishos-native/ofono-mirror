@@ -92,6 +92,7 @@ struct qmi_transport {
 	uint16_t next_service_tid;
 	struct l_hashmap *family_list;
 	const struct qmi_transport_ops *ops;
+	struct debug_data debug;
 	bool writer_active : 1;
 };
 
@@ -943,10 +944,10 @@ static int qmi_qmux_device_write(struct qmi_transport *transport,
 		return -errno;
 
 	l_util_hexdump(false, req->data, bytes_written,
-			qmux->debug.func, qmux->debug.user_data);
+			transport->debug.func, transport->debug.user_data);
 
 	__qmux_debug_msg(' ', req->data, bytes_written,
-				qmux->debug.func, qmux->debug.user_data);
+			transport->debug.func, transport->debug.user_data);
 
 	hdr = (struct qmi_mux_hdr *) req->data;
 
@@ -996,6 +997,7 @@ static void __rx_ctl_message(struct qmi_qmux_device *qmux,
 static bool received_qmux_data(struct l_io *io, void *user_data)
 {
 	struct qmi_qmux_device *qmux = user_data;
+	struct qmi_transport *transport = &qmux->transport;
 	struct qmi_mux_hdr *hdr;
 	unsigned char buf[2048];
 	ssize_t bytes_read;
@@ -1006,7 +1008,7 @@ static bool received_qmux_data(struct l_io *io, void *user_data)
 		return true;
 
 	l_util_hexdump(true, buf, bytes_read,
-			qmux->debug.func, qmux->debug.user_data);
+			transport->debug.func, transport->debug.user_data);
 
 	offset = 0;
 
@@ -1031,7 +1033,8 @@ static bool received_qmux_data(struct l_io *io, void *user_data)
 			break;
 
 		__qmux_debug_msg(' ', buf + offset, len,
-				qmux->debug.func, qmux->debug.user_data);
+				transport->debug.func,
+				transport->debug.user_data);
 
 		msg = buf + offset + QMI_MUX_HDR_SIZE;
 
@@ -1603,6 +1606,15 @@ void qmi_qmux_device_set_debug(struct qmi_qmux_device *qmux,
 	__debug_data_init(&qmux->debug, func, user_data);
 }
 
+void qmi_qmux_device_set_io_debug(struct qmi_qmux_device *qmux,
+				qmi_debug_func_t func, void *user_data)
+{
+	if (!qmux)
+		return;
+
+	__debug_data_init(&qmux->transport.debug, func, user_data);
+}
+
 struct qmi_qrtr_node {
 	unsigned int next_group_id;	/* Matches requests with services */
 	struct l_queue *service_infos;
@@ -1661,8 +1673,6 @@ static void __qrtr_lookup_finished(struct qmi_qrtr_node *node)
 static int qmi_qrtr_node_write(struct qmi_transport *transport,
 					struct qmi_request *req)
 {
-	struct qmi_qrtr_node *node =
-		l_container_of(transport, struct qmi_qrtr_node, transport);
 	struct sockaddr_qrtr addr;
 	uint8_t *data;
 	uint16_t len;
@@ -1681,15 +1691,15 @@ static int qmi_qrtr_node_write(struct qmi_transport *transport,
 	bytes_written = sendto(fd, data, len, 0, (struct sockaddr *) &addr,
 							sizeof(addr));
 	if (bytes_written < 0) {
-		DEBUG(&node->debug, "sendto: %s", strerror(errno));
+		DEBUG(&transport->debug, "sendto: %s", strerror(errno));
 		return -errno;
 	}
 
 	l_util_hexdump(false, data, bytes_written,
-			node->debug.func, node->debug.user_data);
+			transport->debug.func, transport->debug.user_data);
 
 	__qrtr_debug_msg(' ', data, bytes_written,
-			req->info.service_type, &node->debug);
+			req->info.service_type, &transport->debug);
 
 	l_queue_push_tail(transport->service_queue, req);
 
@@ -1800,13 +1810,14 @@ static void qrtr_received_service_message(struct qmi_qrtr_node *node,
 		return;
 	}
 
-	__qrtr_debug_msg(' ', buf, len, service_type, &node->debug);
+	__qrtr_debug_msg(' ', buf, len, service_type, &transport->debug);
 	__rx_message(transport, service_type, 0, buf);
 }
 
 static bool qrtr_received_data(struct l_io *io, void *user_data)
 {
 	struct qmi_qrtr_node *qrtr = user_data;
+	struct debug_data *debug = &qrtr->transport.debug;
 	struct sockaddr_qrtr addr;
 	unsigned char buf[2048];
 	ssize_t bytes_read;
@@ -1816,14 +1827,13 @@ static bool qrtr_received_data(struct l_io *io, void *user_data)
 	bytes_read = recvfrom(l_io_get_fd(qrtr->transport.io),
 				buf, sizeof(buf), 0,
 				(struct sockaddr *) &addr, &addr_size);
-	DEBUG(&qrtr->debug, "Received %zd bytes from Node: %d Port: %d",
+	DEBUG(debug, "Received %zd bytes from Node: %d Port: %d",
 			bytes_read, addr.sq_node, addr.sq_port);
 
 	if (bytes_read < 0)
 		return true;
 
-	l_util_hexdump(true, buf, bytes_read,
-			qrtr->debug.func, qrtr->debug.user_data);
+	l_util_hexdump(true, buf, bytes_read, debug->func, debug->user_data);
 
 	if (addr.sq_port == QRTR_PORT_CTRL)
 		qrtr_received_control_packet(qrtr, buf, bytes_read);
@@ -1885,6 +1895,15 @@ void qmi_qrtr_node_set_debug(struct qmi_qrtr_node *node,
 	__debug_data_init(&node->debug, func, user_data);
 }
 
+void qmi_qrtr_node_set_io_debug(struct qmi_qrtr_node *node,
+				qmi_debug_func_t func, void *user_data)
+{
+	if (!node)
+		return;
+
+	__debug_data_init(&node->transport.debug, func, user_data);
+}
+
 static void qrtr_lookup_reply_timeout(struct l_timeout *timeout,
 							void *user_data)
 {
@@ -1902,6 +1921,7 @@ int qmi_qrtr_node_lookup(struct qmi_qrtr_node *node,
 	socklen_t addr_len;
 	ssize_t bytes_written;
 	int fd;
+	struct debug_data *debug = &node->transport.debug;
 
 	if (!node || !func)
 		return -EINVAL;
@@ -1919,12 +1939,12 @@ int qmi_qrtr_node_lookup(struct qmi_qrtr_node *node,
 	 */
 	addr_len = sizeof(addr);
 	if (getsockname(fd, (struct sockaddr *) &addr, &addr_len) < 0) {
-		DEBUG(&node->debug, "getsockname failed: %s", strerror(errno));
+		DEBUG(debug, "getsockname failed: %s", strerror(errno));
 		return -errno;
 	}
 
 	if (addr.sq_family != AF_QIPCRTR || addr_len != sizeof(addr)) {
-		DEBUG(&node->debug, "Unexpected sockaddr family: %d size: %d",
+		DEBUG(debug, "Unexpected sockaddr family: %d size: %d",
 				addr.sq_family, addr_len);
 		return -EIO;
 	}
@@ -1937,12 +1957,12 @@ int qmi_qrtr_node_lookup(struct qmi_qrtr_node *node,
 				sizeof(packet), 0,
 				(struct sockaddr *) &addr, addr_len);
 	if (bytes_written < 0) {
-		DEBUG(&node->debug, "sendto failed: %s", strerror(errno));
+		DEBUG(debug, "sendto failed: %s", strerror(errno));
 		return -errno;
 	}
 
 	l_util_hexdump(false, &packet, bytes_written,
-			node->debug.func, node->debug.user_data);
+			debug->func, debug->user_data);
 
 	node->lookup.func = func;
 	node->lookup.user_data = user_data;

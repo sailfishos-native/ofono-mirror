@@ -72,6 +72,8 @@ struct qmi_qmux_device *qmi_qmux_device_new(const char *device);
 void qmi_qmux_device_free(struct qmi_qmux_device *qmux);
 void qmi_qmux_device_set_debug(struct qmi_qmux_device *qmux,
 				qmi_debug_func_t func, void *user_data);
+void qmi_qmux_device_set_io_debug(struct qmi_qmux_device *qmux,
+				qmi_debug_func_t func, void *user_data);
 int qmi_qmux_device_discover(struct qmi_qmux_device *qmux,
 				qmi_qmux_device_discover_func_t func,
 				void *user_data, qmi_destroy_func_t destroy);
@@ -90,6 +92,8 @@ int qmi_qmux_device_shutdown(struct qmi_qmux_device *qmux,
 struct qmi_qrtr_node *qmi_qrtr_node_new(uint32_t node);
 void qmi_qrtr_node_free(struct qmi_qrtr_node *node);
 void qmi_qrtr_node_set_debug(struct qmi_qrtr_node *node,
+				qmi_debug_func_t func, void *user_data);
+void qmi_qrtr_node_set_io_debug(struct qmi_qrtr_node *node,
 				qmi_debug_func_t func, void *user_data);
 int qmi_qrtr_node_lookup(struct qmi_qrtr_node *node,
 			qmi_qrtr_node_lookup_done_func_t func,
