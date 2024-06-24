@@ -2176,6 +2176,7 @@ static struct {
 	{ "quectelqmi",	"qcserial",	"2c7c", "0125"	},
 	{ "quectelqmi",	"qmi_wwan",	"2c7c", "0195"	},
 	{ "quectelqmi",	"qcserial",	"2c7c", "0195"	},
+	{ "quectelqmi",	"option",	"2c7c", "0195"	},
 	{ "quectelqmi",	"qmi_wwan",	"2c7c", "0296"	},
 	{ "quectelqmi",	"qcserial",	"2c7c", "0296"	},
 	{ "quectelqmi",	"option",	"2c7c", "0296"	},
