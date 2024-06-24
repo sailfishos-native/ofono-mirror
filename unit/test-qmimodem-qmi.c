@@ -413,6 +413,36 @@ static void send_response_to_client(struct test_info *info, struct l_io *io)
 		l_main_iterate(-1);
 }
 
+static struct qmi_service *service_common_setup(struct test_info *info,
+								bool dedicated)
+{
+	uint32_t service_type;
+	struct qmi_service *service;
+
+	perform_lookup(info);
+
+	service_type = unique_service_type(0); /* Use the first service */
+
+	if (dedicated)
+		service = qmi_qrtr_node_get_dedicated_service(info->node,
+								service_type);
+	else
+		service = qmi_qrtr_node_get_service(info->node, service_type);
+
+	assert(service);
+
+	return service;
+}
+
+static struct l_io *setup_io(int fd, void *user_data)
+{
+	struct l_io *io = l_io_new(fd);
+
+	assert(io);
+	l_io_set_read_handler(io, received_data, user_data, NULL);
+	return io;
+}
+
 /*
  * Initiates a send of the TLV data payload to the test service. The test
  * service will respond with the same data payload.
@@ -420,19 +450,8 @@ static void send_response_to_client(struct test_info *info, struct l_io *io)
 static void test_send_data(const void *data)
 {
 	_auto_(test_cleanup) struct test_info *info = test_setup();
-	struct l_io *io;
-	uint32_t service_type;
-	struct qmi_service *service;
-
-	perform_lookup(info);
-
-	service_type = unique_service_type(0); /* Use the first service */
-	service = qmi_qrtr_node_get_service(info->node, service_type);
-	assert(service);
-
-	io = l_io_new(info->service_fds[0]);
-	assert(io);
-	l_io_set_read_handler(io, received_data, info, NULL);
+	struct l_io *io = setup_io(info->service_fds[0], info);
+	struct qmi_service *service = service_common_setup(info, false);
 
 	send_request_via_qmi(info, service);
 	send_response_to_client(info, io);
@@ -440,7 +459,6 @@ static void test_send_data(const void *data)
 	l_io_destroy(io);
 	qmi_service_free(service);
 }
-
 
 static void notify_cb(struct qmi_result *result, void *user_data)
 {
@@ -464,20 +482,9 @@ static void internal_timeout_cb(struct l_timeout *timeout, void *user_data)
 static void test_notifications(const void *data)
 {
 	_auto_(test_cleanup) struct test_info *info = test_setup();
-	struct l_io *io;
-	uint32_t service_type;
-	struct qmi_service *service;
+	struct qmi_service *service = service_common_setup(info, false);
+	struct l_io *io = setup_io(info->service_fds[0], info);
 	struct l_timeout *receive_timeout;
-
-	perform_lookup(info);
-
-	service_type = unique_service_type(0); /* Use the first service */
-	service = qmi_qrtr_node_get_service(info->node, service_type);
-	assert(service);
-
-	io = l_io_new(info->service_fds[0]);
-	assert(io);
-	l_io_set_read_handler(io, received_data, info, NULL);
 
 	send_request_via_qmi(info, service);
 	send_response_to_client(info, io);
@@ -525,9 +532,7 @@ static void test_service_notification_independence(const void *data)
 
 	service_type = unique_service_type(0); /* Use the first service */
 
-	io = l_io_new(info->service_fds[0]);
-	assert(io);
-	l_io_set_read_handler(io, received_data, info, NULL);
+	io = setup_io(info->service_fds[0], info);
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++) {
 		services[i] = qmi_qrtr_node_get_service(info->node,
@@ -556,6 +561,19 @@ static void test_service_notification_independence(const void *data)
 		qmi_service_free(services[i]);
 
 	l_io_destroy(io);
+}
+
+static void test_dedicated(const void *data)
+{
+	_auto_(test_cleanup) struct test_info *info = test_setup();
+	struct qmi_service *service = service_common_setup(info, true);
+	struct l_io *io = setup_io(info->service_fds[0], info);
+
+	send_request_via_qmi(info, service);
+	send_response_to_client(info, io);
+
+	l_io_destroy(io);
+	qmi_service_free(service);
 }
 
 static void exit_if_qrtr_not_supported(void)
@@ -590,6 +608,7 @@ int main(int argc, char **argv)
 	l_test_add("QRTR notifications", test_notifications, NULL);
 	l_test_add("QRTR service notifications are independent",
 				test_service_notification_independence, NULL);
+	l_test_add("QRTR dedicated service", test_dedicated, NULL);
 	result = l_test_run();
 
 	__ofono_log_cleanup();
