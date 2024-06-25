@@ -181,11 +181,11 @@ static void test_cleanup(struct test_info *info)
 	l_main_exit();
 }
 
+static void _l_test_cleanup_cleanup(void *p) { test_cleanup(*(void **) p); }
+
 static void test_create_qrtr_node(const void *data)
 {
-	struct test_info *info = test_setup();
-
-	test_cleanup(info);
+	_auto_(test_cleanup) struct test_info *info = test_setup();
 }
 
 static void lookup_complete_cb(void *user_data)
@@ -205,11 +205,9 @@ static void perform_lookup(struct test_info *info)
 
 static void test_lookup(const void *data)
 {
-	struct test_info *info = test_setup();
+	_auto_(test_cleanup) struct test_info *info = test_setup();
 
 	perform_lookup(info);
-
-	test_cleanup(info);
 }
 
 /* Callbacks could queue other callbacks so continue until there are no more. */
@@ -223,7 +221,7 @@ static void perform_all_pending_work(void)
 
 static void test_create_services(const void *data)
 {
-	struct test_info *info = test_setup();
+	_auto_(test_cleanup) struct test_info *info = test_setup();
 	struct qmi_service *services[3];
 	uint32_t service_type;
 	size_t i;
@@ -262,8 +260,6 @@ static void test_create_services(const void *data)
 
 	for (i = 0; i < L_ARRAY_SIZE(services); i++)
 		qmi_service_free(services[i]);
-
-	test_cleanup(info);
 }
 
 static bool received_data(struct l_io *io, void *user_data)
@@ -423,7 +419,7 @@ static void send_response_to_client(struct test_info *info, struct l_io *io)
  */
 static void test_send_data(const void *data)
 {
-	struct test_info *info = test_setup();
+	_auto_(test_cleanup) struct test_info *info = test_setup();
 	struct l_io *io;
 	uint32_t service_type;
 	struct qmi_service *service;
@@ -443,8 +439,6 @@ static void test_send_data(const void *data)
 
 	l_io_destroy(io);
 	qmi_service_free(service);
-
-	test_cleanup(info);
 }
 
 
@@ -469,7 +463,7 @@ static void internal_timeout_cb(struct l_timeout *timeout, void *user_data)
 
 static void test_notifications(const void *data)
 {
-	struct test_info *info = test_setup();
+	_auto_(test_cleanup) struct test_info *info = test_setup();
 	struct l_io *io;
 	uint32_t service_type;
 	struct qmi_service *service;
@@ -517,12 +511,11 @@ static void test_notifications(const void *data)
 	l_timeout_remove(receive_timeout);
 
 	l_io_destroy(io);
-	test_cleanup(info);
 }
 
 static void test_service_notification_independence(const void *data)
 {
-	struct test_info *info = test_setup();
+	_auto_(test_cleanup) struct test_info *info = test_setup();
 	struct l_io *io;
 	uint32_t service_type;
 	struct qmi_service *services[2];
@@ -563,7 +556,6 @@ static void test_service_notification_independence(const void *data)
 		qmi_service_free(services[i]);
 
 	l_io_destroy(io);
-	test_cleanup(info);
 }
 
 static void exit_if_qrtr_not_supported(void)
