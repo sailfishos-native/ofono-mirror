@@ -355,7 +355,6 @@ static gboolean setup_gobi(struct modem_info *modem)
 {
 	const struct device_info *qmi = NULL;
 	const struct device_info *net = NULL;
-	const char *mdm = NULL;
 	const char *gps = NULL;
 	const char *diag = NULL;
 	GSList *list;
@@ -381,30 +380,25 @@ static gboolean setup_gobi(struct modem_info *modem)
 					diag = info->devnode; /* ec20 */
 				else if (g_strcmp0(info->number, "01") == 0)
 					diag = info->devnode; /* gobi */
-				else if (g_strcmp0(info->number, "02") == 0)
-					mdm = info->devnode; /* gobi */
 				else if (g_strcmp0(info->number, "03") == 0)
 					gps = info->devnode; /* gobi */
 			} else if (g_strcmp0(info->interface, "255/0/0") == 0) {
 				if (g_strcmp0(info->number, "01") == 0)
 					gps = info->devnode; /* ec20 */
-				if (g_strcmp0(info->number, "02") == 0)
-					mdm = info->devnode; /* ec20 */
 				/* ignore the 3rd device second AT/mdm iface */
 			}
 		}
 	}
 
-	if (qmi == NULL || mdm == NULL || net == NULL)
+	if (qmi == NULL || net == NULL)
 		return FALSE;
 
-	DBG("qmi=%s net=%s mdm=%s gps=%s diag=%s",
-			qmi->devnode, get_ifname(net), mdm, gps, diag);
+	DBG("qmi=%s net=%s gps=%s diag=%s",
+			qmi->devnode, get_ifname(net), gps, diag);
 
 	if (setup_qmi_qmux(modem, qmi, net) < 0)
 		return FALSE;
 
-	ofono_modem_set_string(modem->modem, "Modem", mdm);
 	ofono_modem_set_string(modem->modem, "Diag", diag);
 
 	return TRUE;
