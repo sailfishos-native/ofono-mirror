@@ -803,10 +803,14 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 
 	/* Simple case of 802.3 interface, no QMAP */
 	if (data->n_premux == 0) {
+		struct qmi_service *ipv4 = data->context_services[0].wds_ipv4;
+		struct qmi_service *ipv6 = data->context_services[0].wds_ipv6;
+
 		interface = ofono_modem_get_string(modem, "NetworkInterface");
 
 		gc = ofono_gprs_context_create(modem, 0, "qmimodem", -1,
-						qmi_service_clone(data->wds));
+						qmi_service_clone(ipv4),
+						qmi_service_clone(ipv6));
 		if (!gc) {
 			ofono_warn("Unable to create gprs-context for: %s",
 					ofono_modem_get_path(modem));
@@ -826,13 +830,16 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 	DBG("max_aggregation_size: %u", data->max_aggregation_size);
 
 	for (i = 0; i < data->n_premux; i++) {
+		struct qmi_service *ipv4 = data->context_services[i].wds_ipv4;
+		struct qmi_service *ipv6 = data->context_services[i].wds_ipv6;
 		int mux_id;
 
 		sprintf(buf, "PremuxInterface%dMuxId", i + 1);
 		mux_id = ofono_modem_get_integer(modem, buf);
 
 		gc = ofono_gprs_context_create(modem, 0, "qmimodem", mux_id,
-						qmi_service_clone(data->wds));
+						qmi_service_clone(ipv4),
+						qmi_service_clone(ipv6));
 
 		if (!gc) {
 			ofono_warn("gprs-context creation failed for [%d] %s",

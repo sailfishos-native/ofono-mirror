@@ -324,10 +324,13 @@ static int setup_gprs_context(uint8_t mux_id, const char *interface,
 	struct ofono_modem *modem = ofono_gprs_get_modem(gprs);
 	struct qrtrqmi_data *data = ofono_modem_get_data(modem);
 	struct qmi_qrtr_node *node = data->node;
+	struct qmi_service *ipv4 = qmi_qrtr_node_get_dedicated_service(node,
+								QMI_SERVICE_WDS);
+	struct qmi_service *ipv6 = qmi_qrtr_node_get_dedicated_service(node,
+								QMI_SERVICE_WDS);
 	struct ofono_gprs_context *gc;
 
-	gc = ofono_gprs_context_create(modem, 0, "qmimodem", mux_id,
-			qmi_qrtr_node_get_service(node, QMI_SERVICE_WDS));
+	gc = ofono_gprs_context_create(modem, 0, "qmimodem", mux_id, ipv4, ipv6);
 	if (!gc) {
 		ofono_warn("Unable to create gprs-context for: %s, %s[%u]",
 				ofono_modem_get_path(modem), interface, mux_id);
