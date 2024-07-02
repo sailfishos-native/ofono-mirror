@@ -72,7 +72,11 @@ struct gobi_data {
 	struct qmi_service *voice;
 	struct qmi_service *pds;
 	struct qmi_service *uim;
-	struct service_request service_requests[16];
+	struct {
+		struct qmi_service *wds_ipv4;
+		struct qmi_service *wds_ipv6;
+	} context_services[MAX_CONTEXTS];
+	struct service_request service_requests[8 + MAX_CONTEXTS * 2];
 	int cur_service_request;
 	int num_service_requests;
 	unsigned long features;
@@ -170,6 +174,8 @@ static int gobi_probe(struct ofono_modem *modem)
 
 static void cleanup_services(struct gobi_data *data)
 {
+	int i;
+
 	qmi_service_free(data->dms);
 	data->dms = NULL;
 
@@ -193,6 +199,13 @@ static void cleanup_services(struct gobi_data *data)
 
 	qmi_service_free(data->uim);
 	data->uim = NULL;
+
+	for (i = 0; i < MAX_CONTEXTS; i++) {
+		qmi_service_free(data->context_services[i].wds_ipv4);
+		qmi_service_free(data->context_services[i].wds_ipv6);
+	}
+
+	memset(&data->context_services, 0, sizeof(data->context_services));
 }
 
 static void gobi_remove(struct ofono_modem *modem)
@@ -489,6 +502,7 @@ static void discover_cb(void *user_data)
 	struct gobi_data *data = ofono_modem_get_data(modem);
 	uint16_t major;
 	uint16_t minor;
+	int i;
 
 	DBG("");
 
@@ -537,6 +551,13 @@ static void discover_cb(void *user_data)
 		add_service_request(data, &data->voice, QMI_SERVICE_VOICE);
 	if (data->features & GOBI_UIM)
 		add_service_request(data, &data->uim, QMI_SERVICE_UIM);
+
+	for (i = 0; i < (data->n_premux ? data->n_premux : 1); i++) {
+		add_service_request(data, &data->context_services[i].wds_ipv4,
+							QMI_SERVICE_WDS);
+		add_service_request(data, &data->context_services[i].wds_ipv6,
+							QMI_SERVICE_WDS);
+	}
 
 	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
 					request_service_cb, modem, NULL) > 0)
