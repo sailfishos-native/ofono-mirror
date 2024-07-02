@@ -5,6 +5,8 @@
  * SPDX-License-Identifier: GPL-2.0-only
  */
 
+#include <ell/cleanup.h>
+
 #include <stdbool.h>
 #include <stdint.h>
 
@@ -110,6 +112,8 @@ struct qmi_param;
 struct qmi_param *qmi_param_new(void);
 void qmi_param_free(struct qmi_param *param);
 
+DEFINE_CLEANUP_FUNC(qmi_param_free)
+
 bool qmi_param_append(struct qmi_param *param, uint8_t type,
 					uint16_t length, const void *data);
 bool qmi_param_append_uint8(struct qmi_param *param, uint8_t type,
@@ -145,6 +149,8 @@ int qmi_error_to_ofono_cme(int qmi_error);
 
 struct qmi_service *qmi_service_clone(struct qmi_service *service);
 void qmi_service_free(struct qmi_service *service);
+
+DEFINE_CLEANUP_FUNC(qmi_service_free)
 
 const char *qmi_service_get_identifier(struct qmi_service *service);
 bool qmi_service_get_version(struct qmi_service *service, uint8_t *out_version);
