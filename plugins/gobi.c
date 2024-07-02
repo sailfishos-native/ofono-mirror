@@ -55,6 +55,8 @@
 #define GOBI_VOICE	(1 << 6)
 #define GOBI_WDA	(1 << 7)
 
+#define MAX_CONTEXTS 4
+
 struct service_request {
 	struct qmi_service **member;
 	uint32_t service_type;
@@ -75,6 +77,7 @@ struct gobi_data {
 	int num_service_requests;
 	unsigned long features;
 	unsigned int discover_attempts;
+	uint8_t n_premux;
 	uint8_t oper_mode;
 	int main_net_ifindex;
 	char main_net_name[IFNAMSIZ];
@@ -124,6 +127,7 @@ static int gobi_probe(struct ofono_modem *modem)
 	const char *ifname;
 	int ifindex;
 	const char *bus;
+	int n_premux;
 
 	DBG("%p", modem);
 
@@ -132,10 +136,11 @@ static int gobi_probe(struct ofono_modem *modem)
 	ifname = ofono_modem_get_string(modem, "NetworkInterface");
 	ifindex = ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
 	bus = ofono_modem_get_string(modem, "Bus");
+	n_premux = ofono_modem_get_integer(modem, "NumPremuxInterfaces");
 
 	DBG("net: %s[%s](%d) %s", ifname, if_driver, ifindex, bus);
 
-	if (!if_driver || !ifname || !ifindex || !bus)
+	if (!if_driver || !ifname || !ifindex || !bus || n_premux < 0)
 		return -EPROTO;
 
 	data = l_new(struct gobi_data, 1);
@@ -145,6 +150,13 @@ static int gobi_probe(struct ofono_modem *modem)
 	else if (!strcmp(if_driver, "qmi_wwan"))
 		data->using_qmi_wwan = true;
 
+	if (n_premux > MAX_CONTEXTS) {
+		l_warn("NumPremuxInterfaces > %d, limiting to %d",
+				MAX_CONTEXTS, MAX_CONTEXTS);
+		n_premux = MAX_CONTEXTS;
+	}
+
+	data->n_premux = n_premux;
 	data->main_net_ifindex =
 		ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
 	l_strlcpy(data->main_net_name,
@@ -753,7 +765,6 @@ static void gobi_pre_sim(struct ofono_modem *modem)
 static void gobi_setup_gprs(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
-	int n_premux = ofono_modem_get_integer(modem, "NumPremuxInterfaces");
 	struct ofono_gprs *gprs;
 	struct ofono_gprs_context *gc;
 	const char *interface;
@@ -770,7 +781,7 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 	}
 
 	/* Simple case of 802.3 interface, no QMAP */
-	if (n_premux == 0) {
+	if (data->n_premux == 0) {
 		interface = ofono_modem_get_string(modem, "NetworkInterface");
 
 		gc = ofono_gprs_context_create(modem, 0, "qmimodem", -1,
@@ -793,7 +804,7 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 		ofono_modem_get_integer(modem, "MaxAggregationSize");
 	DBG("max_aggregation_size: %u", data->max_aggregation_size);
 
-	for (i = 0; i < n_premux; i++) {
+	for (i = 0; i < data->n_premux; i++) {
 		int mux_id;
 
 		sprintf(buf, "PremuxInterface%dMuxId", i + 1);
