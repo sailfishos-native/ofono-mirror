@@ -173,28 +173,16 @@ static void get_settings_ipv4(struct ofono_gprs_context *gc,
 
 static void get_settings_cb(struct qmi_result *result, void *user_data)
 {
-	static const uint8_t RESULT_PDP_TYPE = 0x11;	/* uint8 */
-	static const uint8_t RESULT_APN = 0x14;		/* string */
 	static const uint8_t RESULT_IP_FAMILY = 0x2b;	/* uint8 */
 	struct cb_data *cbd = user_data;
 	ofono_gprs_context_cb_t cb = cbd->cb;
 	struct ofono_gprs_context *gc = cbd->user;
-	uint8_t pdp_type, ip_family;
-	char *apn;
+	uint8_t ip_family;
 
 	DBG("");
 
 	if (qmi_result_set_error(result, NULL))
 		goto done;
-
-	apn = qmi_result_get_string(result, RESULT_APN);
-	if (apn) {
-		DBG("APN: %s", apn);
-		l_free(apn);
-	}
-
-	if (qmi_result_get_uint8(result, RESULT_PDP_TYPE, &pdp_type))
-		DBG("PDP type %d", pdp_type);
 
 	if (!qmi_result_get_uint8(result, RESULT_IP_FAMILY, &ip_family)) {
 		ofono_error("No IP family in results");
