@@ -21,12 +21,25 @@
 #include "util.h"
 
 struct gprs_context_data {
-	struct qmi_service *wds;
+	struct qmi_service *ipv4;
 	struct qmi_service *ipv6;
 	unsigned int active_context;
-	uint32_t pkt_handle;
+	uint32_t packet_handle_ipv4;
+	uint32_t packet_handle_ipv6;
 	uint8_t mux_id;
 };
+
+static void check_all_deactivated(struct ofono_gprs_context *gc)
+{
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+
+	if (data->packet_handle_ipv4 || data->packet_handle_ipv6)
+		return;
+
+	/* All families have been disconnected */
+	ofono_gprs_context_deactivated(gc, data->active_context);
+	data->active_context = 0;
+}
 
 static void pkt_status_notify(struct qmi_result *result, void *user_data)
 {
@@ -54,12 +67,11 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 
 	switch (status->status) {
 	case QMI_WDS_CONNECTION_STATUS_DISCONNECTED:
-		if (data->pkt_handle) {
-			/* The context has been disconnected by the network */
-			ofono_gprs_context_deactivated(gc, data->active_context);
-			data->pkt_handle = 0;
-			data->active_context = 0;
+		if (data->packet_handle_ipv4) {
+			data->packet_handle_ipv4 = 0;
+			check_all_deactivated(gc);
 		}
+
 		break;
 	}
 }
@@ -227,7 +239,7 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 
 	DBG("packet handle %d", handle);
 
-	data->pkt_handle = handle;
+	data->packet_handle_ipv4 = handle;
 
 	/*
 	 * Explicitly request certain information to be provided.  The requested
@@ -243,7 +255,7 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 	param = qmi_param_new_uint32(PARAM_REQUESTED_SETTINGS,
 						requested_settings);
 
-	if (qmi_service_send(data->wds, QMI_WDS_GET_CURRENT_SETTINGS, param,
+	if (qmi_service_send(data->ipv4, QMI_WDS_GET_CURRENT_SETTINGS, param,
 				get_settings_cb, cbd, cb_data_unref) > 0) {
 		cb_data_ref(cbd);
 		return;
@@ -292,7 +304,7 @@ static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 
 	param = qmi_param_new_uint8(QMI_WDS_PARAM_IP_FAMILY, ip_family);
 
-	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, param,
+	if (qmi_service_send(data->ipv4, QMI_WDS_START_NETWORK, param,
 					start_net_cb, cbd, cb_data_unref) > 0) {
 		cb_data_ref(cbd);
 		return;
@@ -322,7 +334,7 @@ static void qmi_gprs_read_settings(struct ofono_gprs_context* gc,
 
 	DBG("cid %u", cid);
 
-	if (qmi_service_send(data->wds, QMI_WDS_GET_LTE_ATTACH_PARAMETERS,
+	if (qmi_service_send(data->ipv4, QMI_WDS_GET_LTE_ATTACH_PARAMETERS,
 				NULL, get_lte_attach_param_cb, cbd,
 				cb_data_unref) > 0) {
 		data->active_context = cid;
@@ -381,7 +393,7 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 		qmi_param_append(param, QMI_WDS_PARAM_PASSWORD,
 					strlen(ctx->password), ctx->password);
 
-	if (qmi_service_send(data->wds, QMI_WDS_START_NETWORK, param,
+	if (qmi_service_send(data->ipv4, QMI_WDS_START_NETWORK, param,
 					start_net_cb, cbd, cb_data_unref) > 0)
 		return;
 
@@ -393,6 +405,24 @@ error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 
 	l_free(cbd);
+}
+
+static uint32_t send_stop_net(struct qmi_service *wds, uint32_t packet_handle,
+				qmi_service_result_func_t func,
+				void *user_data, qmi_destroy_func_t destroy)
+{
+	static const uint8_t PARAM_PACKET_HANDLE = 0x01;
+	struct qmi_param *param = qmi_param_new_uint32(PARAM_PACKET_HANDLE,
+							packet_handle);
+	uint32_t id;
+
+	id = qmi_service_send(wds, QMI_WDS_STOP_NETWORK, param,
+				func, user_data, destroy);
+
+	if (!id)
+		qmi_param_free(param);
+
+	return id;
 }
 
 static void stop_net_cb(struct qmi_result *result, void *user_data)
@@ -410,7 +440,7 @@ static void stop_net_cb(struct qmi_result *result, void *user_data)
 		return;
 	}
 
-	data->pkt_handle = 0;
+	data->packet_handle_ipv4 = 0;
 
 	if (cb)
 		CALLBACK_WITH_SUCCESS(cb, cbd->data);
@@ -433,9 +463,10 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 
 	cbd->user = gc;
 
-	param = qmi_param_new_uint32(PARAM_PACKET_HANDLE, data->pkt_handle);
+	param = qmi_param_new_uint32(PARAM_PACKET_HANDLE,
+						data->packet_handle_ipv4);
 
-	if (qmi_service_send(data->wds, QMI_WDS_STOP_NETWORK, param,
+	if (qmi_service_send(data->ipv4, QMI_WDS_STOP_NETWORK, param,
 					stop_net_cb, cbd, l_free) > 0)
 		return;
 
@@ -447,12 +478,57 @@ static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 	l_free(cbd);
 }
 
+static void stop_net_detach_ipv4_cb(struct qmi_result *result, void *user_data)
+{
+	struct ofono_gprs_context *gc = user_data;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+	uint16_t error;
+
+	if (!qmi_result_set_error(result, &error))
+		error = 0;
+
+	DBG("error: %u", error);
+
+	data->packet_handle_ipv4 = 0;
+	check_all_deactivated(gc);
+}
+
+static void stop_net_detach_ipv6_cb(struct qmi_result *result, void *user_data)
+{
+	struct ofono_gprs_context *gc = user_data;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+	uint16_t error;
+
+	if (!qmi_result_set_error(result, &error))
+		error = 0;
+
+	DBG("error: %u", error);
+
+	data->packet_handle_ipv6 = 0;
+	check_all_deactivated(gc);
+}
+
 static void qmi_gprs_context_detach_shutdown(struct ofono_gprs_context *gc,
 						unsigned int cid)
 {
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+
 	DBG("");
 
-	qmi_deactivate_primary(gc, cid, NULL, NULL);
+	if (data->packet_handle_ipv6 &&
+			!send_stop_net(data->ipv6, data->packet_handle_ipv6,
+					stop_net_detach_ipv6_cb, gc, NULL))
+		data->packet_handle_ipv6 = 0;
+
+	if (data->packet_handle_ipv4 &&
+			!send_stop_net(data->ipv4, data->packet_handle_ipv4,
+					stop_net_detach_ipv4_cb, gc, NULL))
+		data->packet_handle_ipv4 = 0;
+
+	if (data->packet_handle_ipv4 || data->packet_handle_ipv6)
+		return;
+
+	data->active_context = 0;
 }
 
 static void set_ip_family_preference_cb(struct qmi_result *result,
@@ -603,11 +679,11 @@ static int qmi_gprs_context_probev(struct ofono_gprs_context *gc,
 		return r;
 
 	data = l_new(struct gprs_context_data, 1);
-	data->wds = l_steal_ptr(ipv4);
+	data->ipv4 = l_steal_ptr(ipv4);
 	data->ipv6 = l_steal_ptr(ipv6);
 	data->mux_id = mux_id;
 
-	qmi_service_register(data->wds, QMI_WDS_PACKET_SERVICE_STATUS,
+	qmi_service_register(data->ipv4, QMI_WDS_PACKET_SERVICE_STATUS,
 					pkt_status_notify, gc, NULL);
 	qmi_service_register(data->ipv6, QMI_WDS_PACKET_SERVICE_STATUS,
 					pkt_status_notify, gc, NULL);
@@ -625,7 +701,7 @@ static void qmi_gprs_context_remove(struct ofono_gprs_context *gc)
 
 	ofono_gprs_context_set_data(gc, NULL);
 
-	qmi_service_free(data->wds);
+	qmi_service_free(data->ipv4);
 	qmi_service_free(data->ipv6);
 	l_free(data);
 }
