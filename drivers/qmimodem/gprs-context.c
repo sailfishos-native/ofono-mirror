@@ -425,57 +425,97 @@ static uint32_t send_stop_net(struct qmi_service *wds, uint32_t packet_handle,
 	return id;
 }
 
-static void stop_net_cb(struct qmi_result *result, void *user_data)
+static void stop_net_ipv4_cb(struct qmi_result *result, void *user_data)
 {
 	struct cb_data *cbd = user_data;
 	ofono_gprs_context_cb_t cb = cbd->cb;
 	struct ofono_gprs_context *gc = cbd->user;
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+	uint16_t error;
 
-	DBG("");
+	if (!qmi_result_set_error(result, &error))
+		error = 0;
 
-	if (qmi_result_set_error(result, NULL)) {
-		if (cb)
-			CALLBACK_WITH_FAILURE(cb, cbd->data);
-		return;
-	}
+	DBG("error: %u", error);
 
 	data->packet_handle_ipv4 = 0;
-
-	if (cb)
-		CALLBACK_WITH_SUCCESS(cb, cbd->data);
-	else
-		ofono_gprs_context_deactivated(gc, data->active_context);
-
 	data->active_context = 0;
+
+	if (error)
+		CALLBACK_WITH_FAILURE(cb, cbd->data);
+	else
+		CALLBACK_WITH_SUCCESS(cb, cbd->data);
+}
+
+static void stop_net_ipv6_cb(struct qmi_result *result, void *user_data)
+{
+	struct cb_data *cbd = user_data;
+	ofono_gprs_context_cb_t cb = cbd->cb;
+	struct ofono_gprs_context *gc = cbd->user;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+	uint16_t error;
+
+	if (!qmi_result_set_error(result, &error))
+		error = 0;
+
+	DBG("error: %u", error);
+
+	data->packet_handle_ipv6 = 0;
+
+	if (data->packet_handle_ipv4) {
+		if (send_stop_net(data->ipv4, data->packet_handle_ipv4,
+					stop_net_ipv4_cb,
+					cb_data_ref(cbd), cb_data_unref))
+			return;
+
+		cb_data_unref(cbd);
+		data->active_context = 0;
+		data->packet_handle_ipv4 = 0;
+		goto error;
+	} else
+		data->active_context = 0;
+
+	if (!error) {
+		CALLBACK_WITH_SUCCESS(cb, cbd->data);
+		return;
+	}
+error:
+	CALLBACK_WITH_FAILURE(cb, cbd->data);
 }
 
 static void qmi_deactivate_primary(struct ofono_gprs_context *gc,
 				unsigned int cid,
 				ofono_gprs_context_cb_t cb, void *user_data)
 {
-	static const uint8_t PARAM_PACKET_HANDLE = 0x01;
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
-	struct cb_data *cbd = cb_data_new(cb, user_data);
-	struct qmi_param *param;
+	struct cb_data *cbd;
+	uint32_t id;
 
 	DBG("cid %u", cid);
 
+	if (!data->packet_handle_ipv4 && !data->packet_handle_ipv6)
+		goto error;
+
+	cbd = cb_data_new(cb, user_data);
 	cbd->user = gc;
 
-	param = qmi_param_new_uint32(PARAM_PACKET_HANDLE,
-						data->packet_handle_ipv4);
+	if (data->packet_handle_ipv6)
+		id = send_stop_net(data->ipv6, data->packet_handle_ipv6,
+					stop_net_ipv6_cb, cbd, cb_data_unref);
+	else
+		id = send_stop_net(data->ipv4, data->packet_handle_ipv4,
+					stop_net_ipv4_cb, cbd, cb_data_unref);
 
-	if (qmi_service_send(data->ipv4, QMI_WDS_STOP_NETWORK, param,
-					stop_net_cb, cbd, l_free) > 0)
+	if (id)
 		return;
 
-	qmi_param_free(param);
-
-	if (cb)
-		CALLBACK_WITH_FAILURE(cb, user_data);
+	data->packet_handle_ipv6 = 0;
+	data->packet_handle_ipv4 = 0;
+	data->active_context = 0;
 
 	l_free(cbd);
+error:
+	CALLBACK_WITH_FAILURE(cb, user_data);
 }
 
 static void stop_net_detach_ipv4_cb(struct qmi_result *result, void *user_data)
