@@ -26,6 +26,8 @@ struct gprs_context_data {
 	unsigned int active_context;
 	uint32_t packet_handle_ipv4;
 	uint32_t packet_handle_ipv6;
+	uint32_t start_network_ipv4_id;
+	uint32_t start_network_ipv6_id;
 	uint8_t mux_id;
 };
 
@@ -67,8 +69,15 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 
 	switch (status->status) {
 	case QMI_WDS_CONNECTION_STATUS_DISCONNECTED:
-		if (data->packet_handle_ipv4) {
+		if (ip_family == QMI_WDS_IP_FAMILY_IPV4 &&
+				data->packet_handle_ipv4) {
 			data->packet_handle_ipv4 = 0;
+			check_all_deactivated(gc);
+		}
+
+		if (ip_family == QMI_WDS_IP_FAMILY_IPV6 &&
+				data->packet_handle_ipv6) {
+			data->packet_handle_ipv6 = 0;
 			check_all_deactivated(gc);
 		}
 
@@ -76,14 +85,33 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 	}
 }
 
-static void get_settings_ipv6(struct ofono_gprs_context *gc,
-					struct qmi_result *result)
+static void check_all_activated(struct gprs_context_data *data,
+					ofono_gprs_context_cb_t cb,
+					void *user_data)
+{
+	if (data->start_network_ipv4_id || data->start_network_ipv6_id)
+		return;
+
+	if (!data->packet_handle_ipv4 && !data->packet_handle_ipv6) {
+		data->active_context = 0;
+		CALLBACK_WITH_FAILURE(cb, user_data);
+		return;
+	}
+
+	CALLBACK_WITH_SUCCESS(cb, user_data);
+}
+
+static void get_settings_ipv6_cb(struct qmi_result *result, void *user_data)
 {
 	static const uint8_t RESULT_IP_ADDRESS = 0x25;
 	static const uint8_t RESULT_GATEWAY = 0x26;
 	static const uint8_t RESULT_PRIMARY_DNS = 0x27;
 	static const uint8_t RESULT_SECONDARY_DNS = 0x28;
 	static const uint8_t RESULT_MTU = 0x29;
+	struct cb_data *cbd = user_data;
+	struct ofono_gprs_context *gc = cbd->user;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+	uint16_t error;
 	const char *dns[3] = { NULL, NULL, NULL };
 	char dns1str[INET6_ADDRSTRLEN];
 	char dns2str[INET6_ADDRSTRLEN];
@@ -91,6 +119,13 @@ static void get_settings_ipv6(struct ofono_gprs_context *gc,
 	const void *tlv;
 	uint16_t len;
 	uint32_t mtu;
+
+	data->start_network_ipv6_id = 0;
+
+	if (qmi_result_set_error(result, &error)) {
+		DBG("error: %u", error);
+		goto done;
+	}
 
 	tlv = qmi_result_get(result, RESULT_IP_ADDRESS, &len);
 	if (tlv && len == sizeof(struct in6_addr) + 1) {
@@ -131,21 +166,34 @@ static void get_settings_ipv6(struct ofono_gprs_context *gc,
 
 	if (qmi_result_get_uint32(result, RESULT_MTU, &mtu))
 		DBG("MTU: %u", mtu);
+
+done:
+	check_all_activated(data, cbd->cb, cbd->data);
 }
 
-static void get_settings_ipv4(struct ofono_gprs_context *gc,
-					struct qmi_result *result)
+static void get_settings_ipv4_cb(struct qmi_result *result, void *user_data)
 {
 	static const uint8_t RESULT_PRIMARY_DNS = 0x15;
 	static const uint8_t RESULT_SECONDARY_DNS = 0x16;
 	static const uint8_t RESULT_IP_ADDRESS = 0x1e;
 	static const uint8_t RESULT_GATEWAY = 0x20;
 	static const uint8_t RESULT_GATEWAY_NETMASK = 0x21;
+	struct cb_data *cbd = user_data;
+	struct ofono_gprs_context *gc = cbd->user;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+	uint16_t error;
 	uint32_t ip_addr;
 	struct in_addr addr;
 	char* straddr;
 	const char *dns[3] = { NULL, NULL, NULL };
 	char dns_buf[2][INET_ADDRSTRLEN];
+
+	data->start_network_ipv4_id = 0;
+
+	if (qmi_result_set_error(result, &error)) {
+		DBG("error: %u", error);
+		goto done;
+	}
 
 	if (qmi_result_get_uint32(result, RESULT_IP_ADDRESS, &ip_addr)) {
 		addr.s_addr = htonl(ip_addr);
@@ -182,65 +230,20 @@ static void get_settings_ipv4(struct ofono_gprs_context *gc,
 
 	if (dns[0])
 		ofono_gprs_context_set_ipv4_dns_servers(gc, dns);
-}
-
-static void get_settings_cb(struct qmi_result *result, void *user_data)
-{
-	static const uint8_t RESULT_IP_FAMILY = 0x2b;	/* uint8 */
-	struct cb_data *cbd = user_data;
-	ofono_gprs_context_cb_t cb = cbd->cb;
-	struct ofono_gprs_context *gc = cbd->user;
-	uint8_t ip_family;
-
-	DBG("");
-
-	if (qmi_result_set_error(result, NULL))
-		goto done;
-
-	if (!qmi_result_get_uint8(result, RESULT_IP_FAMILY, &ip_family)) {
-		ofono_error("No IP family in results");
-		goto done;
-	}
-
-	switch (ip_family) {
-	case QMI_WDS_IP_FAMILY_IPV4:
-		get_settings_ipv4(gc, result);
-		break;
-	case QMI_WDS_IP_FAMILY_IPV6:
-		get_settings_ipv6(gc, result);
-		break;
-	default:
-		break;
-	}
 
 done:
-	CALLBACK_WITH_SUCCESS(cb, cbd->data);
+	check_all_activated(data, cbd->cb, cbd->data);
 }
 
-static void start_net_cb(struct qmi_result *result, void *user_data)
+static uint32_t send_get_current_settings(struct qmi_service *wds,
+						qmi_service_result_func_t func,
+						void *user_data,
+						qmi_destroy_func_t destroy)
 {
-	static const uint8_t RESULT_PACKET_HANDLE = 0x01;
 	static const uint8_t PARAM_REQUESTED_SETTINGS = 0x10;
-	struct cb_data *cbd = user_data;
-	ofono_gprs_context_cb_t cb = cbd->cb;
-	struct ofono_gprs_context *gc = cbd->user;
-	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
-	uint32_t handle;
 	uint32_t requested_settings = 0;
 	struct qmi_param *param;
-
-	DBG("");
-
-	if (qmi_result_set_error(result, NULL))
-		goto error;
-
-	if (!qmi_result_get_uint32(result, RESULT_PACKET_HANDLE, &handle))
-		goto error;
-
-	DBG("packet handle %d", handle);
-
-	data->packet_handle_ipv4 = handle;
-
+	uint32_t id;
 	/*
 	 * Explicitly request certain information to be provided.  The requested
 	 * settings is a bit field, with each bit representing whether the
@@ -254,18 +257,149 @@ static void start_net_cb(struct qmi_result *result, void *user_data)
 	L_BITS_SET(&requested_settings, 2, 3, 4, 5, 6, 7, 8, 9, 13, 14, 15, 17);
 	param = qmi_param_new_uint32(PARAM_REQUESTED_SETTINGS,
 						requested_settings);
+	id = qmi_service_send(wds, QMI_WDS_GET_CURRENT_SETTINGS, param,
+				func, user_data, destroy);
 
-	if (qmi_service_send(data->ipv4, QMI_WDS_GET_CURRENT_SETTINGS, param,
-				get_settings_cb, cbd, cb_data_unref) > 0) {
-		cb_data_ref(cbd);
+	if (!id)
+		qmi_param_free(param);
+
+	return id;
+}
+
+static void start_network_common_cb(int family, struct qmi_result *result,
+					struct cb_data *cbd,
+					struct qmi_service *wds,
+					qmi_service_result_func_t func,
+					uint32_t *packet_handle,
+					uint32_t *family_start_id)
+{
+	static const uint8_t RESULT_PACKET_HANDLE = 0x01;
+	struct ofono_gprs_context *gc = cbd->user;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+	uint16_t error;
+
+	*family_start_id = 0;
+
+	if (!qmi_result_set_error(result, &error))
+		error = 0;
+
+	DBG("family: %d, error: %u", family, error);
+
+	if (error)
+		goto error;
+
+	if (!qmi_result_get_uint32(result, RESULT_PACKET_HANDLE, packet_handle))
+		goto error;
+
+	*family_start_id =
+		send_get_current_settings(wds, func,
+						cb_data_ref(cbd), cb_data_unref);
+	if (*family_start_id)
 		return;
+
+	*packet_handle = 0;
+	cb_data_unref(cbd);
+error:
+	check_all_activated(data, cbd->cb, cbd->data);
+}
+
+static void start_network_ipv4_cb(struct qmi_result *result, void *user_data)
+{
+	struct cb_data *cbd = user_data;
+	struct ofono_gprs_context *gc = cbd->user;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+
+	start_network_common_cb(4, result, user_data,
+				data->ipv4, get_settings_ipv4_cb,
+				&data->packet_handle_ipv4,
+				&data->start_network_ipv4_id);
+}
+
+static void start_network_ipv6_cb(struct qmi_result *result, void *user_data)
+{
+	struct cb_data *cbd = user_data;
+	struct ofono_gprs_context *gc = cbd->user;
+	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
+
+	start_network_common_cb(6, result, user_data,
+				data->ipv6, get_settings_ipv6_cb,
+				&data->packet_handle_ipv6,
+				&data->start_network_ipv6_id);
+}
+
+static struct qmi_param *param_from_context(uint8_t ip_family,
+				const struct ofono_gprs_primary_context *ctx)
+{
+	struct qmi_param *param = qmi_param_new();
+	uint8_t auth;
+
+	qmi_param_append_uint8(param, QMI_WDS_PARAM_IP_FAMILY, ip_family);
+
+	if (!ctx)
+		goto done;
+
+	qmi_param_append(param, QMI_WDS_PARAM_APN,
+					strlen(ctx->apn), ctx->apn);
+
+	auth = qmi_wds_auth_from_ofono(ctx->auth_method);
+	qmi_param_append_uint8(param, QMI_WDS_PARAM_AUTHENTICATION_PREFERENCE,
+					auth);
+
+	if (auth && ctx->username[0] != '\0')
+		qmi_param_append(param, QMI_WDS_PARAM_USERNAME,
+					strlen(ctx->username), ctx->username);
+
+	if (auth && ctx->password[0] != '\0')
+		qmi_param_append(param, QMI_WDS_PARAM_PASSWORD,
+					strlen(ctx->password), ctx->password);
+done:
+	return param;
+}
+
+static int start_network(uint8_t iptype, struct gprs_context_data *data,
+				const struct ofono_gprs_primary_context *ctx,
+				struct cb_data *cbd)
+{
+	struct qmi_param *param;
+
+	if (!L_IN_SET(iptype, QMI_WDS_IP_SUPPORT_IPV4, QMI_WDS_IP_SUPPORT_IPV6,
+				QMI_WDS_IP_SUPPORT_IPV4V6))
+		return -EINVAL;
+
+	if (iptype == QMI_WDS_IP_SUPPORT_IPV4 ||
+			iptype == QMI_WDS_IP_SUPPORT_IPV4V6) {
+		param = param_from_context(QMI_WDS_IP_FAMILY_IPV4, ctx);
+
+		data->start_network_ipv4_id =
+			qmi_service_send(data->ipv4, QMI_WDS_START_NETWORK,
+					param, start_network_ipv4_cb,
+					cb_data_ref(cbd), cb_data_unref);
+
+		if (!data->start_network_ipv4_id) {
+			cb_data_unref(cbd);
+			qmi_param_free(param);
+		}
 	}
 
-	qmi_param_free(param);
+	if (iptype == QMI_WDS_IP_SUPPORT_IPV6 ||
+			iptype == QMI_WDS_IP_SUPPORT_IPV4V6) {
+		param = param_from_context(QMI_WDS_IP_FAMILY_IPV6, ctx);
 
-error:
-	data->active_context = 0;
-	CALLBACK_WITH_FAILURE(cb, cbd->data);
+		data->start_network_ipv6_id =
+			qmi_service_send(data->ipv6, QMI_WDS_START_NETWORK,
+					param, start_network_ipv6_cb,
+					cb_data_ref(cbd), cb_data_unref);
+
+		if (!data->start_network_ipv6_id) {
+			cb_data_unref(cbd);
+			qmi_param_free(param);
+		}
+	}
+
+	if (data->start_network_ipv4_id || data->start_network_ipv6_id)
+		return 0;
+
+	return -EIO;
 }
 
 static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
@@ -277,40 +411,20 @@ static void get_lte_attach_param_cb(struct qmi_result *result, void *user_data)
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
 	uint16_t error;
 	uint8_t iptype;
-	struct qmi_param *param;
-	uint8_t ip_family;
 
-	DBG("");
+	if (!qmi_result_set_error(result, &error))
+		error = 0;
 
-	if (qmi_result_set_error(result, &error))
+	DBG("error: %u", error);
+
+	if (error)
 		goto error;
 
 	if (!qmi_result_get_uint8(result, RESULT_IP_SUPPORT_TYPE, &iptype))
 		goto error;
 
-	switch (iptype) {
-	case QMI_WDS_IP_SUPPORT_IPV4:
-		ip_family = QMI_WDS_IP_FAMILY_IPV4;
-		break;
-	case QMI_WDS_IP_SUPPORT_IPV6:
-		ip_family = QMI_WDS_IP_FAMILY_IPV6;
-		break;
-	case QMI_WDS_IP_SUPPORT_IPV4V6:
-		ip_family = QMI_WDS_IP_FAMILY_IPV4;
-		break;
-	default:
-		goto error;
-	}
-
-	param = qmi_param_new_uint8(QMI_WDS_PARAM_IP_FAMILY, ip_family);
-
-	if (qmi_service_send(data->ipv4, QMI_WDS_START_NETWORK, param,
-					start_net_cb, cbd, cb_data_unref) > 0) {
-		cb_data_ref(cbd);
+	if (!start_network(iptype, data, NULL, cbd))
 		return;
-	}
-
-	qmi_param_free(param);
 
 error:
 	data->active_context = 0;
@@ -320,7 +434,7 @@ error:
 /*
  * This function gets called for "automatic" contexts, those which are
  * not activated via activate_primary.  For these, we will still need
- * to call start_net in order to get the packet handle for the context.
+ * to call start_network in order to get the packet handle for the context.
  * The process for automatic contexts is essentially identical to that
  * for others.
  */
@@ -334,14 +448,15 @@ static void qmi_gprs_read_settings(struct ofono_gprs_context* gc,
 
 	DBG("cid %u", cid);
 
+	data->active_context = cid;
+	cbd->user = gc;
+
 	if (qmi_service_send(data->ipv4, QMI_WDS_GET_LTE_ATTACH_PARAMETERS,
 				NULL, get_lte_attach_param_cb, cbd,
-				cb_data_unref) > 0) {
-		data->active_context = cid;
-		cbd->user = gc;
+				cb_data_unref) > 0)
 		return;
-	}
 
+	data->active_context = 0;
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 	l_free(cbd);
 }
@@ -351,60 +466,37 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 				ofono_gprs_context_cb_t cb, void *user_data)
 {
 	struct gprs_context_data *data = ofono_gprs_context_get_data(gc);
-	struct cb_data *cbd = cb_data_new(cb, user_data);
-	struct qmi_param *param;
-	uint8_t ip_family;
-	uint8_t auth;
+	enum ofono_gprs_proto proto = ctx->proto;
+	struct cb_data *cbd;
+	int ip_type;
+	int r;
 
 	DBG("cid %u", ctx->cid);
 
-	cbd->user = gc;
+	if (!L_IN_SET(proto, OFONO_GPRS_PROTO_IP, OFONO_GPRS_PROTO_IPV6,
+					OFONO_GPRS_PROTO_IPV4V6))
+		goto error;
+
+	ip_type = qmi_wds_pdp_type_from_ofono(ctx->proto);
+	if (ip_type < 0)
+		goto error;
+
+	if (qmi_wds_auth_from_ofono(ctx->auth_method) < 0)
+		goto error;
 
 	data->active_context = ctx->cid;
+	cbd = cb_data_new(cb, user_data);
+	cbd->user = gc;
 
-	switch (ctx->proto) {
-	case OFONO_GPRS_PROTO_IP:
-		ip_family = QMI_WDS_IP_FAMILY_IPV4;
-		break;
-	case OFONO_GPRS_PROTO_IPV6:
-		ip_family = QMI_WDS_IP_FAMILY_IPV6;
-		break;
-	default:
-		goto error;
-	}
+	r = start_network(ip_type, data, ctx, cbd);
+	cb_data_unref(cbd);
 
-	param = qmi_param_new();
-
-	qmi_param_append(param, QMI_WDS_PARAM_APN,
-					strlen(ctx->apn), ctx->apn);
-
-	qmi_param_append_uint8(param, QMI_WDS_PARAM_IP_FAMILY, ip_family);
-
-	auth = qmi_wds_auth_from_ofono(ctx->auth_method);
-
-	qmi_param_append_uint8(param, QMI_WDS_PARAM_AUTHENTICATION_PREFERENCE,
-					auth);
-
-	if (auth && ctx->username[0] != '\0')
-		qmi_param_append(param, QMI_WDS_PARAM_USERNAME,
-					strlen(ctx->username), ctx->username);
-
-	if (auth && ctx->password[0] != '\0')
-		qmi_param_append(param, QMI_WDS_PARAM_PASSWORD,
-					strlen(ctx->password), ctx->password);
-
-	if (qmi_service_send(data->ipv4, QMI_WDS_START_NETWORK, param,
-					start_net_cb, cbd, cb_data_unref) > 0)
+	if (!r)
 		return;
 
-	qmi_param_free(param);
-
-error:
 	data->active_context = 0;
-
-	CALLBACK_WITH_FAILURE(cb, cbd->data);
-
-	l_free(cbd);
+error:
+	CALLBACK_WITH_FAILURE(cb, user_data);
 }
 
 static uint32_t send_stop_net(struct qmi_service *wds, uint32_t packet_handle,
