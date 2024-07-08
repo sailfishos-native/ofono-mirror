@@ -46,10 +46,10 @@ static void pkt_status_notify(struct qmi_result *result, void *user_data)
 	if (!status)
 		return;
 
-	DBG("conn status %d", status->status);
+	if (!qmi_result_get_uint8(result, RESULT_IP_FAMILY, &ip_family))
+		return;
 
-	if (qmi_result_get_uint8(result, RESULT_IP_FAMILY, &ip_family))
-		DBG("ip family %d", ip_family);
+	DBG("conn status %d ip family %d", status->status, ip_family);
 
 	switch (status->status) {
 	case QMI_WDS_CONNECTION_STATUS_DISCONNECTED:
