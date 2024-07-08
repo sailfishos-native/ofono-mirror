@@ -1,3 +1,6 @@
+ver 2.9:
+	Add support for QRTR based devices (MHI bus and SoC).
+
 ver 2.8:
 	Fix issue with handling USB TTY device detection.
 	Fix issue with handling GOBI versus QRTR detection.
