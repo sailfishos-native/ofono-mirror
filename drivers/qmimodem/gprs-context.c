@@ -22,6 +22,7 @@
 
 struct gprs_context_data {
 	struct qmi_service *wds;
+	struct qmi_service *ipv6;
 	unsigned int active_context;
 	uint32_t pkt_handle;
 	uint8_t mux_id;
@@ -454,6 +455,37 @@ static void qmi_gprs_context_detach_shutdown(struct ofono_gprs_context *gc,
 	qmi_deactivate_primary(gc, cid, NULL, NULL);
 }
 
+static void set_ip_family_preference_cb(struct qmi_result *result,
+							void *user_data)
+{
+	struct ofono_gprs_context *gc = user_data;
+	uint16_t error;
+
+	if (!qmi_result_set_error(result, &error))
+		error = 0;
+
+	DBG("%u", error);
+
+	if (error)
+		ofono_gprs_context_remove(gc);
+}
+
+static int set_ip_family_preference(struct ofono_gprs_context *gc,
+						struct qmi_service *wds,
+						uint8_t family)
+{
+	static const uint8_t PARAM_IP_FAMILY_PREFERENCE = 0x01;
+	struct qmi_param *param =
+			qmi_param_new_uint8(PARAM_IP_FAMILY_PREFERENCE, family);
+
+	if (qmi_service_send(wds, QMI_WDS_SET_IP_FAMILY, param,
+				set_ip_family_preference_cb, gc, NULL) > 0)
+		return 0;
+
+	qmi_param_free(param);
+	return -EIO;
+}
+
 static void bind_mux_data_port_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_gprs_context *gc = user_data;
@@ -547,21 +579,37 @@ static int qmi_gprs_context_probev(struct ofono_gprs_context *gc,
 	_auto_(qmi_service_free) struct qmi_service *ipv6 =
 					va_arg(args, struct qmi_service *);
 	struct gprs_context_data *data;
+	int r;
 
 	DBG("");
 
 	if (mux_id != -1) {
-		int r = qmi_gprs_context_bind_mux(gc, ipv4, mux_id);
+		r = qmi_gprs_context_bind_mux(gc, ipv4, mux_id);
+		if (r < 0)
+			return r;
 
+		r = qmi_gprs_context_bind_mux(gc, ipv6, mux_id);
 		if (r < 0)
 			return r;
 	}
 
+	/*
+	 * Default family preference for new WDS services is IPv4.  For the
+	 * service used for IPv6 contexts, issue a SET_IP_FAMILY_PREFERENCE
+	 * command
+	 */
+	r = set_ip_family_preference(gc, ipv6, QMI_WDS_IP_FAMILY_IPV6);
+	if (r < 0)
+		return r;
+
 	data = l_new(struct gprs_context_data, 1);
 	data->wds = l_steal_ptr(ipv4);
+	data->ipv6 = l_steal_ptr(ipv6);
 	data->mux_id = mux_id;
 
 	qmi_service_register(data->wds, QMI_WDS_PACKET_SERVICE_STATUS,
+					pkt_status_notify, gc, NULL);
+	qmi_service_register(data->ipv6, QMI_WDS_PACKET_SERVICE_STATUS,
 					pkt_status_notify, gc, NULL);
 
 	ofono_gprs_context_set_data(gc, data);
@@ -578,6 +626,7 @@ static void qmi_gprs_context_remove(struct ofono_gprs_context *gc)
 	ofono_gprs_context_set_data(gc, NULL);
 
 	qmi_service_free(data->wds);
+	qmi_service_free(data->ipv6);
 	l_free(data);
 }
 
