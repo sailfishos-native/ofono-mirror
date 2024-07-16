@@ -193,6 +193,10 @@ static void ste_eppsd_up_cb(gboolean ok, GAtResult *result, gpointer user_data)
 	for (i = 0; i < g_at_result_num_response_lines(result); i++) {
 		g_at_result_iter_next(&iter, NULL);
 		res_string = g_at_result_iter_raw_line(&iter);
+
+		if (res_string == NULL)
+			goto error;
+
 		length = strlen(res_string);
 
 		if (!g_markup_parse_context_parse(context, res_string,
