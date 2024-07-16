@@ -494,7 +494,7 @@ static gboolean cw_ss_control(int type,
 		goto error;
 	}
 
-	if (strlen(sib) || strlen(sib) || strlen(dn))
+	if (strlen(sib) || strlen(sic) || strlen(dn))
 		goto bad_format;
 
 	if ((type == SS_CONTROL_TYPE_QUERY && cs->driver->cw_query == NULL) ||
