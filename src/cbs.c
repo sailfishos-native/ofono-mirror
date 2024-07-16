@@ -593,7 +593,7 @@ static void cbs_unregister(struct ofono_atom *atom)
 		cbs->settings = NULL;
 	}
 
-	if (cbs->netreg_watch) {
+	if (cbs->netreg_watch && cbs->netreg) {
 		if (cbs->location_watch) {
 			__ofono_netreg_remove_status_watch(cbs->netreg,
 							cbs->location_watch);
