@@ -121,6 +121,9 @@ static int stk_respond(struct ofono_stk *stk, struct stk_response *rsp,
 	if (stk->driver->terminal_response == NULL)
 		return -ENOSYS;
 
+	if (stk->pending_cmd == NULL)
+		return -EINVAL;
+
 	rsp->src = STK_DEVICE_IDENTITY_TYPE_TERMINAL;
 	rsp->dst = STK_DEVICE_IDENTITY_TYPE_UICC;
 	rsp->number = stk->pending_cmd->number;
