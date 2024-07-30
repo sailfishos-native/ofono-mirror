@@ -1152,13 +1152,17 @@ static struct qmi_request *find_control_request(struct qmi_qmux_device *qmux,
 
 static void __qmux_discovery_finished(struct qmi_qmux_device *qmux)
 {
+	qmi_qmux_device_discover_func_t func = qmux->discover.func;
+	void *user_data = qmux->discover.user_data;
+	qmi_destroy_func_t destroy = qmux->discover.destroy;
+
 	l_timeout_remove(qmux->discover.timeout);
-	qmux->discover.func(qmux->discover.user_data);
-
-	if (qmux->discover.destroy)
-		qmux->discover.destroy(qmux->discover.user_data);
-
 	memset(&qmux->discover, 0, sizeof(qmux->discover));
+
+	func(user_data);
+
+	if (destroy)
+		destroy(user_data);
 }
 
 static void qmux_sync_callback(struct qmi_request *req, uint16_t message,
