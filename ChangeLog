@@ -1,3 +1,7 @@
+ver 2.10:
+	Fix issue with SMS and user data length checks.
+	Add support for QMI and Dual-Stack context activation.
+
 ver 2.9:
 	Add support for QRTR based devices (MHI bus and SoC).
 
