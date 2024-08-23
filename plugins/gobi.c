@@ -251,6 +251,10 @@ static void shutdown_cb(void *user_data)
 	DBG("");
 
 	data->discover_attempts = 0;
+	memset(&data->service_requests, 0, sizeof(data->service_requests));
+	data->cur_service_request = 0;
+	data->num_service_requests = 0;
+	data->features = 0;
 
 	qmi_qmux_device_free(data->device);
 	data->device = NULL;
