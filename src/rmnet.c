@@ -25,10 +25,119 @@
 #define RMNET_TYPE "rmnet"
 #define MAX_MUX_IDS 254U
 
+struct rmnet_request {
+	uint32_t parent_ifindex;
+	rmnet_new_interfaces_func_t new_cb;
+	void *user_data;
+	rmnet_destroy_func_t destroy;
+	int id;
+	uint32_t netlink_id;
+	uint16_t request_type;
+	uint8_t current;
+	uint8_t n_interfaces;
+	struct rmnet_ifinfo infos[];
+};
+
 static struct l_netlink *rtnl;
 static uint32_t dump_id;
 static uint32_t link_notify_id;
 static struct l_uintset *mux_ids;
+struct l_queue *request_q;
+
+static void rmnet_request_free(struct rmnet_request *req)
+{
+	if (req->destroy)
+		req->destroy(req->user_data);
+
+	l_free(req);
+}
+
+static struct rmnet_request *__rmnet_del_request_new(unsigned int n_interfaces,
+					const struct rmnet_ifinfo *interfaces)
+{
+	struct rmnet_request *req;
+
+	req = l_malloc(sizeof(struct rmnet_request) +
+				sizeof(struct rmnet_ifinfo) * n_interfaces);
+	memset(req, 0, sizeof(struct rmnet_request));
+	req->request_type = RTM_DELLINK;
+	req->n_interfaces = n_interfaces;
+	memcpy(req->infos, interfaces,
+			sizeof(struct rmnet_ifinfo) * n_interfaces);
+
+	return req;
+}
+
+static int rmnet_link_del(uint32_t ifindex, l_netlink_command_func_t cb,
+				void *userdata,
+				l_netlink_destroy_func_t destroy,
+				uint32_t *out_command_id)
+{
+	struct l_netlink_message *nlm =
+		l_netlink_message_new(RTM_DELLINK, 0);
+	struct ifinfomsg ifi;
+	uint32_t id;
+
+	memset(&ifi, 0, sizeof(ifi));
+	ifi.ifi_family = AF_UNSPEC;
+	ifi.ifi_index = ifindex;
+
+	l_netlink_message_add_header(nlm, &ifi, sizeof(ifi));
+
+	id = l_netlink_send(rtnl, nlm, cb, userdata, destroy);
+	if (!id) {
+		l_netlink_message_unref(nlm);
+		return -EIO;
+	}
+
+	if (out_command_id)
+		*out_command_id = id;
+
+	return 0;
+}
+
+static void rmnet_start_next_request(void);
+
+static void rmnet_del_link_cb(int error, uint16_t type, const void *data,
+					uint32_t len, void *user_data)
+{
+	struct rmnet_request *req = l_queue_peek_head(request_q);
+
+	DBG("DELLINK %u (%u/%u) complete, error: %d",
+		req->netlink_id, req->current, req->n_interfaces, error);
+
+	req->netlink_id = 0;
+	req->current += 1;
+
+	if (req->current < req->n_interfaces)
+		goto next_request;
+
+	l_queue_pop_head(request_q);
+	rmnet_request_free(req);
+
+next_request:
+	if (l_queue_length(request_q) > 0)
+		rmnet_start_next_request();
+}
+
+static void rmnet_start_next_request(void)
+{
+	struct rmnet_request *req = l_queue_peek_head(request_q);
+
+	if (!req)
+		return;
+
+	if (req->request_type == RTM_DELLINK) {
+		uint32_t ifindex = req->infos[req->current].ifindex;
+
+		L_WARN_ON(rmnet_link_del(ifindex, rmnet_del_link_cb, NULL, NULL,
+					&req->netlink_id) < 0);
+		DBG("Start DELLINK: ifindex: %u, interface: %u/%u, request: %u",
+				ifindex, req->current,
+				req->n_interfaces, req->netlink_id);
+		return;
+	}
+}
 
 int rmnet_get_interfaces(uint32_t parent_ifindex, unsigned int n_interfaces,
 				rmnet_new_interfaces_func_t cb,
@@ -152,6 +261,9 @@ static int rmnet_parse_link(const void *data, uint32_t len,
 static void rmnet_link_dump_destroy(void *user_data)
 {
 	dump_id = 0;
+
+	if (l_queue_length(request_q) > 0)
+		rmnet_start_next_request();
 }
 
 static void rmnet_link_dump_cb(int error,
@@ -159,6 +271,7 @@ static void rmnet_link_dump_cb(int error,
 				uint32_t len, void *user_data)
 {
 	struct rmnet_ifinfo info;
+	struct rmnet_request *req;
 
 	/* Check conditions that can't happen on a dump */
 	if (error || type != RTM_NEWLINK)
@@ -168,9 +281,12 @@ static void rmnet_link_dump_cb(int error,
 				info.ifname, &info.ifindex, &info.mux_id) < 0)
 		return;
 
-	DBG("Existing rmnet link: %s(%u) mux_id: %u",
+	DBG("Removing existing rmnet link: %s(%u) mux_id: %u",
 			info.ifname, info.ifindex, info.mux_id);
 	l_uintset_put(mux_ids, info.mux_id);
+
+	req = __rmnet_del_request_new(1, &info);
+	l_queue_push_tail(request_q, req);
 }
 
 static int rmnet_link_dump(void)
@@ -235,6 +351,7 @@ static int rmnet_init(void)
 	link_notify_id = l_netlink_register(rtnl, RTNLGRP_LINK,
 					rmnet_link_notification, NULL, NULL);
 	mux_ids = l_uintset_new_from_range(1, MAX_MUX_IDS);
+	request_q = l_queue_new();
 
 	return 0;
 dump_failed:
@@ -244,6 +361,7 @@ dump_failed:
 
 static void rmnet_exit(void)
 {
+	l_queue_destroy(request_q, (l_queue_destroy_func_t) rmnet_request_free);
 	l_uintset_free(mux_ids);
 	l_netlink_unregister(rtnl, link_notify_id);
 	l_netlink_destroy(rtnl);
