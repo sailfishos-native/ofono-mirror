@@ -65,6 +65,7 @@
 
 enum wda_data_format {
 	WDA_DATA_FORMAT_UNKNOWN = 0,
+	WDA_DATA_FORMAT_RAW_IP,
 	WDA_DATA_FORMAT_802_3,	/* Last, most compatible legacy fallback */
 };
 
@@ -133,7 +134,10 @@ static bool wda_get_data_format(struct gobi_data *data,
 		return true;
 	}
 
-	return false;
+	/* For everything except 802.3, use RAW_IP */
+	out_format->ll_protocol = QMI_WDA_DATA_LINK_PROTOCOL_RAW_IP;
+
+	return true;
 }
 
 static int wda_data_format_to_mtu(enum wda_data_format format, uint32_t *out_mtu)
@@ -142,6 +146,7 @@ static int wda_data_format_to_mtu(enum wda_data_format format, uint32_t *out_mtu
 
 	switch (format) {
 	case WDA_DATA_FORMAT_802_3:
+	case WDA_DATA_FORMAT_RAW_IP:
 		mtu = DEFAULT_MTU;
 		break;
 	default:
@@ -499,6 +504,15 @@ static void enable_set_mtu_cb(int error, uint16_t type,
 
 	if (error)
 		goto error;
+
+	if (data->data_format == WDA_DATA_FORMAT_RAW_IP) {
+		DBG("Setting QMI WWAN to raw_ip");
+
+		if (qmi_wwan_set_raw_ip(data->main_net_name, 'Y') < 0) {
+			ofono_warn("Unable to set raw_ip");
+			goto error;
+		}
+	}
 
 	DBG("Requesting services");
 
