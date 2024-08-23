@@ -149,7 +149,18 @@ int rmnet_get_interfaces(uint32_t parent_ifindex, unsigned int n_interfaces,
 int rmnet_del_interfaces(unsigned int n_interfaces,
 					const struct rmnet_ifinfo *interfaces)
 {
-	return -ENOTSUP;
+	struct rmnet_request *req;
+
+	if (!n_interfaces || n_interfaces > MAX_MUX_IDS)
+		return -EINVAL;
+
+	req = __rmnet_del_request_new(n_interfaces, interfaces);
+	l_queue_push_tail(request_q, req);
+
+	if (l_queue_length(request_q) == 1 && !dump_id)
+		rmnet_start_next_request();
+
+	return 0;
 }
 
 int rmnet_cancel(int id)
