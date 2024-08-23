@@ -58,6 +58,7 @@
 #define GOBI_WDA	(1 << 7)
 
 #define MAX_CONTEXTS 4
+#define DEFAULT_MTU 1400
 
 #define QMI_WWAN_RAW_IP "/sys/class/net/%s/qmi/raw_ip"
 #define QMI_WWAN_PASS_THROUGH "/sys/class/net/%s/qmi/pass_through"
@@ -98,6 +99,7 @@ struct gobi_data {
 	uint8_t interface_number;
 	uint32_t max_aggregation_size;
 	uint32_t set_powered_id;
+	uint32_t set_mtu_id;
 	enum wda_data_format data_format;
 	bool using_mux : 1;
 	bool no_pass_through : 1;
@@ -132,6 +134,24 @@ static bool wda_get_data_format(struct gobi_data *data,
 	}
 
 	return false;
+}
+
+static int wda_data_format_to_mtu(enum wda_data_format format, uint32_t *out_mtu)
+{
+	uint32_t mtu;
+
+	switch (format) {
+	case WDA_DATA_FORMAT_802_3:
+		mtu = DEFAULT_MTU;
+		break;
+	default:
+		return -ENOTSUP;
+	}
+
+	if (out_mtu)
+		*out_mtu = mtu;
+
+	return 0;
 }
 
 static int qmi_wwan_set_raw_ip(const char *interface, char value)
@@ -267,6 +287,11 @@ static void gobi_remove(struct ofono_modem *modem)
 	if (data->set_powered_id) {
 		l_netlink_cancel(l_rtnl_get(), data->set_powered_id);
 		data->set_powered_id = 0;
+	}
+
+	if (data->set_mtu_id) {
+		l_netlink_cancel(l_rtnl_get(), data->set_mtu_id);
+		data->set_mtu_id = 0;
 	}
 
 	cleanup_services(data);
@@ -461,6 +486,29 @@ error:
 	shutdown_device(modem);
 }
 
+static void enable_set_mtu_cb(int error, uint16_t type,
+					const void *msg, uint32_t len,
+					void *user_data)
+{
+	struct ofono_modem *modem = user_data;
+	struct gobi_data *data = ofono_modem_get_data(modem);
+
+	DBG("error: %d", error);
+
+	data->set_mtu_id = 0;
+
+	if (error)
+		goto error;
+
+	DBG("Requesting services");
+
+	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
+				request_service_cb, modem, NULL) > 0)
+		return;
+error:
+	shutdown_device(modem);
+}
+
 /*
  * Some firmware accepts the Set Data Format command successfully, but doesn't
  * change anything.  Try to detect and warn if that happens
@@ -497,6 +545,7 @@ static void set_data_format_cb(struct qmi_result *result, void *user_data)
 		.interface_number = data->interface_number,
 	};
 	struct qmi_wda_data_format format;
+	uint32_t mtu;
 
 	DBG("");
 
@@ -523,10 +572,15 @@ static void set_data_format_cb(struct qmi_result *result, void *user_data)
 	goto error;
 
 done:
-	DBG("Set Data Format succeeded, proceeding to create services");
+	DBG("Set Data Format succeeded, try to set MTU...");
 
-	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
-				request_service_cb, modem, NULL) > 0)
+	if (L_WARN_ON(wda_data_format_to_mtu(data->data_format, &mtu) < 0))
+		goto error;
+
+	data->set_mtu_id = l_rtnl_link_set_mtu(l_rtnl_get(),
+						data->main_net_ifindex, mtu,
+						enable_set_mtu_cb, modem, NULL);
+	if (data->set_mtu_id)
 		return;
 error:
 	shutdown_device(modem);
