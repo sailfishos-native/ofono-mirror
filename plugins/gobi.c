@@ -15,6 +15,7 @@
 #include <stdlib.h>
 #include <stdio.h>
 #include <net/if.h>
+#include <sys/stat.h>
 
 #define OFONO_API_SUBJECT_TO_CHANGE
 #include <ofono/plugin.h>
@@ -59,6 +60,7 @@
 #define MAX_CONTEXTS 4
 
 #define QMI_WWAN_RAW_IP "/sys/class/net/%s/qmi/raw_ip"
+#define QMI_WWAN_PASS_THROUGH "/sys/class/net/%s/qmi/pass_through"
 
 enum wda_data_format {
 	WDA_DATA_FORMAT_UNKNOWN = 0,
@@ -98,6 +100,7 @@ struct gobi_data {
 	uint32_t set_powered_id;
 	enum wda_data_format data_format;
 	bool using_mux : 1;
+	bool no_pass_through : 1;
 };
 
 static void gobi_debug(const char *str, void *user_data)
@@ -136,6 +139,11 @@ static int qmi_wwan_set_raw_ip(const char *interface, char value)
 	return l_sysctl_set_char(value, QMI_WWAN_RAW_IP, interface);
 }
 
+static int qmi_wwan_set_pass_through(const char *interface, char value)
+{
+	return l_sysctl_set_char(value, QMI_WWAN_PASS_THROUGH, interface);
+}
+
 /*
  * Probe the modem.  The following modem properties are expected to be set
  * in order to initialize the driver properly:
@@ -165,6 +173,9 @@ static int gobi_probe(struct ofono_modem *modem)
 	uint8_t interface_number;
 	int ifindex;
 	const char *bus;
+	struct stat st;
+	_auto_(l_free) char *pass_through = NULL;
+	bool no_pass_through = false;
 
 	DBG("%p", modem);
 
@@ -189,10 +200,19 @@ static int gobi_probe(struct ofono_modem *modem)
 				&interface_number) < 0)
 		return -EINVAL;
 
+	pass_through = l_strdup_printf(QMI_WWAN_PASS_THROUGH, ifname);
+	if (stat(pass_through, &st) == -1) {
+		if (errno == ENOENT)
+			no_pass_through = true;
+		else
+			return -errno;
+	}
+
 	data = l_new(struct gobi_data, 1);
 	data->main_net_ifindex = ifindex;
 	l_strlcpy(data->main_net_name, ifname, sizeof(data->main_net_name));
 	data->interface_number = interface_number;
+	data->no_pass_through = no_pass_through;
 
 	ofono_modem_set_data(modem, data);
 	ofono_modem_set_capabilities(modem, OFONO_MODEM_CAPABILITY_LTE);
@@ -504,7 +524,11 @@ static void create_wda_cb(struct qmi_service *service, void *user_data)
 	}
 
 	data->wda = service;
-	data->data_format = WDA_DATA_FORMAT_UNKNOWN + 1;
+
+	if (data->no_pass_through)
+		data->data_format = WDA_DATA_FORMAT_802_3;
+	else
+		data->data_format = WDA_DATA_FORMAT_UNKNOWN + 1;
 
 	if (!wda_get_data_format(data, &format))
 		goto error;
@@ -603,6 +627,15 @@ static void init_powered_down_cb(int error, uint16_t type,
 		goto error;
 
 	DBG("Setting QMI_WWAN to 802.3 mode");
+
+	/* Must set pass_through first, before toggling raw_ip */
+	if (!data->no_pass_through) {
+		r = qmi_wwan_set_pass_through(data->main_net_name, 'N');
+		if (r < 0) {
+			ofono_warn("Unable to reset pass_through");
+			goto error;
+		}
+	}
 
 	r = qmi_wwan_set_raw_ip(data->main_net_name, 'N');
 	if (r < 0) {
