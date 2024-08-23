@@ -45,6 +45,7 @@
 #include <drivers/qmimodem/dms.h>
 #include <drivers/qmimodem/wda.h>
 #include <drivers/qmimodem/util.h>
+#include <drivers/qmimodem/common.h>
 
 #define GOBI_DMS	(1 << 0)
 #define GOBI_NAS	(1 << 1)
@@ -56,6 +57,13 @@
 #define GOBI_WDA	(1 << 7)
 
 #define MAX_CONTEXTS 4
+
+#define QMI_WWAN_RAW_IP "/sys/class/net/%s/qmi/raw_ip"
+
+enum wda_data_format {
+	WDA_DATA_FORMAT_UNKNOWN = 0,
+	WDA_DATA_FORMAT_802_3,	/* Last, most compatible legacy fallback */
+};
 
 struct service_request {
 	struct qmi_service **member;
@@ -88,6 +96,7 @@ struct gobi_data {
 	uint8_t interface_number;
 	uint32_t max_aggregation_size;
 	uint32_t set_powered_id;
+	enum wda_data_format data_format;
 	bool using_mux : 1;
 };
 
@@ -103,6 +112,28 @@ static void gobi_io_debug(const char *str, void *user_data)
 	const char *prefix = user_data;
 
 	ofono_debug("%s%s", prefix, str);
+}
+
+static bool wda_get_data_format(struct gobi_data *data,
+				struct qmi_wda_data_format *out_format)
+{
+	if (data->data_format == WDA_DATA_FORMAT_UNKNOWN ||
+			data->data_format > WDA_DATA_FORMAT_802_3)
+		return false;
+
+	memset(out_format, 0, sizeof(struct qmi_wda_data_format));
+
+	if (data->data_format == WDA_DATA_FORMAT_802_3) {
+		out_format->ll_protocol = QMI_WDA_DATA_LINK_PROTOCOL_802_3;
+		return true;
+	}
+
+	return false;
+}
+
+static int qmi_wwan_set_raw_ip(const char *interface, char value)
+{
+	return l_sysctl_set_char(value, QMI_WWAN_RAW_IP, interface);
 }
 
 /*
@@ -159,11 +190,8 @@ static int gobi_probe(struct ofono_modem *modem)
 		return -EINVAL;
 
 	data = l_new(struct gobi_data, 1);
-	data->main_net_ifindex =
-		ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
-	l_strlcpy(data->main_net_name,
-			ofono_modem_get_string(modem, "NetworkInterface"),
-			sizeof(data->main_net_name));
+	data->main_net_ifindex = ifindex;
+	l_strlcpy(data->main_net_name, ifname, sizeof(data->main_net_name));
 	data->interface_number = interface_number;
 
 	ofono_modem_set_data(modem, data);
@@ -252,6 +280,7 @@ static void __shutdown_device(struct ofono_modem *modem)
 	data->cur_service_request = 0;
 	data->num_service_requests = 0;
 	data->features = 0;
+	data->data_format = WDA_DATA_FORMAT_UNKNOWN;
 
 	qmi_qmux_device_free(data->device);
 	data->device = NULL;
@@ -376,94 +405,6 @@ error:
 	shutdown_device(modem);
 }
 
-static void setup_qmi_wwan(const char *interface, uint32_t llproto)
-{
-	char raw_ip;
-	char new_raw_ip;
-
-	if (l_sysctl_get_char(&raw_ip, "/sys/class/net/%s/qmi/raw_ip",
-				interface) < 0) {
-		DBG("Couldn't query raw_ip setting");
-		return;
-	}
-
-	if (raw_ip != 'Y' && raw_ip != 'N') {
-		DBG("Unexpected value: %c", raw_ip);
-		return;
-	}
-
-	switch (llproto) {
-	case QMI_WDA_DATA_LINK_PROTOCOL_802_3:
-		new_raw_ip = 'N';
-		break;
-	case QMI_WDA_DATA_LINK_PROTOCOL_RAW_IP:
-		new_raw_ip = 'Y';
-		break;
-	default:
-		DBG("Unknown WDA Link Protocol");
-		return;
-	}
-
-	DBG("raw_ip: %c, want: %c", raw_ip, new_raw_ip);
-
-	if (raw_ip == new_raw_ip)
-		return;
-
-	if (l_sysctl_set_char(new_raw_ip, "/sys/class/net/%s/qmi/raw_ip",
-				interface) < 0)
-		DBG("Fail to set raw_ip to %c", new_raw_ip);
-}
-
-static void get_data_format_cb(struct qmi_result *result, void *user_data)
-{
-	struct ofono_modem *modem = user_data;
-	struct gobi_data *data = ofono_modem_get_data(modem);
-	uint32_t llproto;
-
-	DBG("");
-
-	if (qmi_result_set_error(result, NULL))
-		goto done;
-
-	if (!qmi_result_get_uint32(result, QMI_WDA_LL_PROTOCOL, &llproto))
-		goto done;
-
-	setup_qmi_wwan(data->main_net_name, llproto);
-
-done:
-	if (qmi_service_send(data->dms, QMI_DMS_GET_CAPS, NULL,
-						get_caps_cb, modem, NULL) > 0)
-		return;
-
-	shutdown_device(modem);
-}
-
-static void create_wda_cb(struct qmi_service *service, void *user_data)
-{
-	struct ofono_modem *modem = user_data;
-	struct gobi_data *data = ofono_modem_get_data(modem);
-
-	DBG("");
-
-	if (!service) {
-		DBG("Failed to request WDA service, continue initialization");
-		goto error;
-	}
-
-	data->wda = service;
-
-	if (qmi_service_send(data->wda, QMI_WDA_GET_DATA_FORMAT, NULL,
-				get_data_format_cb, modem, NULL) > 0)
-		return;
-
-error:
-	if (qmi_service_send(data->dms, QMI_DMS_GET_CAPS, NULL,
-						get_caps_cb, modem, NULL) > 0)
-		return;
-
-	shutdown_device(modem);
-}
-
 static void request_service_cb(struct qmi_service *service, void *user_data)
 {
 	struct ofono_modem *modem = user_data;
@@ -480,10 +421,10 @@ static void request_service_cb(struct qmi_service *service, void *user_data)
 
 	data->cur_service_request += 1;
 	if (data->cur_service_request == data->num_service_requests) {
-		DBG("All services requested, proceeding to create WDA");
+		DBG("All services requested, query DMS Capabilities");
 
-		if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_WDA,
-						create_wda_cb, modem, NULL))
+		if (qmi_service_send(data->dms, QMI_DMS_GET_CAPS, NULL,
+						get_caps_cb, modem, NULL) > 0)
 			return;
 
 		goto error;
@@ -496,6 +437,81 @@ static void request_service_cb(struct qmi_service *service, void *user_data)
 					request_service_cb, modem, NULL))
 		return;
 
+error:
+	shutdown_device(modem);
+}
+
+static void set_data_format_cb(struct qmi_result *result, void *user_data)
+{
+	struct ofono_modem *modem = user_data;
+	struct gobi_data *data = ofono_modem_get_data(modem);
+	struct qmi_endpoint_info endpoint_info = {
+		.endpoint_type = QMI_DATA_ENDPOINT_TYPE_HSUSB,
+		.interface_number = data->interface_number,
+	};
+	struct qmi_wda_data_format format;
+
+	DBG("");
+
+	if (!qmi_result_set_error(result, NULL))
+		goto done;
+
+	if (data->data_format == WDA_DATA_FORMAT_802_3)
+		goto error;
+
+	DBG("Trying next data format");
+	data->data_format += 1;
+
+	if (!wda_get_data_format(data, &format))
+		goto error;
+
+	if (qmi_wda_set_data_format(data->wda, &endpoint_info, &format,
+					set_data_format_cb, modem, NULL) > 0)
+		return;
+
+	goto error;
+
+done:
+	DBG("Set Data Format succeeded, proceeding to create services");
+
+	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
+				request_service_cb, modem, NULL) > 0)
+		return;
+error:
+	shutdown_device(modem);
+}
+
+static void create_wda_cb(struct qmi_service *service, void *user_data)
+{
+	struct ofono_modem *modem = user_data;
+	struct gobi_data *data = ofono_modem_get_data(modem);
+	struct qmi_endpoint_info endpoint_info = {
+		.endpoint_type = QMI_DATA_ENDPOINT_TYPE_HSUSB,
+		.interface_number = data->interface_number,
+	};
+	struct qmi_wda_data_format format;
+
+	DBG("");
+
+	if (!service) {
+		DBG("Failed to request WDA service, assume 802.3");
+
+		if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
+					request_service_cb, modem, NULL) > 0)
+			return;
+
+		goto error;
+	}
+
+	data->wda = service;
+	data->data_format = WDA_DATA_FORMAT_UNKNOWN + 1;
+
+	if (!wda_get_data_format(data, &format))
+		goto error;
+
+	if (qmi_wda_set_data_format(data->wda, &endpoint_info, &format,
+					set_data_format_cb, modem, NULL) > 0)
+		return;
 error:
 	shutdown_device(modem);
 }
@@ -563,9 +579,10 @@ static void discover_cb(void *user_data)
 							QMI_SERVICE_WDS);
 	}
 
-	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
-					request_service_cb, modem, NULL) > 0)
+	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_WDA,
+						create_wda_cb, modem, NULL))
 		return;
+
 error:
 	shutdown_device(modem);
 }
@@ -584,6 +601,14 @@ static void init_powered_down_cb(int error, uint16_t type,
 
 	if (error)
 		goto error;
+
+	DBG("Setting QMI_WWAN to 802.3 mode");
+
+	r = qmi_wwan_set_raw_ip(data->main_net_name, 'N');
+	if (r < 0) {
+		ofono_warn("Unable to reset raw_ip");
+		goto error;
+	}
 
 	r = qmi_qmux_device_discover(data->device, discover_cb, modem, NULL);
 	if (!r)
