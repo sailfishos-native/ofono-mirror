@@ -461,6 +461,33 @@ error:
 	shutdown_device(modem);
 }
 
+/*
+ * Some firmware accepts the Set Data Format command successfully, but doesn't
+ * change anything.  Try to detect and warn if that happens
+ */
+static int compare_data_format(struct gobi_data *data, struct qmi_result *result)
+{
+	struct qmi_wda_data_format expected;
+	struct qmi_wda_data_format actual;
+	int r;
+
+	if (!wda_get_data_format(data, &expected))
+		return -EPROTO;
+
+	r = qmi_wda_parse_data_format(result, &actual);
+	if (r < 0)
+		return -EBADMSG;
+
+	if (expected.ll_protocol != actual.ll_protocol ||
+			expected.ul_aggregation_protocol !=
+			actual.ul_aggregation_protocol ||
+			expected.dl_aggregation_protocol !=
+			actual.dl_aggregation_protocol)
+		return -EBADE;
+
+	return 0;
+}
+
 static void set_data_format_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_modem *modem = user_data;
@@ -473,8 +500,12 @@ static void set_data_format_cb(struct qmi_result *result, void *user_data)
 
 	DBG("");
 
-	if (!qmi_result_set_error(result, NULL))
-		goto done;
+	if (!qmi_result_set_error(result, NULL)) {
+		if (!compare_data_format(data, result))
+			goto done;
+
+		ofono_error("Setting Data Format had no effect");
+	}
 
 	if (data->data_format == WDA_DATA_FORMAT_802_3)
 		goto error;
