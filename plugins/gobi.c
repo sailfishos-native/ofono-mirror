@@ -85,6 +85,7 @@ struct gobi_data {
 	uint8_t oper_mode;
 	int main_net_ifindex;
 	char main_net_name[IFNAMSIZ];
+	uint8_t interface_number;
 	uint32_t max_aggregation_size;
 	uint32_t set_powered_id;
 	bool using_mux : 1;
@@ -115,6 +116,9 @@ static void gobi_io_debug(const char *str, void *user_data)
  * NetworkInterfaceIndex
  *   The index of the main interface given by NetworkInterface
  *
+ * InterfaceNumber
+ *   The USB interface number of the network interface
+ *
  * NetworkInterfaceKernelDriver
  *   The kernel driver that is being used by the main network device.  Only
  *   'qmi_wwan' is supported.
@@ -127,6 +131,7 @@ static int gobi_probe(struct ofono_modem *modem)
 	struct gobi_data *data;
 	const char *if_driver;
 	const char *ifname;
+	uint8_t interface_number;
 	int ifindex;
 	const char *bus;
 
@@ -149,12 +154,17 @@ static int gobi_probe(struct ofono_modem *modem)
 	if (!L_IN_STRSET(bus, "usb"))
 		return -ENOTSUP;
 
+	if (l_safe_atox8(ofono_modem_get_string(modem, "InterfaceNumber"),
+				&interface_number) < 0)
+		return -EINVAL;
+
 	data = l_new(struct gobi_data, 1);
 	data->main_net_ifindex =
 		ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
 	l_strlcpy(data->main_net_name,
 			ofono_modem_get_string(modem, "NetworkInterface"),
 			sizeof(data->main_net_name));
+	data->interface_number = interface_number;
 
 	ofono_modem_set_data(modem, data);
 	ofono_modem_set_capabilities(modem, OFONO_MODEM_CAPABILITY_LTE);
