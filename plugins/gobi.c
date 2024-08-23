@@ -47,6 +47,7 @@
 #include <drivers/qmimodem/wda.h>
 #include <drivers/qmimodem/util.h>
 #include <drivers/qmimodem/common.h>
+#include "src/rmnet.h"
 
 #define GOBI_DMS	(1 << 0)
 #define GOBI_NAS	(1 << 1)
@@ -59,12 +60,15 @@
 
 #define MAX_CONTEXTS 4
 #define DEFAULT_MTU 1400
+#define RMNET_MAX_MTU 16384
+#define DEFAULT_DL_DATAGRAMS 32
 
 #define QMI_WWAN_RAW_IP "/sys/class/net/%s/qmi/raw_ip"
 #define QMI_WWAN_PASS_THROUGH "/sys/class/net/%s/qmi/pass_through"
 
 enum wda_data_format {
 	WDA_DATA_FORMAT_UNKNOWN = 0,
+	WDA_DATA_FORMAT_RMNET_QMAP5,
 	WDA_DATA_FORMAT_RAW_IP,
 	WDA_DATA_FORMAT_802_3,	/* Last, most compatible legacy fallback */
 };
@@ -88,12 +92,14 @@ struct gobi_data {
 		struct qmi_service *wds_ipv4;
 		struct qmi_service *wds_ipv6;
 	} context_services[MAX_CONTEXTS];
+	struct rmnet_ifinfo rmnet_interfaces[MAX_CONTEXTS];
+	uint8_t n_premux;
+	int rmnet_id;
 	struct service_request service_requests[8 + MAX_CONTEXTS * 2];
 	int cur_service_request;
 	int num_service_requests;
 	unsigned long features;
 	unsigned int discover_attempts;
-	uint8_t n_premux;
 	uint8_t oper_mode;
 	int main_net_ifindex;
 	char main_net_name[IFNAMSIZ];
@@ -102,7 +108,6 @@ struct gobi_data {
 	uint32_t set_powered_id;
 	uint32_t set_mtu_id;
 	enum wda_data_format data_format;
-	bool using_mux : 1;
 	bool no_pass_through : 1;
 };
 
@@ -137,6 +142,19 @@ static bool wda_get_data_format(struct gobi_data *data,
 	/* For everything except 802.3, use RAW_IP */
 	out_format->ll_protocol = QMI_WDA_DATA_LINK_PROTOCOL_RAW_IP;
 
+	if (data->data_format == WDA_DATA_FORMAT_RAW_IP)
+		goto done;
+
+	out_format->dl_max_datagrams = DEFAULT_DL_DATAGRAMS;
+	out_format->dl_max_size = data->max_aggregation_size;
+
+	if (data->data_format == WDA_DATA_FORMAT_RMNET_QMAP5) {
+		out_format->ul_aggregation_protocol =
+					QMI_WDA_AGGREGATION_PROTOCOL_QMAPV5;
+		out_format->dl_aggregation_protocol =
+					QMI_WDA_AGGREGATION_PROTOCOL_QMAPV5;
+	}
+done:
 	return true;
 }
 
@@ -148,6 +166,9 @@ static int wda_data_format_to_mtu(enum wda_data_format format, uint32_t *out_mtu
 	case WDA_DATA_FORMAT_802_3:
 	case WDA_DATA_FORMAT_RAW_IP:
 		mtu = DEFAULT_MTU;
+		break;
+	case WDA_DATA_FORMAT_RMNET_QMAP5:
+		mtu = RMNET_MAX_MTU;
 		break;
 	default:
 		return -ENOTSUP;
@@ -238,6 +259,8 @@ static int gobi_probe(struct ofono_modem *modem)
 	l_strlcpy(data->main_net_name, ifname, sizeof(data->main_net_name));
 	data->interface_number = interface_number;
 	data->no_pass_through = no_pass_through;
+	/* See drivers/net/ethernet/qualcomm/rmnet/rmnet_private.h */
+	data->max_aggregation_size = 16384;
 
 	ofono_modem_set_data(modem, data);
 	ofono_modem_set_capabilities(modem, OFONO_MODEM_CAPABILITY_LTE);
@@ -299,6 +322,11 @@ static void gobi_remove(struct ofono_modem *modem)
 		data->set_mtu_id = 0;
 	}
 
+	if (data->rmnet_id) {
+		rmnet_cancel(data->rmnet_id);
+		data->rmnet_id = 0;
+	}
+
 	cleanup_services(data);
 
 	qmi_qmux_device_free(data->device);
@@ -353,6 +381,14 @@ static void shutdown_device(struct ofono_modem *modem)
 	DBG("%p", modem);
 
 	cleanup_services(data);
+
+	if (!l_memeqzero(data->rmnet_interfaces,
+					sizeof(data->rmnet_interfaces))) {
+		rmnet_del_interfaces(data->n_premux, data->rmnet_interfaces);
+		data->n_premux = 0;
+		memset(data->rmnet_interfaces, 0,
+						sizeof(data->rmnet_interfaces));
+	}
 
 	if (qmi_qmux_device_shutdown(data->device, shutdown_cb, modem, NULL) < 0)
 		shutdown_cb(modem);
@@ -491,6 +527,55 @@ error:
 	shutdown_device(modem);
 }
 
+static uint32_t start_service_requests(struct ofono_modem *modem)
+{
+	struct gobi_data *data = ofono_modem_get_data(modem);
+	unsigned int i;
+
+	DBG("");
+
+	for (i = 0; i < (data->n_premux ? data->n_premux : 1); i++) {
+		add_service_request(data, &data->context_services[i].wds_ipv4,
+					QMI_SERVICE_WDS);
+		add_service_request(data, &data->context_services[i].wds_ipv6,
+					QMI_SERVICE_WDS);
+	}
+
+	return qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
+				request_service_cb, modem, NULL);
+}
+
+static void rmnet_get_interfaces_cb(int error, unsigned int n_interfaces,
+					const struct rmnet_ifinfo *interfaces,
+					void *user_data)
+{
+	struct ofono_modem *modem = user_data;
+	struct gobi_data *data = ofono_modem_get_data(modem);
+	unsigned int i;
+
+	DBG("error: %d, n_interfaces: %u", error, n_interfaces);
+	data->rmnet_id = 0;
+
+	if (error)
+		goto error;
+
+	DBG("RMNet interfaces created:");
+
+	for (i = 0; i < n_interfaces; i++)
+		DBG("\t%s[%d], mux_id: %u",
+			interfaces[i].ifname, interfaces[i].ifindex,
+			interfaces[i].mux_id);
+
+	memcpy(data->rmnet_interfaces, interfaces,
+				sizeof(struct rmnet_ifinfo) * n_interfaces);
+	data->n_premux = n_interfaces;
+
+	if (start_service_requests(modem) > 0)
+		return;
+error:
+	shutdown_device(modem);
+}
+
 static void enable_set_mtu_cb(int error, uint16_t type,
 					const void *msg, uint32_t len,
 					void *user_data)
@@ -505,7 +590,7 @@ static void enable_set_mtu_cb(int error, uint16_t type,
 	if (error)
 		goto error;
 
-	if (data->data_format == WDA_DATA_FORMAT_RAW_IP) {
+	if (data->data_format != WDA_DATA_FORMAT_802_3) {
 		DBG("Setting QMI WWAN to raw_ip");
 
 		if (qmi_wwan_set_raw_ip(data->main_net_name, 'Y') < 0) {
@@ -514,10 +599,26 @@ static void enable_set_mtu_cb(int error, uint16_t type,
 		}
 	}
 
-	DBG("Requesting services");
+	if (L_IN_SET(data->data_format, WDA_DATA_FORMAT_RMNET_QMAP5)) {
+		DBG("Setting QMI WWAN to pass_through");
 
-	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_DMS,
-				request_service_cb, modem, NULL) > 0)
+		if (qmi_wwan_set_pass_through(data->main_net_name, 'Y') < 0) {
+			ofono_error("Unable to set pass_through");
+			goto error;
+		}
+
+		data->rmnet_id = rmnet_get_interfaces(data->main_net_ifindex,
+							MAX_CONTEXTS,
+							rmnet_get_interfaces_cb,
+							modem, NULL);
+		if (data->rmnet_id > 0)
+			return;
+
+		ofono_error("Unable to request RMNet interfaces");
+		goto error;
+	}
+
+	if (start_service_requests(modem) > 0)
 		return;
 error:
 	shutdown_device(modem);
@@ -645,7 +746,6 @@ static void discover_cb(void *user_data)
 	struct gobi_data *data = ofono_modem_get_data(modem);
 	uint16_t major;
 	uint16_t minor;
-	int i;
 
 	DBG("");
 
@@ -694,13 +794,6 @@ static void discover_cb(void *user_data)
 		add_service_request(data, &data->voice, QMI_SERVICE_VOICE);
 	if (data->features & GOBI_UIM)
 		add_service_request(data, &data->uim, QMI_SERVICE_UIM);
-
-	for (i = 0; i < (data->n_premux ? data->n_premux : 1); i++) {
-		add_service_request(data, &data->context_services[i].wds_ipv4,
-							QMI_SERVICE_WDS);
-		add_service_request(data, &data->context_services[i].wds_ipv6,
-							QMI_SERVICE_WDS);
-	}
 
 	if (qmi_qmux_device_create_client(data->device, QMI_SERVICE_WDA,
 						create_wda_cb, modem, NULL))
@@ -910,7 +1003,7 @@ static void gobi_set_online(struct ofono_modem *modem, ofono_bool_t online,
 	l_netlink_command_func_t powered_cb;
 
 	DBG("%p %s using_mux: %s", modem, online ? "online" : "offline",
-		data->using_mux ? "yes" : "no");
+		data->n_premux ? "yes" : "no");
 
 	cbd->user = data;
 
@@ -919,7 +1012,7 @@ static void gobi_set_online(struct ofono_modem *modem, ofono_bool_t online,
 	else
 		powered_cb = powered_down_cb;
 
-	if (!data->using_mux) {
+	if (!data->n_premux) {
 		powered_cb(0, 0, NULL, 0, cbd);
 		cb_data_unref(cbd);
 		return;
@@ -1000,14 +1093,10 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 	for (i = 0; i < data->n_premux; i++) {
 		struct qmi_service *ipv4 = data->context_services[i].wds_ipv4;
 		struct qmi_service *ipv6 = data->context_services[i].wds_ipv6;
-		const char *interface;
-		char buf[256];
-		int mux_id;
+		struct rmnet_ifinfo *ifinfo = data->rmnet_interfaces + i;
 
-		sprintf(buf, "PremuxInterface%dMuxId", i + 1);
-		mux_id = ofono_modem_get_integer(modem, buf);
-
-		gc = ofono_gprs_context_create(modem, 0, "qmimodem", mux_id,
+		gc = ofono_gprs_context_create(modem, 0, "qmimodem",
+						ifinfo->mux_id,
 						qmi_service_clone(ipv4),
 						qmi_service_clone(ipv6));
 
@@ -1017,11 +1106,8 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 			continue;
 		}
 
-		sprintf(buf, "PremuxInterface%d", i + 1);
-		interface = ofono_modem_get_string(modem, buf);
-
 		ofono_gprs_add_context(gprs, gc);
-		ofono_gprs_context_set_interface(gc, interface);
+		ofono_gprs_context_set_interface(gc, ifinfo->ifname);
 	}
 }
 
