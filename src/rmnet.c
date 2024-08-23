@@ -32,6 +32,7 @@ struct rmnet_request {
 	void *user_data;
 	rmnet_destroy_func_t destroy;
 	int id;
+	bool canceled;
 	uint32_t netlink_id;
 	uint16_t request_type;
 	uint8_t current;
@@ -52,6 +53,14 @@ static void rmnet_request_free(struct rmnet_request *req)
 		req->destroy(req->user_data);
 
 	l_free(req);
+}
+
+static bool rmnet_request_id_matches(const void *a, const void *b)
+{
+	const struct rmnet_request *req = a;
+	int id = L_PTR_TO_INT(b);
+
+	return req->id == id;
 }
 
 static struct rmnet_request *__rmnet_del_request_new(unsigned int n_interfaces,
@@ -199,7 +208,7 @@ static void rmnet_new_link_cb(int error, uint16_t type, const void *data,
 	if (!error)
 		req->current += 1;
 
-	if (error) {
+	if (error || req->canceled) {
 		__rmnet_cancel_request();
 		req->n_interfaces = 0;
 	} else {
@@ -273,6 +282,7 @@ int rmnet_get_interfaces(uint32_t parent_ifindex, unsigned int n_interfaces,
 	req->user_data = user_data;
 	req->destroy = destroy;
 	req->id = next_request_id++;
+	req->canceled = false;
 	req->request_type = RTM_NEWLINK;
 	req->netlink_id = 0;
 	req->current = 0;
@@ -309,7 +319,53 @@ int rmnet_del_interfaces(unsigned int n_interfaces,
 
 int rmnet_cancel(int id)
 {
-	return -ENOTSUP;
+	struct rmnet_request *req;
+
+	req = l_queue_peek_head(request_q);
+	if (!req)
+		return -ENOENT;
+
+	/* Simple Case: Request not yet started (not queue head) */
+	if (req->id != id) {
+		req = l_queue_remove_if(request_q, rmnet_request_id_matches,
+						L_INT_TO_PTR(id));
+		if (!req)
+			return -ENOENT;
+
+		DBG("Removing non-head of queue request %d", id);
+		rmnet_request_free(req);
+		return 0;
+	}
+
+	/* Harder Case: In progress, but the next request not in flight */
+	if (!l_netlink_request_sent(rtnl, req->netlink_id)) {
+		DBG("Removing in-progress request (not in flight) %d", id);
+		req = __rmnet_cancel_request();
+		l_netlink_cancel(rtnl, req->netlink_id);
+		rmnet_request_free(req);
+
+		if (l_queue_length(request_q))
+			rmnet_start_next_request();
+
+		return 0;
+	}
+
+	/*
+	 * Hardest Case: In progress, next request in flight
+	 * We have to wait until the next callback since the ifindex won't be
+	 * known until then.
+	 */
+	if (req->destroy)
+		req->destroy(req->user_data);
+
+	req->new_cb = NULL;
+	req->destroy = NULL;
+	req->user_data = NULL;
+
+	DBG("Setting canceled on in-progress request %d", id);
+	req->canceled = true;
+
+	return 0;
 }
 
 static int rmnet_parse_info_data(struct l_netlink_attr *linkinfo,
