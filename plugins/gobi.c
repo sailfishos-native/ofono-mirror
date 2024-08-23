@@ -120,7 +120,7 @@ static void gobi_io_debug(const char *str, void *user_data)
  *   'qmi_wwan' is supported.
  *
  * Bus
- *   The bus of the modem.  Values can be "usb", "embedded", or "pci"
+ *   The bus of the modem.  Values can be "usb"
  */
 static int gobi_probe(struct ofono_modem *modem)
 {
@@ -144,6 +144,9 @@ static int gobi_probe(struct ofono_modem *modem)
 		return -EPROTO;
 
 	if (!L_IN_STRSET(if_driver, "qmi_wwan"))
+		return -ENOTSUP;
+
+	if (!L_IN_STRSET(bus, "usb"))
 		return -ENOTSUP;
 
 	data = l_new(struct gobi_data, 1);
