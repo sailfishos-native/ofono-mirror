@@ -28,6 +28,7 @@
 static struct l_netlink *rtnl;
 static uint32_t dump_id;
 static uint32_t link_notify_id;
+static struct l_uintset *mux_ids;
 
 int rmnet_get_interfaces(uint32_t parent_ifindex, unsigned int n_interfaces,
 				rmnet_new_interfaces_func_t cb,
@@ -169,6 +170,7 @@ static void rmnet_link_dump_cb(int error,
 
 	DBG("Existing rmnet link: %s(%u) mux_id: %u",
 			info.ifname, info.ifindex, info.mux_id);
+	l_uintset_put(mux_ids, info.mux_id);
 }
 
 static int rmnet_link_dump(void)
@@ -207,6 +209,11 @@ static void rmnet_link_notification(uint16_t type, const void *data,
 	if (rmnet_parse_link(data, len, ifname, &ifindex, &mux_id) < 0)
 		return;
 
+	if (type == RTM_NEWLINK)
+		l_uintset_put(mux_ids, mux_id);
+	else
+		l_uintset_take(mux_ids, mux_id);
+
 	DBG("link_notification: %s(%u) with mux_id: %u",
 			ifname, ifindex, mux_id);
 }
@@ -227,6 +234,7 @@ static int rmnet_init(void)
 
 	link_notify_id = l_netlink_register(rtnl, RTNLGRP_LINK,
 					rmnet_link_notification, NULL, NULL);
+	mux_ids = l_uintset_new_from_range(1, MAX_MUX_IDS);
 
 	return 0;
 dump_failed:
@@ -236,6 +244,7 @@ dump_failed:
 
 static void rmnet_exit(void)
 {
+	l_uintset_free(mux_ids);
 	l_netlink_unregister(rtnl, link_notify_id);
 	l_netlink_destroy(rtnl);
 }
