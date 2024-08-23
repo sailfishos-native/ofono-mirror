@@ -76,3 +76,8 @@
 #define QMI_LTE_BAND_MASK_EUTRA_41	0x0000010000000000
 #define QMI_LTE_BAND_MASK_EUTRA_42	0x0000020000000000
 #define QMI_LTE_BAND_MASK_EUTRA_43	0x0000040000000000
+
+struct qmi_endpoint_info {
+	uint32_t endpoint_type;
+	uint32_t interface_number;
+} __attribute__((packed));

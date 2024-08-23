@@ -17,6 +17,7 @@
 #include <ofono/gprs-context.h>
 
 #include "qmi.h"
+#include "common.h"
 #include "wds.h"
 #include "util.h"
 
@@ -715,10 +716,7 @@ static int qmi_gprs_context_bind_mux(struct ofono_gprs_context *gc,
 	struct qmi_param *param;
 	const char *interface_number;
 	const char *bus;
-	struct {
-		uint32_t endpoint_type;
-		uint32_t interface_number;
-	} __attribute__((packed)) endpoint_info;
+	struct qmi_endpoint_info endpoint_info;
 	uint8_t u8;
 
 	bus = ofono_modem_get_string(modem, "Bus");

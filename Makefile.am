@@ -366,6 +366,7 @@ qmi_sources = drivers/qmimodem/qmi.h drivers/qmimodem/qmi.c \
 					drivers/qmimodem/pds.h \
 					drivers/qmimodem/common.h \
 					drivers/qmimodem/wda.h \
+					drivers/qmimodem/wda.c \
 					drivers/qmimodem/wds.c \
 					drivers/qmimodem/voice.h
 
