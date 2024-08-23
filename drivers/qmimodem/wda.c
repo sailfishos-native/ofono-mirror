@@ -16,6 +16,42 @@
 #include "common.h"
 #include "wda.h"
 
+int qmi_wda_parse_data_format(struct qmi_result *result,
+				struct qmi_wda_data_format *out_format)
+{
+	static const uint8_t RESULT_LL_PROTO = 0x11;
+	static const uint8_t RESULT_UL_AGGREGATION_PROTOCOL = 0x12;
+	static const uint8_t RESULT_DL_AGGREGATION_PROTOCOL = 0x13;
+	static const uint8_t RESULT_DL_MAX_DATAGRAMS = 0x15;
+	static const uint8_t RESULT_DL_MAX_SIZE = 0x16;
+	struct qmi_wda_data_format format;
+
+	if (!qmi_result_get_uint32(result, RESULT_LL_PROTO,
+						&format.ll_protocol))
+		return -ENOENT;
+
+	if (!qmi_result_get_uint32(result, RESULT_UL_AGGREGATION_PROTOCOL,
+					&format.ul_aggregation_protocol))
+		return -ENOENT;
+
+	if (!qmi_result_get_uint32(result, RESULT_DL_AGGREGATION_PROTOCOL,
+					&format.dl_aggregation_protocol))
+		return -ENOENT;
+
+	if (!qmi_result_get_uint32(result, RESULT_DL_MAX_DATAGRAMS,
+					&format.dl_max_datagrams))
+		return -ENOENT;
+
+	if (!qmi_result_get_uint32(result, RESULT_DL_MAX_SIZE,
+					&format.dl_max_size))
+		return -ENOENT;
+
+	if (out_format)
+		memcpy(out_format, &format, sizeof(struct qmi_wda_data_format));
+
+	return 0;
+}
+
 uint16_t qmi_wda_set_data_format(struct qmi_service *wda,
 				const struct qmi_endpoint_info *endpoint_info,
 				const struct qmi_wda_data_format *format,

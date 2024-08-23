@@ -34,6 +34,8 @@ struct qmi_wda_data_format {
 	uint32_t dl_max_size;
 };
 
+int qmi_wda_parse_data_format(struct qmi_result *result,
+				struct qmi_wda_data_format *out_format);
 uint16_t qmi_wda_set_data_format(struct qmi_service *wda,
 				const struct qmi_endpoint_info *endpoint_info,
 				const struct qmi_wda_data_format *format,
