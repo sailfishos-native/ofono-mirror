@@ -2311,7 +2311,7 @@ bool qmi_result_get_uint8(struct qmi_result *result, uint8_t type,
 		return false;
 
 	ptr = tlv_get(result->data, result->length, type, &len);
-	if (!ptr)
+	if (!ptr || len != sizeof(uint8_t))
 		return false;
 
 	if (value)
@@ -2330,7 +2330,7 @@ bool qmi_result_get_int16(struct qmi_result *result, uint8_t type,
 		return false;
 
 	ptr = tlv_get(result->data, result->length, type, &len);
-	if (!ptr)
+	if (!ptr || len != sizeof(int16_t))
 		return false;
 
 	memcpy(&tmp, ptr, 2);
@@ -2351,7 +2351,7 @@ bool qmi_result_get_uint16(struct qmi_result *result, uint8_t type,
 		return false;
 
 	ptr = tlv_get(result->data, result->length, type, &len);
-	if (!ptr)
+	if (!ptr || len != sizeof(uint16_t))
 		return false;
 
 	memcpy(&tmp, ptr, 2);
@@ -2373,7 +2373,7 @@ bool qmi_result_get_uint32(struct qmi_result *result, uint8_t type,
 		return false;
 
 	ptr = tlv_get(result->data, result->length, type, &len);
-	if (!ptr)
+	if (!ptr || len != sizeof(uint32_t))
 		return false;
 
 	memcpy(&tmp, ptr, 4);
@@ -2395,7 +2395,7 @@ bool qmi_result_get_uint64(struct qmi_result *result, uint8_t type,
 		return false;
 
 	ptr = tlv_get(result->data, result->length, type, &len);
-	if (!ptr)
+	if (!ptr || len != sizeof(uint64_t))
 		return false;
 
 	memcpy(&tmp, ptr, 8);
