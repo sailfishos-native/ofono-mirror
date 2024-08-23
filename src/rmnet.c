@@ -12,6 +12,7 @@
 #include <stddef.h>
 #include <errno.h>
 #include <unistd.h>
+#include <stdio.h>
 #include <linux/rtnetlink.h>
 #include <net/if.h>
 #include <linux/if_link.h>
@@ -43,6 +44,7 @@ static uint32_t dump_id;
 static uint32_t link_notify_id;
 static struct l_uintset *mux_ids;
 struct l_queue *request_q;
+static int next_request_id = 1;
 
 static void rmnet_request_free(struct rmnet_request *req)
 {
@@ -68,6 +70,19 @@ static struct rmnet_request *__rmnet_del_request_new(unsigned int n_interfaces,
 	return req;
 }
 
+static struct rmnet_request *__rmnet_cancel_request(void)
+{
+	struct rmnet_request *req = l_queue_pop_head(request_q);
+
+	if (req->current) {
+		struct rmnet_request *del_req =
+			__rmnet_del_request_new(req->current, req->infos);
+		l_queue_push_head(request_q, del_req);
+	}
+
+	return req;
+}
+
 static int rmnet_link_del(uint32_t ifindex, l_netlink_command_func_t cb,
 				void *userdata,
 				l_netlink_destroy_func_t destroy,
@@ -83,6 +98,57 @@ static int rmnet_link_del(uint32_t ifindex, l_netlink_command_func_t cb,
 	ifi.ifi_index = ifindex;
 
 	l_netlink_message_add_header(nlm, &ifi, sizeof(ifi));
+
+	id = l_netlink_send(rtnl, nlm, cb, userdata, destroy);
+	if (!id) {
+		l_netlink_message_unref(nlm);
+		return -EIO;
+	}
+
+	if (out_command_id)
+		*out_command_id = id;
+
+	return 0;
+}
+
+static int rmnet_link_new(uint32_t parent_ifindex, uint8_t mux_id,
+				const char ifname[static IF_NAMESIZE],
+				l_netlink_command_func_t cb,
+				void *userdata,
+				l_netlink_destroy_func_t destroy,
+				uint32_t *out_command_id)
+{
+	struct ifinfomsg ifi;
+	struct l_netlink_message *nlm =
+		l_netlink_message_new(RTM_NEWLINK, NLM_F_EXCL | NLM_F_CREATE);
+	struct ifla_rmnet_flags flags;
+	uint32_t id;
+
+	memset(&ifi, 0, sizeof(ifi));
+	ifi.ifi_family = AF_UNSPEC;
+	ifi.ifi_type = ARPHRD_RAWIP;
+	ifi.ifi_flags = 0;
+	ifi.ifi_change = 0xFFFFFFFF;
+
+	l_netlink_message_add_header(nlm, &ifi, sizeof(ifi));
+	l_netlink_message_append_u32(nlm, IFLA_LINK, parent_ifindex);
+	l_netlink_message_append_string(nlm, IFLA_IFNAME, ifname);
+
+	l_netlink_message_enter_nested(nlm, IFLA_LINKINFO);
+	l_netlink_message_append_string(nlm, IFLA_INFO_KIND, RMNET_TYPE);
+	l_netlink_message_enter_nested(nlm, IFLA_INFO_DATA);
+	l_netlink_message_append_u16(nlm, IFLA_RMNET_MUX_ID, mux_id);
+	flags.flags = RMNET_FLAGS_INGRESS_DEAGGREGATION |
+			RMNET_FLAGS_INGRESS_MAP_CKSUMV5 |
+			RMNET_FLAGS_EGRESS_MAP_CKSUMV5;
+	flags.mask = RMNET_FLAGS_EGRESS_MAP_CKSUMV4 |
+			RMNET_FLAGS_INGRESS_MAP_CKSUMV4 |
+			RMNET_FLAGS_EGRESS_MAP_CKSUMV5 |
+			RMNET_FLAGS_INGRESS_MAP_CKSUMV5 |
+			RMNET_FLAGS_INGRESS_DEAGGREGATION;
+	l_netlink_message_append(nlm, IFLA_RMNET_FLAGS, &flags, sizeof(flags));
+	l_netlink_message_leave_nested(nlm);
+	l_netlink_message_leave_nested(nlm);
 
 	id = l_netlink_send(rtnl, nlm, cb, userdata, destroy);
 	if (!id) {
@@ -120,9 +186,45 @@ next_request:
 		rmnet_start_next_request();
 }
 
+static void rmnet_new_link_cb(int error, uint16_t type, const void *data,
+					uint32_t len, void *user_data)
+{
+	struct rmnet_request *req = l_queue_peek_head(request_q);
+
+	DBG("NEWLINK %u (%u/%u) complete, error: %d",
+		req->netlink_id, req->current + 1, req->n_interfaces, error);
+
+	req->netlink_id = 0;
+
+	if (!error)
+		req->current += 1;
+
+	if (error) {
+		__rmnet_cancel_request();
+		req->n_interfaces = 0;
+	} else {
+		if (req->current < req->n_interfaces)
+			goto next_request;
+
+		l_queue_pop_head(request_q);
+	}
+
+	if (req->new_cb)
+		req->new_cb(error, req->n_interfaces,
+				req->n_interfaces ? req->infos : NULL,
+				req->user_data);
+
+	rmnet_request_free(req);
+next_request:
+	if (l_queue_length(request_q) > 0)
+		rmnet_start_next_request();
+}
+
 static void rmnet_start_next_request(void)
 {
 	struct rmnet_request *req = l_queue_peek_head(request_q);
+	uint32_t mux_id;
+	struct rmnet_ifinfo *info;
 
 	if (!req)
 		return;
@@ -137,13 +239,55 @@ static void rmnet_start_next_request(void)
 				req->n_interfaces, req->netlink_id);
 		return;
 	}
+
+	info = req->infos + req->current;
+	mux_id = l_uintset_find_unused_min(mux_ids);
+	info->mux_id = mux_id;
+	sprintf(info->ifname, RMNET_TYPE"%u", mux_id - 1);
+
+	L_WARN_ON(rmnet_link_new(req->parent_ifindex, mux_id, info->ifname,
+					rmnet_new_link_cb, NULL, NULL,
+					&req->netlink_id) < 0);
+
+	DBG("Start NEWLINK: parent: %u, interface: %u/%u, request: %u",
+			req->parent_ifindex, req->current + 1,
+			req->n_interfaces, req->netlink_id);
 }
 
 int rmnet_get_interfaces(uint32_t parent_ifindex, unsigned int n_interfaces,
 				rmnet_new_interfaces_func_t cb,
 				void *user_data, rmnet_destroy_func_t destroy)
 {
-	return -ENOTSUP;
+	struct rmnet_request *req;
+
+	if (!n_interfaces || n_interfaces > MAX_MUX_IDS)
+		return -EINVAL;
+
+	if (l_uintset_size(mux_ids) > MAX_MUX_IDS - n_interfaces)
+		return -ENOSPC;
+
+	req = l_malloc(sizeof(struct rmnet_request) +
+				sizeof(struct rmnet_ifinfo) * n_interfaces);
+	req->parent_ifindex = parent_ifindex;
+	req->new_cb = cb;
+	req->user_data = user_data;
+	req->destroy = destroy;
+	req->id = next_request_id++;
+	req->request_type = RTM_NEWLINK;
+	req->netlink_id = 0;
+	req->current = 0;
+	req->n_interfaces = n_interfaces;
+	memset(req->infos, 0, sizeof(struct rmnet_ifinfo) * n_interfaces);
+
+	if (next_request_id < 0)
+		next_request_id = 1;
+
+	l_queue_push_tail(request_q, req);
+
+	if (l_queue_length(request_q) == 1 && !dump_id)
+		rmnet_start_next_request();
+
+	return req->id;
 }
 
 int rmnet_del_interfaces(unsigned int n_interfaces,
@@ -323,6 +467,23 @@ static int rmnet_link_dump(void)
 	return -EIO;
 }
 
+/* For NEW_LINK requests, the ifindex comes in the multicast message */
+static void update_new_link_ifindex(uint16_t mux_id,
+					const char ifname[static IF_NAMESIZE],
+					uint32_t ifindex)
+{
+	struct rmnet_request *req;
+	struct rmnet_ifinfo *info;
+
+	req = l_queue_peek_head(request_q);
+	if (!req || req->request_type != RTM_NEWLINK)
+		return;
+
+	info = req->infos + req->current;
+	if (info->mux_id == mux_id && !strcmp(info->ifname, ifname))
+		info->ifindex = ifindex;
+}
+
 static void rmnet_link_notification(uint16_t type, const void *data,
 					uint32_t len, void *user_data)
 {
@@ -336,9 +497,10 @@ static void rmnet_link_notification(uint16_t type, const void *data,
 	if (rmnet_parse_link(data, len, ifname, &ifindex, &mux_id) < 0)
 		return;
 
-	if (type == RTM_NEWLINK)
+	if (type == RTM_NEWLINK) {
 		l_uintset_put(mux_ids, mux_id);
-	else
+		update_new_link_ifindex(mux_id, ifname, ifindex);
+	} else
 		l_uintset_take(mux_ids, mux_id);
 
 	DBG("link_notification: %s(%u) with mux_id: %u",
