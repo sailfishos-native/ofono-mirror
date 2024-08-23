@@ -88,8 +88,6 @@ struct gobi_data {
 	uint32_t max_aggregation_size;
 	uint32_t set_powered_id;
 	bool using_mux : 1;
-	bool using_qmi_wwan : 1;
-	bool using_qmi_wwan_q : 1;
 };
 
 static void gobi_debug(const char *str, void *user_data)
@@ -111,15 +109,15 @@ static void gobi_io_debug(const char *str, void *user_data)
  * in order to initialize the driver properly:
  *
  * NetworkInterface
- *   The string that contains the 'main' network device.  This can be
- *   "rmnet_ipa" on SoC systems, or "wwan0" for upstream linux systems.
+ *   The string that contains the 'main' network device.  This is typically
+ *   'wwanX' on upstream linux systems.
  *
  * NetworkInterfaceIndex
  *   The index of the main interface given by NetworkInterface
  *
  * NetworkInterfaceKernelDriver
- *   The kernel driver that is being used by the main network device.  Certain
- *   drivers such as 'qmi_wwan' or 'qmi_wwan_q' are treated specifically.
+ *   The kernel driver that is being used by the main network device.  Only
+ *   'qmi_wwan' is supported.
  *
  * Bus
  *   The bus of the modem.  Values can be "usb", "embedded", or "pci"
@@ -131,7 +129,6 @@ static int gobi_probe(struct ofono_modem *modem)
 	const char *ifname;
 	int ifindex;
 	const char *bus;
-	int n_premux;
 
 	DBG("%p", modem);
 
@@ -140,32 +137,22 @@ static int gobi_probe(struct ofono_modem *modem)
 	ifname = ofono_modem_get_string(modem, "NetworkInterface");
 	ifindex = ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
 	bus = ofono_modem_get_string(modem, "Bus");
-	n_premux = ofono_modem_get_integer(modem, "NumPremuxInterfaces");
 
 	DBG("net: %s[%s](%d) %s", ifname, if_driver, ifindex, bus);
 
-	if (!if_driver || !ifname || !ifindex || !bus || n_premux < 0)
+	if (!if_driver || !ifname || !ifindex || !bus)
 		return -EPROTO;
 
+	if (!L_IN_STRSET(if_driver, "qmi_wwan"))
+		return -ENOTSUP;
+
 	data = l_new(struct gobi_data, 1);
-
-	if (!strcmp(if_driver, "qmi_wwan_q"))
-		data->using_qmi_wwan_q = true;
-	else if (!strcmp(if_driver, "qmi_wwan"))
-		data->using_qmi_wwan = true;
-
-	if (n_premux > MAX_CONTEXTS) {
-		l_warn("NumPremuxInterfaces > %d, limiting to %d",
-				MAX_CONTEXTS, MAX_CONTEXTS);
-		n_premux = MAX_CONTEXTS;
-	}
-
-	data->n_premux = n_premux;
 	data->main_net_ifindex =
 		ofono_modem_get_integer(modem, "NetworkInterfaceIndex");
 	l_strlcpy(data->main_net_name,
 			ofono_modem_get_string(modem, "NetworkInterface"),
 			sizeof(data->main_net_name));
+
 	ofono_modem_set_data(modem, data);
 	ofono_modem_set_capabilities(modem, OFONO_MODEM_CAPABILITY_LTE);
 
@@ -423,12 +410,7 @@ static void get_data_format_cb(struct qmi_result *result, void *user_data)
 	if (!qmi_result_get_uint32(result, QMI_WDA_LL_PROTOCOL, &llproto))
 		goto done;
 
-	if (data->using_qmi_wwan) {
-		const char *interface =
-			ofono_modem_get_string(modem, "NetworkInterface");
-
-		setup_qmi_wwan(interface, llproto);
-	}
+	setup_qmi_wwan(data->main_net_name, llproto);
 
 done:
 	if (qmi_service_send(data->dms, QMI_DMS_GET_CAPS, NULL,
@@ -674,10 +656,6 @@ static void powered_up_cb(int error, uint16_t type,
 	if (!param)
 		goto error;
 
-	if (data->using_qmi_wwan_q)
-		l_sysctl_set_u32(1, "/sys/class/net/%s/link_state",
-					data->main_net_name);
-
 	cb_data_ref(cbd);
 
 	if (qmi_service_send(data->dms, QMI_DMS_SET_OPER_MODE, param,
@@ -710,10 +688,6 @@ static void powered_down_cb(int error, uint16_t type,
 					QMI_DMS_OPER_MODE_LOW_POWER);
 	if (!param)
 		goto error;
-
-	if (data->using_qmi_wwan_q)
-		l_sysctl_set_u32(0, "/sys/class/net/%s/link_state",
-					data->main_net_name);
 
 	cb_data_ref(cbd);
 
@@ -792,8 +766,6 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 	struct gobi_data *data = ofono_modem_get_data(modem);
 	struct ofono_gprs *gprs;
 	struct ofono_gprs_context *gc;
-	const char *interface;
-	char buf[256];
 	int i;
 
 	gprs = ofono_gprs_create(modem, 0, "qmimodem",
@@ -810,8 +782,6 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 		struct qmi_service *ipv4 = data->context_services[0].wds_ipv4;
 		struct qmi_service *ipv6 = data->context_services[0].wds_ipv6;
 
-		interface = ofono_modem_get_string(modem, "NetworkInterface");
-
 		gc = ofono_gprs_context_create(modem, 0, "qmimodem", -1,
 						qmi_service_clone(ipv4),
 						qmi_service_clone(ipv6));
@@ -822,20 +792,16 @@ static void gobi_setup_gprs(struct ofono_modem *modem)
 		}
 
 		ofono_gprs_add_context(gprs, gc);
-		ofono_gprs_context_set_interface(gc, interface);
+		ofono_gprs_context_set_interface(gc, data->main_net_name);
 
 		return;
 	}
 
-	data->using_mux = true;
-
-	data->max_aggregation_size =
-		ofono_modem_get_integer(modem, "MaxAggregationSize");
-	DBG("max_aggregation_size: %u", data->max_aggregation_size);
-
 	for (i = 0; i < data->n_premux; i++) {
 		struct qmi_service *ipv4 = data->context_services[i].wds_ipv4;
 		struct qmi_service *ipv6 = data->context_services[i].wds_ipv6;
+		const char *interface;
+		char buf[256];
 		int mux_id;
 
 		sprintf(buf, "PremuxInterface%dMuxId", i + 1);
