@@ -230,12 +230,9 @@ static void add_service_request(struct gobi_data *data,
 	data->service_requests[data->num_service_requests++] = req;
 }
 
-static void shutdown_cb(void *user_data)
+static void __shutdown_device(struct ofono_modem *modem)
 {
-	struct ofono_modem *modem = user_data;
 	struct gobi_data *data = ofono_modem_get_data(modem);
-
-	DBG("");
 
 	data->discover_attempts = 0;
 	memset(&data->service_requests, 0, sizeof(data->service_requests));
@@ -245,7 +242,15 @@ static void shutdown_cb(void *user_data)
 
 	qmi_qmux_device_free(data->device);
 	data->device = NULL;
+}
 
+static void shutdown_cb(void *user_data)
+{
+	struct ofono_modem *modem = user_data;
+
+	DBG("");
+
+	__shutdown_device(modem);
 	ofono_modem_set_powered(modem, FALSE);
 }
 
@@ -552,11 +557,32 @@ error:
 	shutdown_device(modem);
 }
 
+static void init_powered_down_cb(int error, uint16_t type,
+					const void *msg, uint32_t len,
+					void *user_data)
+{
+	struct ofono_modem *modem = user_data;
+	struct gobi_data *data = ofono_modem_get_data(modem);
+	int r;
+
+	DBG("error: %d", error);
+
+	data->set_powered_id = 0;
+
+	if (error)
+		goto error;
+
+	r = qmi_qmux_device_discover(data->device, discover_cb, modem, NULL);
+	if (!r)
+		return;
+error:
+	__shutdown_device(modem);
+}
+
 static int gobi_enable(struct ofono_modem *modem)
 {
 	struct gobi_data *data = ofono_modem_get_data(modem);
 	const char *device;
-	int r;
 
 	DBG("%p", modem);
 
@@ -575,11 +601,15 @@ static int gobi_enable(struct ofono_modem *modem)
 		qmi_qmux_device_set_io_debug(data->device,
 						gobi_io_debug, "QMI: ");
 
-	r = qmi_qmux_device_discover(data->device, discover_cb, modem, NULL);
-	if (!r)
+	data->set_powered_id =
+		l_rtnl_set_powered(l_rtnl_get(), data->main_net_ifindex,
+					false, init_powered_down_cb,
+					modem, NULL);
+	if (data->set_powered_id)
 		return -EINPROGRESS;
 
-	return r;
+	__shutdown_device(modem);
+	return -EIO;
 }
 
 static void power_disable_cb(struct qmi_result *result, void *user_data)
