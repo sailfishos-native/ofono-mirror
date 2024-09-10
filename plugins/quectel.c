@@ -50,7 +50,7 @@ static const char *cfun_prefix[] = { "+CFUN:", NULL };
 static const char *cpin_prefix[] = { "+CPIN:", NULL };
 static const char *cbc_prefix[] = { "+CBC:", NULL };
 static const char *qinistat_prefix[] = { "+QINISTAT:", NULL };
-static const char *cgmm_prefix[] = { "UC15", "Quectel_M95", "Quectel_MC60",
+static const char *cgmm_prefix[] = { "UC15", "Quectel_M95", "EG916Q-GL", "Quectel_MC60",
 					"EC21", "EC200", NULL };
 static const char *none_prefix[] = { NULL };
 
@@ -69,6 +69,7 @@ enum quectel_model {
 	QUECTEL_UNKNOWN,
 	QUECTEL_UC15,
 	QUECTEL_M95,
+	QUECTEL_EG916Q,
 	QUECTEL_MC60,
 	QUECTEL_EC21,
 	QUECTEL_EC200,
@@ -120,6 +121,7 @@ static ofono_bool_t quectel_model_supports_lte(enum quectel_model model)
 	switch (model) {
 	case QUECTEL_EC21:
 	case QUECTEL_EC200:
+	case QUECTEL_EG916Q:
 		return TRUE;
 	default:
 		return FALSE;
@@ -556,6 +558,7 @@ static void dbus_hw_enable(struct ofono_modem *modem)
 					NULL);
 		break;
 	case QUECTEL_M95:
+	case QUECTEL_EG916Q:
 	case QUECTEL_MC60:
 		g_at_chat_register(data->aux, "OVER_VOLTAGE POWER DOWN",
 					power_notify, FALSE, hw, NULL);
@@ -597,6 +600,7 @@ static void qinistat_cb(gboolean ok, GAtResult *result, gpointer user_data)
 	switch (data->model) {
 	case QUECTEL_UC15:
 	case QUECTEL_EC21:
+	case QUECTEL_EG916Q:
 		/* UC15 uses a bitmap of 1 + 2 + 4 = 7 */
 		ready = 7;
 		break;
@@ -865,6 +869,10 @@ static void cgmm_cb(int ok, GAtResult *result, void *user_data)
 		DBG("%p model M95", modem);
 		data->vendor = OFONO_VENDOR_QUECTEL_SERIAL;
 		data->model = QUECTEL_M95;
+	} else if (strcmp(model, "EG916Q-GL") == 0) {
+		DBG("%p model EG916Q-GL", modem);
+		data->vendor = OFONO_VENDOR_QUECTEL_EG91X;
+		data->model = QUECTEL_EG916Q;
 	} else if (strcmp(model, "Quectel_MC60") == 0) {
 		DBG("%p model MC60", modem);
 		data->vendor = OFONO_VENDOR_QUECTEL_SERIAL;
