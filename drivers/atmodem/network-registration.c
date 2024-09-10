@@ -2103,6 +2103,7 @@ static void at_creg_set_cb(gboolean ok, GAtResult *result, gpointer user_data)
 		/* Signal strength reporting via CIND is not supported */
 		break;
 	case OFONO_VENDOR_QUECTEL_EC2X:
+	case OFONO_VENDOR_QUECTEL_EG91X:
 		g_at_chat_register(nd->chat, "+QIND:",
 				quectel_qind_notify, FALSE, netreg, NULL);
 		/* Register for specific signal strength reports */

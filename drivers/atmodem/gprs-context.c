@@ -455,6 +455,9 @@ static int at_gprs_context_probe(struct ofono_gprs_context *gc,
 	case OFONO_VENDOR_SIMCOM_SIM900:
 		gcd->use_atd99 = FALSE;
 		break;
+	case OFONO_VENDOR_QUECTEL_EG91X:
+		gcd->use_atd99 = TRUE;
+		break;
 	default:
 		g_at_chat_send(chat, "AT+CGDATA=?", cgdata_prefix,
 						at_cgdata_test_cb, gc, NULL);

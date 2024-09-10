@@ -324,6 +324,7 @@ static inline void at_ack_delivery(struct ofono_sms *sms)
 		switch (data->vendor) {
 		case OFONO_VENDOR_GEMALTO:
 		case OFONO_VENDOR_QUECTEL_EC2X:
+		case OFONO_VENDOR_QUECTEL_EG91X:
 			snprintf(buf, sizeof(buf), "AT+CNMA=1");
 			break;
 		case OFONO_VENDOR_QUECTEL_SERIAL:
@@ -835,6 +836,7 @@ static gboolean build_cnmi_string(char *buf, int *cnmi_opts,
 	case OFONO_VENDOR_SIMCOM_A76XX:
 	case OFONO_VENDOR_QUECTEL:
 	case OFONO_VENDOR_QUECTEL_EC2X:
+	case OFONO_VENDOR_QUECTEL_EG91X:
 	case OFONO_VENDOR_DROID:
 		/* MSM devices advertise support for mode 2, but return an
 		 * error if we attempt to actually use it. */

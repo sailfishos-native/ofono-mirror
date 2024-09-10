@@ -668,6 +668,7 @@ static void gprs_initialized(gboolean ok, GAtResult *result, gpointer user_data)
 						NULL, NULL, NULL);
 		break;
 	case OFONO_VENDOR_QUECTEL_EC2X:
+	case OFONO_VENDOR_QUECTEL_EG91X:
 	case OFONO_VENDOR_QUECTEL_SERIAL:
 		break;
 	default:
