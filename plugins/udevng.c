@@ -1045,7 +1045,8 @@ static gboolean setup_quectel_usb(struct modem_info *modem)
 			mdm = info->devnode;
 			if (aux != NULL)
 				break;
-		} else if (g_strcmp0(info->interface, "255/255/255") == 0) {
+		} else if (g_strcmp0(info->interface, "255/255/255") == 0 ||
+				g_strcmp0(info->interface, "255/0/0") == 0) {
 			if (g_strcmp0(info->number, "02") == 0)
 				aux = info->devnode;
 			else if (g_strcmp0(info->number, "03") == 0)
@@ -2145,6 +2146,7 @@ static struct {
 	{ "samsung",	"option",	"04e8", "6889"	},
 	{ "samsung",	"kalmia"			},
 	{ "quectel",	"option",	"05c6", "9090"	},
+	{ "quectel",	"option",	"2c7c", "6007"	},
 	{ "quectelqmi",	"qmi_wwan",	"2c7c", "0121"	},
 	{ "quectelqmi",	"qcserial",	"2c7c", "0121"	},
 	{ "quectelqmi",	"qmi_wwan",	"2c7c", "0125"	},
