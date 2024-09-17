@@ -287,7 +287,7 @@ def existing_path(value):
 def existing_dir(value):
     path = os.path.abspath(os.path.expanduser(value))
     if not os.path.isdir(path):
-        raise ArgumentTypeError(f"{vale} is not a directory.")
+        raise ArgumentTypeError(f"{value} is not a directory.")
     return path
 
 def expanded_path(value):
