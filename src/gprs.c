@@ -1731,10 +1731,12 @@ static void gprs_netreg_update(struct ofono_gprs *gprs)
 	if (gprs->netreg_status < 0)
 		return;
 
-	attach = gprs->netreg_status == NETWORK_REGISTRATION_STATUS_REGISTERED;
+	attach = (gprs->netreg_status == NETWORK_REGISTRATION_STATUS_REGISTERED) ||
+		(gprs->netreg_status == NETWORK_REGISTRATION_STATUS_REGISTERED_SMS_EUTRAN);
 
 	attach = attach || (gprs->roaming_allowed &&
-		gprs->netreg_status == NETWORK_REGISTRATION_STATUS_ROAMING);
+		((gprs->netreg_status == NETWORK_REGISTRATION_STATUS_ROAMING) ||
+		(gprs->netreg_status == NETWORK_REGISTRATION_STATUS_ROAMING_SMS_EUTRAN)));
 
 	attach = attach && gprs->powered;
 
