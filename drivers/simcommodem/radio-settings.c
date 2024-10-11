@@ -96,6 +96,47 @@ error:
 	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
 }
 
+static void cnmp_rat_support_cb(gboolean ok, GAtResult *result,
+							gpointer user_data)
+{
+	struct cb_data *cbd = user_data;
+	ofono_radio_settings_rat_mode_query_cb_t cb = cbd->cb;
+	struct ofono_error error;
+	int index;
+	GAtResultIter iter;
+	unsigned int available_rats = 0;
+
+	DBG("ok %d", ok);
+
+	decode_at_error(&error, g_at_result_final_response(result));
+
+	if (!ok)
+		goto error;
+
+	g_at_result_iter_init(&iter, result);
+
+	while (g_at_result_iter_next(&iter, "+CNMP:")) {
+		if (!g_at_result_iter_open_list(&iter))
+			break;
+
+		while (1) {
+			if (!g_at_result_iter_next_number(&iter, &index))
+				break;
+
+			available_rats |= cnmp_mode_to_radio_access_mode(index);
+		}
+	}
+
+	DBG("available_rats %d", available_rats);
+
+	cb(&error, available_rats, cbd->data);
+
+	return;
+
+error:
+	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
+}
+
 static void simcom_query_rat_mode(struct ofono_radio_settings *rs,
 				ofono_radio_settings_rat_mode_query_cb_t cb,
 				void *data)
@@ -168,11 +209,16 @@ static void simcom_query_available_rats(struct ofono_radio_settings *rs,
 			ofono_radio_settings_available_rats_query_cb_t cb,
 			void *data)
 {
-	unsigned int available_rats = OFONO_RADIO_ACCESS_MODE_GSM
-				| OFONO_RADIO_ACCESS_MODE_UMTS
-				| OFONO_RADIO_ACCESS_MODE_LTE;
+	struct radio_settings_data *rsd = ofono_radio_settings_get_data(rs);
+	struct cb_data *cbd = cb_data_new(cb, data);
 
-	CALLBACK_WITH_SUCCESS(cb, available_rats, data);
+	DBG("");
+
+	if (g_at_chat_send(rsd->chat, "AT+CNMP=?", cnmp_prefix,
+				cnmp_rat_support_cb, cbd, g_free) == 0) {
+		CALLBACK_WITH_FAILURE(cb, -1, data);
+		g_free(cbd);
+	}
 }
 
 static void cnmp_support_cb(gboolean ok, GAtResult *result, gpointer user_data)
