@@ -376,7 +376,8 @@ static char *get_operator_display_name(struct ofono_netreg *netreg)
 		return name;
 	}
 
-	if (netreg->status == NETWORK_REGISTRATION_STATUS_REGISTERED)
+	if (L_IN_SET(netreg->status, NETWORK_REGISTRATION_STATUS_REGISTERED,
+				NETWORK_REGISTRATION_STATUS_REGISTERED_SMS_EUTRAN))
 		home_or_spdi = TRUE;
 	else
 		home_or_spdi = sim_spdi_lookup(netreg->spdi,
@@ -1205,8 +1206,10 @@ static void current_operator_callback(const struct ofono_error *error,
 	 * in which case the operator information frequently comes in bogus.
 	 * We ignore it here
 	 */
-	if (netreg->status != NETWORK_REGISTRATION_STATUS_REGISTERED &&
-			netreg->status != NETWORK_REGISTRATION_STATUS_ROAMING)
+	if (!L_IN_SET(netreg->status, NETWORK_REGISTRATION_STATUS_REGISTERED,
+				NETWORK_REGISTRATION_STATUS_REGISTERED_SMS_EUTRAN,
+				NETWORK_REGISTRATION_STATUS_ROAMING,
+				NETWORK_REGISTRATION_STATUS_ROAMING_SMS_EUTRAN))
 		current = NULL;
 
 	if (error->type != OFONO_ERROR_TYPE_NO_ERROR) {
@@ -1351,8 +1354,10 @@ void ofono_netreg_status_notify(struct ofono_netreg *netreg, int status,
 	if (netreg->technology != tech)
 		set_registration_technology(netreg, tech);
 
-	if (netreg->status == NETWORK_REGISTRATION_STATUS_REGISTERED ||
-		netreg->status == NETWORK_REGISTRATION_STATUS_ROAMING) {
+	if (L_IN_SET(netreg->status, NETWORK_REGISTRATION_STATUS_REGISTERED,
+				NETWORK_REGISTRATION_STATUS_REGISTERED_SMS_EUTRAN,
+				NETWORK_REGISTRATION_STATUS_ROAMING,
+				NETWORK_REGISTRATION_STATUS_ROAMING_SMS_EUTRAN)) {
 		if (netreg->driver->current_operator != NULL)
 			netreg->driver->current_operator(netreg,
 					current_operator_callback, netreg);
@@ -1460,8 +1465,10 @@ static void init_registration_status(const struct ofono_error *error,
 	 * Bootstrap our signal strength value without waiting for the
 	 * stack to report it
 	 */
-	if (netreg->status == NETWORK_REGISTRATION_STATUS_REGISTERED ||
-		netreg->status == NETWORK_REGISTRATION_STATUS_ROAMING) {
+	if (L_IN_SET(netreg->status, NETWORK_REGISTRATION_STATUS_REGISTERED,
+				NETWORK_REGISTRATION_STATUS_REGISTERED_SMS_EUTRAN,
+				NETWORK_REGISTRATION_STATUS_ROAMING,
+				NETWORK_REGISTRATION_STATUS_ROAMING_SMS_EUTRAN)) {
 		if (netreg->driver->strength != NULL)
 			netreg->driver->strength(netreg,
 					signal_strength_callback, netreg);
@@ -1516,8 +1523,10 @@ void ofono_netreg_strength_notify(struct ofono_netreg *netreg, int strength)
 	 * Theoretically we can get signal strength even when not registered
 	 * to any network.  However, what do we do with it in that case?
 	 */
-	if (netreg->status != NETWORK_REGISTRATION_STATUS_REGISTERED &&
-			netreg->status != NETWORK_REGISTRATION_STATUS_ROAMING)
+	if (!L_IN_SET(netreg->status, NETWORK_REGISTRATION_STATUS_REGISTERED,
+				NETWORK_REGISTRATION_STATUS_REGISTERED_SMS_EUTRAN,
+				NETWORK_REGISTRATION_STATUS_ROAMING,
+				NETWORK_REGISTRATION_STATUS_ROAMING_SMS_EUTRAN))
 		return;
 
 	DBG("strength %d", strength);
