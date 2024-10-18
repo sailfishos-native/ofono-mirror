@@ -353,6 +353,13 @@ static void cops_cb(gboolean ok, GAtResult *result, gpointer user_data)
 	op.status = 2;
 	op.tech = tech;
 
+	/*
+	 * SIMCom modems shows the current tech via the +COPS
+	 * not like other modems where it's shown via +CREG
+	 */
+	if (nd->vendor == OFONO_VENDOR_SIMCOM_A76XX)
+		nd->tech = tech;
+
 	DBG("cops_cb: %s, %s %s %d", name, nd->mcc, nd->mnc, tech);
 
 	cb(&error, &op, cbd->data);
