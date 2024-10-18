@@ -1627,9 +1627,11 @@ static void gprs_attached_update(struct ofono_gprs *gprs)
 		 */
 		attached = have_active_contexts(gprs);
 	else
-		attached = gprs->driver_attached &&
-			(status == NETWORK_REGISTRATION_STATUS_REGISTERED ||
-				status == NETWORK_REGISTRATION_STATUS_ROAMING);
+		attached = gprs->driver_attached && L_IN_SET(status,
+			NETWORK_REGISTRATION_STATUS_REGISTERED,
+			NETWORK_REGISTRATION_STATUS_REGISTERED_SMS_EUTRAN,
+			NETWORK_REGISTRATION_STATUS_ROAMING,
+			NETWORK_REGISTRATION_STATUS_ROAMING_SMS_EUTRAN);
 
 	if (attached == gprs->attached)
 		return;
@@ -2637,8 +2639,10 @@ void ofono_gprs_status_notify(struct ofono_gprs *gprs, int status)
 	if (gprs->flags & GPRS_FLAG_ATTACHING)
 		return;
 
-	if (status != NETWORK_REGISTRATION_STATUS_REGISTERED &&
-			status != NETWORK_REGISTRATION_STATUS_ROAMING) {
+	if (!L_IN_SET(status, NETWORK_REGISTRATION_STATUS_REGISTERED,
+				NETWORK_REGISTRATION_STATUS_REGISTERED_SMS_EUTRAN,
+				NETWORK_REGISTRATION_STATUS_ROAMING,
+				NETWORK_REGISTRATION_STATUS_ROAMING_SMS_EUTRAN)) {
 		ofono_gprs_detached_notify(gprs);
 		return;
 	}
