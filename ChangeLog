@@ -1,3 +1,7 @@
+ver 2.11:
+	Add support for SIMCom A7672E-FASE modem.
+	Add support for Quectel EG916Q-GL modem.
+
 ver 2.10:
 	Fix issue with SMS and user data length checks.
 	Add support for QMI and Dual-Stack context activation.
