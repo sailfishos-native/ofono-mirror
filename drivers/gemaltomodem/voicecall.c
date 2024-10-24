@@ -409,13 +409,11 @@ static void slcc_notify(GAtResult *result, gpointer user_data)
 
 			o = o->next;
 		} else if (nc && (oc == NULL || (nc->id < oc->id))) {
-
 			if (nc->type == 0) /* new call, signal it */
 				ofono_voicecall_notify(vc, nc);
 
 			n = n->next;
 		} else {
-
 			DBG("modify call part");
 
 			/* notify in case of changes */

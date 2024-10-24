@@ -91,7 +91,6 @@ char **qmi_nas_data_capability_status_to_string_list(const void *tlv,
 
 int qmi_nas_cap_to_bearer_tech(int cap_tech)
 {
-
 	switch (cap_tech) {
 	case QMI_NAS_DATA_CAPABILITY_GSM:
 	case QMI_NAS_DATA_CAPABILITY_NONE:

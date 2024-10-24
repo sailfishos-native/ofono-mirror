@@ -453,7 +453,6 @@ static void append_voicecall_properties(struct voicecall *v,
 
 	ofono_dbus_dict_append(dict, "Emergency",
 					DBUS_TYPE_BOOLEAN, &emergency_call);
-
 }
 
 static DBusMessage *voicecall_get_properties(DBusConnection *conn,

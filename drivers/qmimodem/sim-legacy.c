@@ -150,7 +150,6 @@ static void qmi_read_imsi(struct ofono_sim *sim,
 
 static void get_pin_status_cb(struct qmi_result *result, void *user_data)
 {
-
 	struct cb_data *cbd = user_data;
 	ofono_sim_passwd_cb_t cb = cbd->cb;
 	struct sim_data *data = cbd->user;

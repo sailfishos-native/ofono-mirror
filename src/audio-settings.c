@@ -43,7 +43,6 @@ void ofono_audio_settings_active_notify(struct ofono_audio_settings *as,
 	ofono_dbus_signal_property_changed(conn, path,
 				OFONO_AUDIO_SETTINGS_INTERFACE,
 				"Active", DBUS_TYPE_BOOLEAN, &as->active);
-
 }
 
 void ofono_audio_settings_mode_notify(struct ofono_audio_settings *as,

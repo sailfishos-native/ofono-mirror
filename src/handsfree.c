@@ -488,7 +488,6 @@ static DBusMessage *handsfree_set_property(DBusConnection *conn,
 	dbus_message_iter_get_basic(&var, &enabled);
 
 	if (g_str_equal(name, "VoiceRecognition") == TRUE) {
-
 		if (!hf->driver->voice_recognition)
 			return __ofono_error_not_implemented(msg);
 
@@ -499,7 +498,6 @@ static DBusMessage *handsfree_set_property(DBusConnection *conn,
 		hf->pending = dbus_message_ref(msg);
 		hf->driver->voice_recognition(hf, enabled, voicerec_set_cb, hf);
 	} else if (g_str_equal(name, "EchoCancelingNoiseReduction") == TRUE) {
-
 		if (!(hf->ag_features & HFP_AG_FEATURE_ECNR))
 			return __ofono_error_not_supported(msg);
 

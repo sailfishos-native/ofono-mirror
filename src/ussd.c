@@ -258,7 +258,6 @@ static gboolean recognized_control_string(struct ofono_ussd *ussd,
 
 			l = l->next;
 		}
-
 	}
 
 	/* TODO: Handle all strings that control voice calls */

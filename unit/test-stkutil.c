@@ -20170,7 +20170,6 @@ static const struct terminal_response_test
 					.status = STK_CHANNEL_LINK_DROPPED,
 				},
 		} },
-
 	},
 };
 

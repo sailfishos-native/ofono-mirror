@@ -268,7 +268,6 @@ static void mtc_power_off_cb(const GIsiMessage *msg, void *data)
 	struct isi_data *isi = data;
 
 	if (!check_response_status(msg, MTC_POWER_OFF_RESP)) {
-
 		if (isi->power_state == POWER_STATE_OFF_STARTED)
 			mtc_power_off(isi);
 		return;

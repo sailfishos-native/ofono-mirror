@@ -184,7 +184,6 @@ static void emulator_hfp_watch(struct ofono_atom *atom,
 
 static void modemwatch(struct ofono_modem *modem, gboolean added, void *user)
 {
-
 	const char *path = ofono_modem_get_path(modem);
 
 	DBG("modem: %s, added: %d", path, added);
@@ -193,7 +192,6 @@ static void modemwatch(struct ofono_modem *modem, gboolean added, void *user)
 		__ofono_modem_add_atom_watch(modem,
 					OFONO_ATOM_TYPE_EMULATOR_HFP,
 					emulator_hfp_watch, NULL, NULL);
-
 }
 
 static void call_modemwatch(struct ofono_modem *modem, void *user)
@@ -226,7 +224,6 @@ static gboolean parse_devices_reply(DBusMessage *reply)
 	dbus_message_iter_recurse(&array, &iter);
 
 	while (dbus_message_iter_get_arg_type(&iter) == DBUS_TYPE_OBJECT_PATH) {
-
 		dbus_message_iter_get_basic(&iter, &path);
 
 		if (g_strrstr(path, "/battery_")) {
@@ -349,7 +346,6 @@ static void upower_exit(void)
 
 	if (battery_device_path)
 		g_free(battery_device_path);
-
 }
 
 OFONO_PLUGIN_DEFINE(upower, "upower battery monitor", VERSION,

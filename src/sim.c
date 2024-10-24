@@ -1869,7 +1869,6 @@ static void sim_imsi_obtained(struct ofono_sim *sim, const char *imsi)
 	}
 
 	sim_set_ready(sim);
-
 }
 
 static void sim_efimsi_cb(const struct ofono_error *error,

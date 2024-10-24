@@ -486,7 +486,6 @@ static void u8500_info_resp_cb(const GIsiMessage *msg, void *data)
 	for (g_isi_sb_iter_init(&iter, msg, 2);
 			g_isi_sb_iter_is_valid(&iter);
 			g_isi_sb_iter_next(&iter)) {
-
 		uint8_t id = g_isi_sb_iter_get_id(&iter);
 		uint8_t chars;
 		char *info = NULL;

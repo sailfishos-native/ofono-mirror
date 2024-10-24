@@ -588,7 +588,6 @@ static void phonet_status_cb(GIsiModem *idx, enum GIsiPhonetLinkState state,
 		state == PN_LINK_DOWN ? "down" : "up");
 
 	if (state == PN_LINK_UP) {
-
 		if (self.current == PHONET_LINK_UP)
 			return;
 
@@ -599,7 +598,6 @@ static void phonet_status_cb(GIsiModem *idx, enum GIsiPhonetLinkState state,
 
 		gpio_power_state_machine(POWER_EVENT_PHONET_LINK_UP);
 	} else {
-
 		if (self.current == PHONET_LINK_DOWN)
 			return;
 

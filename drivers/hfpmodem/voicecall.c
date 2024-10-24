@@ -406,7 +406,6 @@ static void hfp_dial_last(struct ofono_voicecall *vc, ofono_voicecall_cb_t cb,
 	g_free(cbd);
 
 	CALLBACK_WITH_FAILURE(cb, data);
-
 }
 
 static void hfp_dial_memory(struct ofono_voicecall *vc,

@@ -175,7 +175,6 @@ out:
 	cb(&error, num, list, cbd->data);
 
 	g_free(list);
-
 }
 
 static void hfp_cnum_query(struct ofono_handsfree *hf,

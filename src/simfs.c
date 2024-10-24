@@ -248,7 +248,6 @@ void sim_fs_notify_file_watches(struct sim_fs *fs, int id)
 				notify(w->ef, w->item.notify_data);
 		}
 	}
-
 }
 
 static void sim_fs_end_current(struct sim_fs *fs)

@@ -1975,7 +1975,6 @@ static gboolean extract_app_port_common(struct sms_udh_iter *iter, int *dst,
 		*is_8bit = is_addr_8bit;
 
 	return TRUE;
-
 }
 
 gboolean sms_extract_app_port(const struct sms *sms, int *dst, int *src,
@@ -2322,7 +2321,6 @@ char *sms_decode_text(GSList *sms_list)
 			memcpy(utf16 + utf16_size, from, num_ucs2_chars);
 			utf16_size += num_ucs2_chars;
 		}
-
 	}
 
 	if (utf16) {
@@ -3165,7 +3163,6 @@ void status_report_assembly_expire(struct status_report_assembly *assembly,
 	 */
 	while (g_hash_table_iter_next(&iter_addr, (gpointer) &straddr,
 					(gpointer) &id_table)) {
-
 		__sms_address_from_string(&addr, straddr);
 		g_hash_table_iter_init(&iter_node, id_table);
 

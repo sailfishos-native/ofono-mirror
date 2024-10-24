@@ -386,7 +386,6 @@ static int hfp16_card_probe(struct ofono_handsfree_card *card,
 
 static void hfp16_card_remove(struct ofono_handsfree_card *card)
 {
-
 }
 
 static void bcc_cb(gboolean ok, GAtResult *result, gpointer user_data)

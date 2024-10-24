@@ -369,7 +369,6 @@ static void stemgr_exit(void)
 
 	if (property_changed_watch > 0)
 		g_dbus_remove_watch(connection, property_changed_watch);
-
 }
 
 OFONO_PLUGIN_DEFINE(stemgr, "ST-Ericsson Modem Init Daemon detection", VERSION,
