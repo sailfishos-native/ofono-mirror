@@ -1966,7 +1966,7 @@ static void emulator_cops_cb(struct ofono_emulator *em,
 fail:
 		result.type = OFONO_ERROR_TYPE_FAILURE;
 		ofono_emulator_send_final(em, &result);
-	};
+	}
 }
 
 static void emulator_hfp_init(struct ofono_atom *atom, void *data)

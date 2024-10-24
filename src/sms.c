@@ -125,7 +125,7 @@ static const char *sms_bearer_to_string(int bearer)
 		return "ps-preferred";
 	case 3:
 		return "cs-preferred";
-	};
+	}
 
 	return NULL;
 }

@@ -3275,7 +3275,7 @@ static void emulator_cnum_cb(struct ofono_emulator *em,
 	default:
 		result.type = OFONO_ERROR_TYPE_FAILURE;
 		ofono_emulator_send_final(em, &result);
-	};
+	}
 }
 
 static void emulator_hfp_watch(struct ofono_atom *atom,

@@ -73,7 +73,7 @@ static void gsmv1_hint(GAtSyntax *syntax, GAtSyntaxExpectHint hint)
 		break;
 	default:
 		break;
-	};
+	}
 }
 
 static GAtSyntaxResult gsmv1_feed(GAtSyntax *syntax,
@@ -254,7 +254,7 @@ static GAtSyntaxResult gsmv1_feed(GAtSyntax *syntax,
 
 		default:
 			break;
-		};
+		}
 
 		i += 1;
 	}
@@ -366,7 +366,7 @@ static GAtSyntaxResult gsm_permissive_feed(GAtSyntax *syntax,
 
 		default:
 			break;
-		};
+		}
 
 		i += 1;
 	}

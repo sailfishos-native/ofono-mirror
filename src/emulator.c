@@ -699,7 +699,7 @@ static void clip_cb(GAtServer *server, GAtServerRequestType type,
 	default:
 fail:
 		g_at_server_send_final(server, G_AT_SERVER_RESULT_ERROR);
-	};
+	}
 }
 
 static void ccwa_cb(GAtServer *server, GAtServerRequestType type,
@@ -748,7 +748,7 @@ static void ccwa_cb(GAtServer *server, GAtServerRequestType type,
 	default:
 fail:
 		g_at_server_send_final(server, G_AT_SERVER_RESULT_ERROR);
-	};
+	}
 }
 
 static void cmee_cb(GAtServer *server, GAtServerRequestType type,
@@ -1365,7 +1365,7 @@ void ofono_emulator_send_final(struct ofono_emulator *em,
 failure:
 		g_at_server_send_final(em->server, G_AT_SERVER_RESULT_ERROR);
 		break;
-	};
+	}
 }
 
 void ofono_emulator_send_unsolicited(struct ofono_emulator *em,

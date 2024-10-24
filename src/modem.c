@@ -716,7 +716,7 @@ static void common_online_cb(const struct ofono_error *error, void *data)
 	case MODEM_STATE_ONLINE:
 		ofono_error("Online called when the modem is already online!");
 		break;
-	};
+	}
 }
 
 static void online_cb(const struct ofono_error *error, void *data)
@@ -1614,7 +1614,7 @@ static void attr_template(struct ofono_emulator *em,
 	default:
 		result.type = OFONO_ERROR_TYPE_FAILURE;
 		ofono_emulator_send_final(em, &result);
-	};
+	}
 }
 
 static void gmi_cb(struct ofono_emulator *em,

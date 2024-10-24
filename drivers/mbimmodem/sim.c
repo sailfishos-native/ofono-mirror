@@ -63,7 +63,7 @@ static void mbim_sim_state_changed(struct ofono_sim *sim, uint32_t ready_state)
 		break;
 	default:
 		break;
-	};
+	}
 }
 
 static void mbim_read_imsi(struct ofono_sim *sim,

@@ -1418,7 +1418,7 @@ gboolean sim_parse_3g_get_response(const unsigned char *data, int len,
 		break;
 	default:
 		return FALSE;
-	};
+	}
 
 	/* For cyclic or linear fixed we need record size & num records */
 	if (str != 0x00 && tlv_length != 5)

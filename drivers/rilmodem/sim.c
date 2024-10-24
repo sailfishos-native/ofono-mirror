@@ -861,7 +861,7 @@ static void sim_status_cb(struct ril_msg *message, gpointer user_data)
 		default:
 			sd->passwd_state = OFONO_SIM_PASSWORD_NONE;
 			break;
-		};
+		}
 		break;
 	case RIL_APPSTATE_READY:
 		sd->passwd_state = OFONO_SIM_PASSWORD_NONE;
@@ -1309,7 +1309,7 @@ static void ril_change_passwd(struct ofono_sim *sim,
 		break;
 	default:
 		goto error;
-	};
+	}
 
 	parcel_init(&rilp);
 

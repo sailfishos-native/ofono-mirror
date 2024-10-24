@@ -180,7 +180,7 @@ gboolean sms_dcs_decode(guint8 dcs, enum sms_class *cls,
 		break;
 	default:
 		return FALSE;
-	};
+	}
 
 	if (compressed)
 		*compressed = comp;
@@ -292,7 +292,7 @@ int sms_udl_in_bytes(guint8 ud_len, guint8 dcs)
 		break;
 	default:
 		break;
-	};
+	}
 
 	return 0;
 }
@@ -1523,7 +1523,7 @@ gboolean sms_encode(const struct sms *in, int *len, int *tpdu_len,
 		break;
 	default:
 		return FALSE;
-	};
+	}
 
 	if (tpdu_len)
 		*tpdu_len = offset - tpdu_start;
@@ -1653,7 +1653,7 @@ const guint8 *sms_extract_common(const struct sms *sms, gboolean *out_udhi,
 		dcs = 0;
 		max = sizeof(sms->command.cd);
 		break;
-	};
+	}
 
 	if (ud == NULL)
 		return NULL;
@@ -3841,7 +3841,7 @@ gboolean cbs_dcs_decode(guint8 dcs, gboolean *udhi, enum sms_class *cls,
 		break;
 	default:
 		return FALSE;
-	};
+	}
 
 	if (udhi)
 		*udhi = udh;

@@ -925,7 +925,7 @@ static enum ParserResult server_feed(GAtServer *server,
 
 		default:
 			break;
-		};
+		}
 
 		i += 1;
 	}

@@ -607,7 +607,7 @@ const char *bearer_class_to_string(enum bearer_class cls)
 	case BEARER_CLASS_DEFAULT:
 	case BEARER_CLASS_SS_DEFAULT:
 		break;
-	};
+	}
 
 	return NULL;
 }
@@ -741,7 +741,7 @@ const char *gprs_proto_to_string(enum ofono_gprs_proto proto)
 		return "ipv6";
 	case OFONO_GPRS_PROTO_IPV4V6:
 		return "dual";
-	};
+	}
 
 	return NULL;
 }
@@ -771,7 +771,7 @@ const char *gprs_auth_method_to_string(enum ofono_gprs_auth_method auth)
 		return "pap";
 	case OFONO_GPRS_AUTH_METHOD_NONE:
 		return "none";
-	};
+	}
 
 	return NULL;
 }

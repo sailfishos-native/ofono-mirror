@@ -638,7 +638,7 @@ static void clip_cnap_colp_colr_ss_query_cb(const struct ofono_error *error,
 				__ofono_error_failed(cs->pending));
 		ofono_error("Unknown type during COLR/COLP/CLIP/CNAP ss");
 		return;
-	};
+	}
 
 	generate_ss_query_reply(cs, context, value);
 }
@@ -746,7 +746,7 @@ static void clir_ss_query_callback(const struct ofono_error *error,
 		break;
 	default:
 		value = "unknown";
-	};
+	}
 
 	generate_ss_query_reply(cs, "CallingLineRestriction", value);
 
@@ -839,7 +839,7 @@ static gboolean clir_ss_control(int type,
 		cs->driver->clir_set(cs, OFONO_CLIR_OPTION_INVOCATION,
 					clir_ss_set_callback, cs);
 		break;
-	};
+	}
 
 	return TRUE;
 }

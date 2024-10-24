@@ -330,7 +330,7 @@ static void cpi_notify(GAtResult *result, gpointer user_data)
 		return;
 	default:
 		return;
-	};
+	}
 
 	call.id = id;
 	call.type = mode;

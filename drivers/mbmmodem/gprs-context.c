@@ -216,7 +216,7 @@ static void mbm_state_changed(struct ofono_gprs_context *gc, int state)
 
 	default:
 		break;
-	};
+	}
 
 	gcd->enap = state;
 }

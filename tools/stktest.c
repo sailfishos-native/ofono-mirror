@@ -418,7 +418,7 @@ static void cgmi_cb(GAtServer *server, GAtServerRequestType type,
 		break;
 	default:
 		g_at_server_send_final(server, G_AT_SERVER_RESULT_ERROR);
-	};
+	}
 }
 
 static void cgmm_cb(GAtServer *server, GAtServerRequestType type,
@@ -434,7 +434,7 @@ static void cgmm_cb(GAtServer *server, GAtServerRequestType type,
 		break;
 	default:
 		g_at_server_send_final(server, G_AT_SERVER_RESULT_ERROR);
-	};
+	}
 }
 
 static void cgmr_cb(GAtServer *server, GAtServerRequestType type,
@@ -453,7 +453,7 @@ static void cgmr_cb(GAtServer *server, GAtServerRequestType type,
 		break;
 	default:
 		g_at_server_send_final(server, G_AT_SERVER_RESULT_ERROR);
-	};
+	}
 }
 
 static void cgsn_cb(GAtServer *server, GAtServerRequestType type,
@@ -469,7 +469,7 @@ static void cgsn_cb(GAtServer *server, GAtServerRequestType type,
 		break;
 	default:
 		g_at_server_send_final(server, G_AT_SERVER_RESULT_ERROR);
-	};
+	}
 }
 
 static gboolean send_ok(gpointer user)
@@ -521,7 +521,7 @@ static void cfun_cb(GAtServer *server, GAtServerRequestType type,
 	}
 	default:
 		goto error;
-	};
+	}
 
 	return;
 
@@ -565,7 +565,7 @@ static void cusatt_cb(GAtServer *server, GAtServerRequestType type,
 	}
 	default:
 		goto error;
-	};
+	}
 
 	return;
 
@@ -904,7 +904,7 @@ static gboolean modem_changed(DBusConnection *conn,
 		/* Fall through */
 	case TEST_STATE_POWERING_DOWN:
 		break;
-	};
+	}
 
 	return TRUE;
 }

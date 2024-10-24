@@ -41,7 +41,7 @@ static const char *location_reporting_type_to_string(
 	switch (type) {
 	case OFONO_LOCATION_REPORTING_TYPE_NMEA:
 		return "nmea";
-	};
+	}
 
 	return NULL;
 }

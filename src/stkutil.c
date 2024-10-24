@@ -3801,7 +3801,7 @@ static enum stk_command_parse_result parse_command_body(
 		return parse_activate(command, iter);
 	default:
 		return STK_PARSE_RESULT_TYPE_NOT_UNDERSTOOD;
-	};
+	}
 }
 
 struct stk_command *stk_command_new_from_pdu(const uint8_t *pdu,
@@ -5759,7 +5759,7 @@ const uint8_t *stk_pdu_from_response(const struct stk_response *response,
 		break;
 	default:
 		return NULL;
-	};
+	}
 
 	if (!ok)
 		return NULL;
@@ -6148,7 +6148,7 @@ const uint8_t *stk_pdu_from_envelope(const struct stk_envelope *envelope,
 		break;
 	default:
 		return NULL;
-	};
+	}
 
 	if (!ok)
 		return NULL;

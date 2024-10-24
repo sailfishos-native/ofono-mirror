@@ -330,7 +330,7 @@ static void owancall_notifier(GAtResult *result, gpointer user_data)
 
 	default:
 		break;
-	};
+	}
 
 	gcd->owancall = state;
 }

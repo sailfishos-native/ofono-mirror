@@ -113,7 +113,7 @@ static void cbs_dispatch_emergency(struct ofono_cbs *cbs, const char *message,
 		break;
 	default:
 		return;
-	};
+	}
 
 	signal = dbus_message_new_signal(path, OFONO_CELL_BROADCAST_INTERFACE,
 						"EmergencyBroadcast");

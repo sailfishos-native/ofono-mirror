@@ -395,7 +395,7 @@ static gboolean poweron_cycle(gpointer user_data)
 
 	default:
 		break;
-	};
+	}
 
 	ofono_modem_set_powered(modem, FALSE);
 	return FALSE;

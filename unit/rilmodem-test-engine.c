@@ -246,7 +246,7 @@ void rilmodem_test_engine_next_step(struct engine_data *ed)
 	case TST_EVENT_RECEIVE:
 	case TST_EVENT_CALL:
 		break;
-	};
+	}
 }
 
 const struct rilmodem_test_step *rilmodem_test_engine_get_current_step(

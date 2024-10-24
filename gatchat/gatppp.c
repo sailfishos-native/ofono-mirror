@@ -241,7 +241,7 @@ static void ppp_receive(const unsigned char *buf, gsize len, void *data)
 	default:
 		pppcp_send_protocol_reject(ppp->lcp, buf, len);
 		break;
-	};
+	}
 }
 
 static void ppp_send_lcp_frame(GAtPPP *ppp, guint8 *packet, guint infolen)
