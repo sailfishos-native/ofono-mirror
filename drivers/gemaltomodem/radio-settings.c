@@ -198,7 +198,7 @@ static void gemalto_set_rat_mode(struct ofono_radio_settings *rs,
 
 	if (!g_strcmp0(model, GEMALTO_MODEL_ALS3_PLS8x) ||
 				!g_strcmp0(model, GEMALTO_MODEL_ELS81x)) {
-		int val= 6, p1 = 3, p2 = 2;
+		int val = 6, p1 = 3, p2 = 2;
 
 		switch (m) {
 		case OFONO_RADIO_ACCESS_MODE_ANY:

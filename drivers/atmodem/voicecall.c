@@ -32,10 +32,10 @@
 /* Amount of ms we wait between CLCC calls */
 #define POLL_CLCC_INTERVAL 500
 
- /* Amount of time we give for CLIP to arrive before we commence CLCC poll */
+/* Amount of time we give for CLIP to arrive before we commence CLCC poll */
 #define CLIP_INTERVAL 200
 
- /* When +VTD returns 0, an unspecified manufacturer-specific delay is used */
+/* When +VTD returns 0, an unspecified manufacturer-specific delay is used */
 #define TONE_DURATION 1000
 
 static const char *clcc_prefix[] = { "+CLCC:", NULL };

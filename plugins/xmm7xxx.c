@@ -158,7 +158,7 @@ static void euicc_pending_reply(struct xmm7xxx_euicc *euicc,
 		goto done;
 
 	response = g_new0(unsigned char, bufferBytesSize);
-	decode_hex_own_buf(resp, strlen(resp),  &length, '\0', response );
+	decode_hex_own_buf(resp, strlen(resp),  &length, '\0', response);
 
 	dbus_message_iter_init_append(reply, &iter);
 	dbus_message_iter_open_container(&iter, DBUS_TYPE_ARRAY,
@@ -329,7 +329,7 @@ static void euicc_select_isdr_cb(gboolean ok, GAtResult *result,
 	DBG("ok %d", ok);
 
 	if (!ok) {
-		g_free (euicc->command);
+		g_free(euicc->command);
 
 		if (!euicc->is_registered) {
 			g_free(euicc->eid);
@@ -396,7 +396,7 @@ static DBusMessage *euicc_transmit_pdu(DBusConnection *conn,
 	g_free(euicc->command);
 	euicc->length = length * 2;
 	euicc->command = g_new0(char, euicc->length + 1);
-	encode_hex_own_buf(command,(long)length,0, euicc->command);
+	encode_hex_own_buf(command,(long)length, 0, euicc->command);
 	euicc->pending = dbus_message_ref(msg);
 
 	euicc_send_cmd(euicc);

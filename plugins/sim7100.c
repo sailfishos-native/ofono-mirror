@@ -99,7 +99,7 @@ static void sim7100_remove(struct ofono_modem *modem)
 		g_at_chat_unref(data->ppp);
 
 	ofono_modem_set_data(modem, NULL);
-	g_free (data);
+	g_free(data);
 }
 
 static void cfun_set_on_cb(gboolean ok, GAtResult *result, gpointer user_data)

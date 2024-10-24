@@ -368,7 +368,8 @@ static void at_sim_update_file(struct ofono_sim *sim, int cmd, int fileid,
 	if (buf == NULL)
 		goto error;
 
-	len = sprintf(buf, "AT+CRSM=%i,%i,%i,%i,%i,\"", cmd, fileid,p1, p2, p3);
+	len = sprintf(buf, "AT+CRSM=%i,%i,%i,%i,%i,\"",
+						cmd, fileid, p1, p2, p3);
 
 	for (; p3; p3--)
 		len += sprintf(buf + len, "%02hhX", *value++);

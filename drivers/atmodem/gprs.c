@@ -504,7 +504,7 @@ static void telit_mode_notify(GAtResult *result, gpointer user_data)
 	if (!g_at_result_iter_next(&iter, "#PSNT:"))
 		return;
 
-	if (!g_at_result_iter_next_number(&iter,&nt))
+	if (!g_at_result_iter_next_number(&iter, &nt))
 		return;
 
 	switch (nt) {
@@ -542,7 +542,7 @@ static void simcom_mode_notify(GAtResult *result, gpointer user_data)
 	if (!g_at_result_iter_next(&iter, "+CNSMOD:"))
 		return;
 
-	if (!g_at_result_iter_next_number(&iter,&stat))
+	if (!g_at_result_iter_next_number(&iter, &stat))
 		return;
 
 	switch (stat) {
