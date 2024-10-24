@@ -683,7 +683,6 @@ static void option_osigq_notify(GAtResult *result, gpointer user_data)
 
 static void ifx_xhomezr_notify(GAtResult *result, gpointer user_data)
 {
-	//struct ofono_netreg *netreg = user_data;
 	const char *label;
 	GAtResultIter iter;
 
@@ -748,7 +747,6 @@ static void ifx_xreg_notify(GAtResult *result, gpointer user_data)
 
 static void ifx_xciev_notify(GAtResult *result, gpointer user_data)
 {
-	//struct ofono_netreg *netreg = user_data;
 	int ind;
 	GAtResultIter iter;
 

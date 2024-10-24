@@ -134,7 +134,6 @@ static void test_basic(void)
 	}
 
 	g_test_trap_assert_passed();
-	//g_test_trap_assert_stderr("failed");
 }
 
 static void test_chnlat(void)
@@ -145,7 +144,6 @@ static void test_chnlat(void)
 	}
 
 	g_test_trap_assert_passed();
-	//g_test_trap_assert_stderr("failed");
 }
 
 int main(int argc, char **argv)

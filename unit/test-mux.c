@@ -212,7 +212,6 @@ static void test_basic(void)
 	}
 
 	g_test_trap_assert_passed();
-	//g_test_trap_assert_stderr("failed");
 }
 
 /* DLC 1, Open Channel */

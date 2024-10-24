@@ -206,8 +206,6 @@ static void xcallstat_notify(GAtResult *result, gpointer user_data)
 
 static void xem_notify(GAtResult *result, gpointer user_data)
 {
-	//struct ofono_voicecall *vc = user_data;
-	//struct voicecall_data *vd = ofono_voicecall_get_data(vc);
 	GAtResultIter iter;
 	int state;
 
