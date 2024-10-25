@@ -24,7 +24,6 @@
 #include <gattty.h>
 
 #define OFONO_API_SUBJECT_TO_CHANGE
-#include <ofono.h>
 #include <ofono/plugin.h>
 #include <ofono/log.h>
 #include <ofono/modem.h>
@@ -105,12 +104,8 @@ static void sim7100_remove(struct ofono_modem *modem)
 static void cfun_set_on_cb(gboolean ok, GAtResult *result, gpointer user_data)
 {
 	struct ofono_modem *modem = user_data;
-	struct sim7100_data *data = ofono_modem_get_data(modem);
 
 	DBG("");
-
-	if (data->model == SIMCOM_A76XX)
-		ofono_modem_set_capabilities(modem, OFONO_MODEM_CAPABILITY_LTE);
 
 	if (ok)
 		ofono_modem_set_powered(modem, TRUE);
@@ -276,8 +271,6 @@ static void sim7100_post_sim(struct ofono_modem *modem)
 							"atmodem", data->at);
 		ofono_radio_settings_create(modem, 0, "simcommodem", data->at);
 		gprs = ofono_gprs_create(modem, OFONO_VENDOR_SIMCOM_A76XX,
-							"atmodem", data->at);
-		ofono_lte_create(modem, OFONO_VENDOR_SIMCOM_A76XX,
 							"atmodem", data->at);
 		break;
 	default:
