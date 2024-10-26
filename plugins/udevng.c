@@ -2455,6 +2455,10 @@ static void check_net_device(struct udev_device *device)
 	}
 
 	name = udev_device_get_sysname(device);
+	if (l_str_has_prefix(name, "phonet")) {
+		add_serial_device(device);
+		return;
+	}
 	if (!l_str_has_prefix(name, "rmnet_"))
 		return;
 
