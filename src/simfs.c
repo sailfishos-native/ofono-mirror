@@ -9,7 +9,6 @@
 #include <config.h>
 #endif
 
-#include <string.h>
 #include <stdio.h>
 
 #include <glib.h>
@@ -26,6 +25,8 @@
 #include "simutil.h"
 #include "storage.h"
 #include "missing.h"
+
+#include <ell/ell.h>
 
 #define SIM_CACHE_MODE 0600
 #define SIM_CACHE_BASEPATH STORAGEDIR "/%s-%i"
@@ -1054,7 +1055,7 @@ int sim_fs_read(struct ofono_sim_context *context, int id,
 	op->num_bytes = num_bytes;
 	op->info_only = FALSE;
 	op->context = context;
-	memcpy(op->path, path, path_len);
+	l_memcpy(op->path, path, path_len);
 	op->path_len = path_len;
 
 	g_queue_push_tail(fs->op_q, op);
