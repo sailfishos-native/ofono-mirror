@@ -400,7 +400,6 @@ static void get_default_profile_number_cb(struct qmi_result *result,
 
 	DBG("Default profile index: %hhd", index);
 	data->default_profile = index;
-	ofono_gprs_set_cid_range(gprs, index, index);
 
 	if (set_event_report_request(gprs) >= 0)
 		return;
