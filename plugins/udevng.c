@@ -1108,19 +1108,6 @@ static gboolean setup_quectel(struct modem_info *modem)
 		return FALSE;
 }
 
-static gboolean is_premultiplexed(const struct device_info *net)
-{
-	struct udev_device *parent = udev_device_get_parent(net->udev_device);
-
-	if (!parent)
-		return FALSE;
-
-	if (g_strcmp0(udev_device_get_subsystem(parent), "net") == 0)
-		return TRUE;
-
-	return FALSE;
-}
-
 static gboolean setup_quectelqmi(struct modem_info *modem)
 {
 	const struct device_info *net = NULL;
@@ -1128,11 +1115,6 @@ static gboolean setup_quectelqmi(struct modem_info *modem)
 	const char *gps = NULL;
 	const char *aux = NULL;
 	GSList *list;
-	const char *premux_interfaces[8];
-	int n_premux = 0;
-	const char *qmap_size;
-
-	memset(premux_interfaces, 0, sizeof(premux_interfaces));
 
 	DBG("%s", modem->syspath);
 
@@ -1144,22 +1126,12 @@ static gboolean setup_quectelqmi(struct modem_info *modem)
 		DBG("%s %s %s %s %s", info->devnode, info->interface,
 				info->number, info->label, subsystem);
 
-		if (g_strcmp0(info->interface, "255/255/255") == 0) {
-			if (g_strcmp0(subsystem, "usbmisc") == 0) {
+		if (g_strcmp0(info->interface, "255/255/255") == 0 &&
+				g_strcmp0(info->number, "04") == 0) {
+			if (g_strcmp0(subsystem, "net") == 0)
+				net = info;
+			else if (g_strcmp0(subsystem, "usbmisc") == 0)
 				qmi = info;
-				continue;
-			}
-
-			if (g_strcmp0(subsystem, "net"))
-				continue;
-
-			if (is_premultiplexed(info)) {
-				premux_interfaces[n_premux] = info->devnode;
-				n_premux += 1;
-				continue;
-			}
-
-			net = info;
 		} else if (g_strcmp0(info->interface, "255/0/0") == 0 &&
 				g_strcmp0(info->number, "01") == 0) {
 			gps = info->devnode;
@@ -1177,43 +1149,11 @@ static gboolean setup_quectelqmi(struct modem_info *modem)
 	if (setup_qmi_qmux(modem, qmi, net) < 0)
 		return FALSE;
 
-	qmap_size = udev_device_get_sysattr_value(net->udev_device,
-							"qmap_size");
-	if (qmap_size) {
-		uint32_t max_aggregation_size;
-
-		if (l_safe_atou32(qmap_size, &max_aggregation_size) == 0)
-			ofono_modem_set_integer(modem->modem,
-						"MaxAggregationSize",
-						max_aggregation_size);
-	}
-
 	if (gps)
 		ofono_modem_set_string(modem->modem, "GPS", gps);
 
 	if (aux)
 		ofono_modem_set_string(modem->modem, "Aux", aux);
-
-	if (n_premux) {
-		char buf[256];
-		int i;
-
-		ofono_modem_set_integer(modem->modem,
-					"NumPremuxInterfaces", n_premux);
-		for (i = 0; i < n_premux; i++) {
-			const char *device = premux_interfaces[i];
-			int len = strlen(device);
-
-			if (!len)
-				continue;
-
-			sprintf(buf, "PremuxInterface%d", i + 1);
-			ofono_modem_set_string(modem->modem, buf, device);
-			sprintf(buf, "PremuxInterface%dMuxId", i + 1);
-			ofono_modem_set_integer(modem->modem, buf,
-						0x80 + device[len - 1] - '0');
-		}
-	}
 
 	return TRUE;
 }
@@ -2160,7 +2100,6 @@ static struct {
 	{ "quectelqmi", "qmi_wwan",	"2c7c", "0800"	},
 	{ "quectelqmi", "qcserial",	"2c7c", "0800"	},
 	{ "quectelqmi", "option",	"2c7c", "0800"	},
-	{ "quectelqmi", "qmi_wwan_q",	"2c7c", "0452"	},
 	{ "ublox",	"cdc_acm",	"1546", "1010"	},
 	{ "ublox",	"cdc_ncm",	"1546", "1010"	},
 	{ "ublox",	"cdc_acm",	"1546", "1102"	},
