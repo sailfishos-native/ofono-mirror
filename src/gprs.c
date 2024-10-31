@@ -3082,6 +3082,7 @@ OFONO_DEFINE_ATOM_CREATE(gprs, OFONO_ATOM_TYPE_GPRS, {
 	atom->status = NETWORK_REGISTRATION_STATUS_UNKNOWN;
 	atom->netreg_status = -1;
 	atom->used_pids = l_uintset_new(MAX_CONTEXTS);
+	atom->used_cids = l_uintset_new_from_range(1, MAX_CONTEXTS - 1);
 })
 
 static void netreg_watch(struct ofono_atom *atom,
