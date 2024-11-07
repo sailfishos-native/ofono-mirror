@@ -247,8 +247,8 @@ AC_ARG_ENABLE([external_ell], AS_HELP_STRING([--enable-external-ell],
 				[enable external Embedded Linux library]),
 					[enable_external_ell=${enableval}])
 if (test "${enable_external_ell}" = "yes"); then
-	PKG_CHECK_MODULES(ELL, ell >= 0.69, dummy=yes,
-		AC_MSG_ERROR(Embedded Linux library >= 0.69 is required))
+	PKG_CHECK_MODULES(ELL, ell >= 0.70, dummy=yes,
+		AC_MSG_ERROR(Embedded Linux library >= 0.70 is required))
 	AC_SUBST(ELL_CFLAGS)
 	AC_SUBST(ELL_LIBS)
 fi
