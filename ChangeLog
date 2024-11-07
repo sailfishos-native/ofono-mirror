@@ -1,3 +1,7 @@
+ver 2.12:
+	Fix issue with access technology reporting.
+	Fix issue with detecting Phonet devices.
+
 ver 2.11:
 	Add support for SIMCom A7672E-FASE modem.
 	Add support for Quectel EG916Q-GL modem.
