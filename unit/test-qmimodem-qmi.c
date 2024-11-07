@@ -377,7 +377,7 @@ static void send_message_to_client(struct sockaddr_qrtr *dest, struct l_io *io,
 	response.error_type = 2;
 	response.error_length = L_CPU_TO_LE16(4);
 	response.data_type = TEST_TLV_TYPE;
-	response.data_length = 1;
+	response.data_length = L_CPU_TO_LE16(1);
 	response.data_value = data_value;
 
 	sendto(l_io_get_fd(io), &response, sizeof(response), 0,
