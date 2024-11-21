@@ -155,6 +155,7 @@ enum qmi_wds_command {
 
 int qmi_wds_auth_from_ofono(enum ofono_gprs_auth_method method);
 int qmi_wds_pdp_type_from_ofono(enum ofono_gprs_proto proto);
+int qmi_wds_ip_support_from_ofono(enum ofono_gprs_proto proto);
 
 int qmi_wds_parse_data_system_status(const void *dss, uint16_t len);
 int qmi_wds_parse_extended_data_bearer_technology(const void *edbt,

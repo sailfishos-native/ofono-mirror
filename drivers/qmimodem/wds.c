@@ -43,6 +43,20 @@ int qmi_wds_pdp_type_from_ofono(enum ofono_gprs_proto proto)
 	return -ENOENT;
 }
 
+int qmi_wds_ip_support_from_ofono(enum ofono_gprs_proto proto)
+{
+	switch (proto) {
+	case OFONO_GPRS_PROTO_IP:
+		return QMI_WDS_IP_SUPPORT_IPV4;
+	case OFONO_GPRS_PROTO_IPV6:
+		return QMI_WDS_IP_SUPPORT_IPV6;
+	case OFONO_GPRS_PROTO_IPV4V6:
+		return QMI_WDS_IP_SUPPORT_IPV4V6;
+	}
+
+	return -ENOENT;
+}
+
 int qmi_wds_parse_data_system_status(const void *dss, uint16_t len)
 {
 	const size_t network_info_size = sizeof(uint8_t) + 2 * sizeof(uint32_t);
