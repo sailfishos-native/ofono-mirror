@@ -478,7 +478,7 @@ static void qmi_activate_primary(struct ofono_gprs_context *gc,
 					OFONO_GPRS_PROTO_IPV4V6))
 		goto error;
 
-	ip_type = qmi_wds_pdp_type_from_ofono(ctx->proto);
+	ip_type = qmi_wds_ip_support_from_ofono(ctx->proto);
 	if (ip_type < 0)
 		goto error;
 
