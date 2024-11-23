@@ -80,11 +80,35 @@ struct qmi_uim_file_attributes {
 	uint8_t raw_value[0];
 } __attribute__((__packed__));
 
-/* Verify PIN parameter */
 #define QMI_UIM_PARAM_MESSAGE_SESSION_INFO	0x01
-#define QMI_UIM_PARAM_MESSAGE_INFO	0x02
-struct qmi_uim_param_message_info {
-	uint8_t pin_id;
-	uint8_t length;
-	uint8_t pin_value[0];
+
+enum qmi_uim_session_type {
+	/* Primary GW Provisioning */
+	QMI_UIM_SESSION_TYPE_PGWP =		0x00,
+	/* Primary 1X Provisioning */
+	QMI_UIM_SESSION_TYPE_P1XP =		0x01,
+	/* Secondary GW Provisioning */
+	QMI_UIM_SESSION_TYPE_SGWP =		0x02,
+	/* Secondary 1X Provisioning */
+	QMI_UIM_SESSION_TYPE_S1XP =		0x03,
+	/* NonProvisioning on Slot 1 */
+	QMI_UIM_SESSION_TYPE_NPS1 =		0x04,
+	/* NonProvisioning on Slot 2 */
+	QMI_UIM_SESSION_TYPE_NPS2 =		0x05,
+	/* Card on Slot 1 */
+	QMI_UIM_SESSION_TYPE_CS1 =		0x06,
+	/* Card on Slot 2 */
+	QMI_UIM_SESSION_TYPE_CS2 =		0x07,
+	/* Logical Channel on Slot 1 */
+	QMI_UIM_SESSION_TYPE_LCS1 =		0x08,
+	/* Logical Channel on Slot 2 */
+	QMI_UIM_SESSION_TYPE_LCS2 =		0x09
+};
+
+struct qmi_uim_param_session_info {
+	uint8_t type;
+	uint8_t aid_length;
+	uint8_t aid[0];
 } __attribute__((__packed__));
+
+#define QMI_UIM_PARAM_MESSAGE_INFO	0x02

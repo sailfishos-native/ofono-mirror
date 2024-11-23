@@ -718,33 +718,30 @@ static void qmi_pin_send(struct ofono_sim *sim, const char *passwd,
 	struct cb_data *cbd = cb_data_new(cb, user_data);
 	int passwd_len;
 	struct qmi_param *param;
-	struct qmi_uim_param_message_info *info_data;
-	unsigned char session_info_data[2];
+	struct qmi_uim_param_session_info session;
+	struct {
+		uint8_t id;
+		uint8_t length;
+		uint8_t pin[0];
+	} __attribute__((__packed__)) *info;
 
 	DBG("");
 
-	if (!passwd)
-		goto error;
-
 	passwd_len = strlen(passwd);
-
-	if (passwd_len <= 0 || passwd_len > 0xFF)
-		goto error;
-
 	param = qmi_param_new();
 
-	/* param info */
-	info_data = alloca(2 + passwd_len);
-	info_data->pin_id = 0x01; /* PIN 1 */
-	info_data->length = (uint8_t) passwd_len;
-	memcpy(info_data->pin_value, passwd, passwd_len);
-	qmi_param_append(param, QMI_UIM_PARAM_MESSAGE_INFO, 2 + passwd_len,
-					info_data);
-	/* param Session Information */
-	session_info_data[0] = 0x6;
-	session_info_data[1] = 0x0;
-	qmi_param_append(param, QMI_UIM_PARAM_MESSAGE_SESSION_INFO, 2,
-					session_info_data);
+	/* info */
+	info = alloca(sizeof(*info) + passwd_len);
+	info->id = 0x01; /* PIN 1 */
+	info->length = (uint8_t) passwd_len;
+	memcpy(info->pin, passwd, passwd_len);
+	qmi_param_append(param, QMI_UIM_PARAM_MESSAGE_INFO,
+					sizeof(*info) + passwd_len, info);
+	/* session */
+	session.type = QMI_UIM_SESSION_TYPE_CS1;
+	session.aid_length = 0;
+	qmi_param_append(param, QMI_UIM_PARAM_MESSAGE_SESSION_INFO,
+					sizeof(session), &session);
 
 	if (qmi_service_send(data->uim, QMI_UIM_VERIFY_PIN, param,
 					pin_send_cb, cbd, l_free) > 0)
@@ -752,7 +749,6 @@ static void qmi_pin_send(struct ofono_sim *sim, const char *passwd,
 
 	qmi_param_free(param);
 
-error:
 	CALLBACK_WITH_FAILURE(cb, cbd->data);
 	l_free(cbd);
 }
