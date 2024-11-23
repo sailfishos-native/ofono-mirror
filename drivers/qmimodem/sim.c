@@ -884,6 +884,82 @@ static void qmi_lock(struct ofono_sim *sim,
 	l_free(cbd);
 }
 
+static void qmi_change_passwd(struct ofono_sim *sim,
+				enum ofono_sim_password_type passwd_type,
+				const char *old_pwd, const char *new_pwd,
+				ofono_sim_lock_unlock_cb_t cb, void *user_data)
+{
+	struct sim_data *data = ofono_sim_get_data(sim);
+	struct cb_data *cbd = cb_data_new(cb, user_data);
+	uint8_t old_pwd_len;
+	uint8_t new_pwd_len;
+	uint16_t info_len;
+	uint16_t info1_len;
+	uint16_t info2_len;
+	uint8_t pin_id;
+	struct qmi_param *param;
+	struct qmi_uim_param_session_info session;
+	struct {
+		uint8_t id;
+		uint8_t length;
+		uint8_t pin[0];
+	} __attribute__((__packed__)) *info1;
+	struct {
+		uint8_t length;
+		uint8_t pin[0];
+	} __attribute__((__packed__)) *info2;
+
+	DBG("");
+
+	switch (passwd_type) {
+	case OFONO_SIM_PASSWORD_SIM_PIN:
+		pin_id = 0x01;
+		break;
+	case OFONO_SIM_PASSWORD_SIM_PIN2:
+		pin_id = 0x02;
+		break;
+	default:
+		CALLBACK_WITH_CME_ERROR(cb, 4, cbd->data);
+		l_free(cbd);
+		return;
+	}
+
+	old_pwd_len = strlen(old_pwd);
+	new_pwd_len = strlen(new_pwd);
+
+	/* info */
+	info1_len = sizeof(*info1) + old_pwd_len;
+	info2_len = sizeof(*info2) + new_pwd_len;
+	info_len = info1_len + info2_len;
+
+	info1 = alloca(info_len);
+	info1->id = pin_id;
+	info1->length = old_pwd_len;
+	memcpy(info1->pin, old_pwd, old_pwd_len);
+
+	info2 = (void *)&info1->pin[old_pwd_len];
+	info2->length = new_pwd_len;
+	memcpy(info2->pin, new_pwd, new_pwd_len);
+
+	param = qmi_param_new();
+	qmi_param_append(param, QMI_UIM_PARAM_MESSAGE_INFO, info_len, info1);
+
+	/* session */
+	session.type = QMI_UIM_SESSION_TYPE_CS1;
+	session.aid_length = 0;
+	qmi_param_append(param, QMI_UIM_PARAM_MESSAGE_SESSION_INFO,
+					sizeof(session), &session);
+
+	if (qmi_service_send(data->uim, QMI_UIM_CHANGE_PIN, param,
+					pin_send_cb, cbd, cb_data_unref) > 0)
+		return;
+
+	qmi_param_free(param);
+
+	CALLBACK_WITH_FAILURE(cb, cbd->data);
+	l_free(cbd);
+}
+
 static void get_card_status_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_sim *sim = user_data;
@@ -1028,6 +1104,7 @@ static const struct ofono_sim_driver driver = {
 	.send_passwd		= qmi_pin_send,
 	.query_facility_lock	= qmi_query_locked,
 	.lock			= qmi_lock,
+	.change_passwd		= qmi_change_passwd,
 };
 
 OFONO_ATOM_DRIVER_BUILTIN(sim, qmimodem, &driver)

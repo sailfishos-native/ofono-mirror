@@ -13,6 +13,7 @@
 
 #define QMI_UIM_ENABLE_PIN		37	/* Set PIN protection */
 #define QMI_UIM_VERIFY_PIN		38	/* Verify PIN */
+#define QMI_UIM_CHANGE_PIN		40	/* Change PIN */
 
 #define QMI_UIM_EVENT_REGISTRATION	46	/* Register for indications */
 #define QMI_UIM_GET_CARD_STATUS		47	/* Get card status */
