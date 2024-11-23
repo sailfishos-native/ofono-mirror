@@ -41,6 +41,8 @@ struct sim_status {
 	uint8_t app_type;
 	uint8_t passwd_state;
 	int retries[OFONO_SIM_PASSWORD_INVALID];
+	uint8_t pin1_state;
+	uint8_t pin2_state;
 };
 
 struct sim_data {
@@ -486,6 +488,9 @@ static bool get_card_status(const struct qmi_uim_slot_info *slot,
 		break;
 	}
 
+	sim_stat->pin1_state = info2->pin1_state;
+	sim_stat->pin2_state = info2->pin2_state;
+
 	sim_stat->retries[OFONO_SIM_PASSWORD_SIM_PIN] = info2->pin1_retries;
 	sim_stat->retries[OFONO_SIM_PASSWORD_SIM_PUK] = info2->puk1_retries;
 
@@ -752,6 +757,74 @@ error:
 	l_free(cbd);
 }
 
+static void query_locked_cb(struct qmi_result *result, void *user_data)
+{
+	struct cb_data *cbd = user_data;
+	ofono_query_facility_lock_cb_t cb = cbd->cb;
+	struct sim_status sim_stat;
+	uint8_t pin_state;
+	gboolean status;
+
+	DBG("");
+
+	if (handle_get_card_status_result(result, &sim_stat) !=
+					GET_CARD_STATUS_RESULT_OK) {
+		CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
+		return;
+	}
+
+	if (L_PTR_TO_UINT(cbd->user) == OFONO_SIM_PASSWORD_SIM_PIN)
+		pin_state = sim_stat.pin1_state;
+	else
+		pin_state = sim_stat.pin2_state;
+
+	switch (pin_state) {
+	case 1: /* Enabled and not verified */
+	case 2: /* Enabled and verified */
+		status = TRUE;
+		break;
+	case 0: /* Unknown */
+	case 3: /* Disabled */
+	case 4: /* Blocked */
+	case 5: /* Permanently blocked */
+	default:
+		status = FALSE;
+		break;
+	}
+
+	CALLBACK_WITH_SUCCESS(cb, status, cbd->data);
+}
+
+static void qmi_query_locked(struct ofono_sim *sim,
+			enum ofono_sim_password_type passwd_type,
+			ofono_query_facility_lock_cb_t cb, void *user_data)
+{
+	struct sim_data *data = ofono_sim_get_data(sim);
+	struct cb_data *cbd = cb_data_new(cb, user_data);
+
+	DBG("");
+
+	switch (passwd_type) {
+	case OFONO_SIM_PASSWORD_SIM_PIN:
+	case OFONO_SIM_PASSWORD_SIM_PIN2:
+		break;
+	default:
+		CALLBACK_WITH_CME_ERROR(cb, 4, -1, cbd->data);
+		l_free(cbd);
+		return;
+	}
+
+	cbd->user = L_UINT_TO_PTR(passwd_type);
+
+	if (qmi_service_send(data->uim, QMI_UIM_GET_CARD_STATUS, NULL,
+			query_locked_cb, cbd, cb_data_unref) > 0)
+		return;
+
+	CALLBACK_WITH_FAILURE(cb, -1, cbd->data);
+
+	l_free(cbd);
+}
+
 static void get_card_status_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_sim *sim = user_data;
@@ -894,6 +967,7 @@ static const struct ofono_sim_driver driver = {
 	.query_passwd_state	= qmi_query_passwd_state,
 	.query_pin_retries	= qmi_query_pin_retries,
 	.send_passwd		= qmi_pin_send,
+	.query_facility_lock	= qmi_query_locked,
 };
 
 OFONO_ATOM_DRIVER_BUILTIN(sim, qmimodem, &driver)
