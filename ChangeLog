@@ -1,3 +1,8 @@
+ver 2.13:
+	Add support for handling QMI PIN and Lock methods.
+	Add support for handling QMI WWAN interfaces.
+	Add support for handling RMNet interfaces.
+
 ver 2.12:
 	Fix issue with access technology reporting.
 	Fix issue with detecting Phonet devices.
