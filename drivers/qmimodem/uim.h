@@ -11,6 +11,7 @@
 #define QMI_UIM_WRITE_RECORD		35	/* Write a record */
 #define QMI_UIM_GET_FILE_ATTRIBUTES	36	/* Get file attributes */
 
+#define QMI_UIM_ENABLE_PIN		37	/* Set PIN protection */
 #define QMI_UIM_VERIFY_PIN		38	/* Verify PIN */
 
 #define QMI_UIM_EVENT_REGISTRATION	46	/* Register for indications */

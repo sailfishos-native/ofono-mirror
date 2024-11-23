@@ -821,6 +821,69 @@ static void qmi_query_locked(struct ofono_sim *sim,
 	l_free(cbd);
 }
 
+static void qmi_lock(struct ofono_sim *sim,
+		enum ofono_sim_password_type passwd_type,
+		int enable, const char *passwd,
+		ofono_sim_lock_unlock_cb_t cb, void *user_data)
+{
+	struct sim_data *data = ofono_sim_get_data(sim);
+	struct cb_data *cbd = cb_data_new(cb, user_data);
+	int passwd_len;
+	uint16_t info_len;
+	uint8_t pin_id;
+	struct qmi_param *param;
+	struct qmi_uim_param_session_info session;
+	struct {
+		uint8_t id;
+		uint8_t enabled;
+		uint8_t length;
+		uint8_t pin[0];
+	} __attribute__((__packed__)) *info;
+
+	DBG("");
+
+	switch (passwd_type) {
+	case OFONO_SIM_PASSWORD_SIM_PIN:
+		pin_id = 0x01;
+		break;
+	case OFONO_SIM_PASSWORD_SIM_PIN2:
+		pin_id = 0x02;
+		break;
+	default:
+		CALLBACK_WITH_CME_ERROR(cb, 4, cbd->data);
+		l_free(cbd);
+		return;
+	}
+
+	passwd_len = strlen(passwd);
+	param = qmi_param_new();
+
+	/* info */
+	info_len = sizeof(*info) + passwd_len;
+	info = alloca(info_len);
+	info->id = pin_id;
+	info->enabled = enable ? 0x01 : 0x00;
+	info->length = (uint8_t) passwd_len;
+	memcpy(info->pin, passwd, passwd_len);
+
+	qmi_param_append(param, QMI_UIM_PARAM_MESSAGE_INFO, info_len, info);
+
+	/* session */
+	session.type = QMI_UIM_SESSION_TYPE_CS1;
+	session.aid_length = 0;
+	qmi_param_append(param, QMI_UIM_PARAM_MESSAGE_SESSION_INFO,
+					sizeof(session), &session);
+
+	if (qmi_service_send(data->uim, QMI_UIM_ENABLE_PIN, param,
+					pin_send_cb, cbd, cb_data_unref) > 0)
+		return;
+
+	qmi_param_free(param);
+
+	CALLBACK_WITH_FAILURE(cb, cbd->data);
+	l_free(cbd);
+}
+
 static void get_card_status_cb(struct qmi_result *result, void *user_data)
 {
 	struct ofono_sim *sim = user_data;
@@ -964,6 +1027,7 @@ static const struct ofono_sim_driver driver = {
 	.query_pin_retries	= qmi_query_pin_retries,
 	.send_passwd		= qmi_pin_send,
 	.query_facility_lock	= qmi_query_locked,
+	.lock			= qmi_lock,
 };
 
 OFONO_ATOM_DRIVER_BUILTIN(sim, qmimodem, &driver)
